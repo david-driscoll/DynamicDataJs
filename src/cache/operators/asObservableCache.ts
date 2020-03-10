@@ -14,6 +14,10 @@ class AnonymousObservableCache<TObject, TKey> implements IObservableCache<TObjec
         }
     }
 
+    getKey(item: TObject): TKey {
+        return this._cache.getKey(item);
+    }
+
      get countChanged() { return this._cache.countChanged }
      get size(){ return this._cache.size }
 
