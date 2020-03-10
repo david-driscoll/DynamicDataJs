@@ -1,6 +1,6 @@
 import { IQuery } from './IQuery';
 import { IChangeSet } from './IChangeSet';
-import { ArrayOrIterable } from './IObservableCache';
+import { ArrayOrIterable } from '../util/ArrayOrIterable';
 
  /**
  *  Api for updating  an intermediate cache

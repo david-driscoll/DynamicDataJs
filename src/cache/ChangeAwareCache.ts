@@ -1,7 +1,7 @@
 import { Change } from './Change';
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
 import { IChangeSet } from './IChangeSet';
-import { ICache } from './IObservableCache';
+import { ICache } from './ICache';
 import { ChangeSet } from './ChangeSet';
 
 /**

@@ -2,12 +2,11 @@
  *
  */
 import { Disposable, IDisposable, IDisposableOrSubscription } from './Disposable';
-export class CompositeDisposable implements IDisposable {
-    private _disposables = new Set<IDisposableOrSubscription>();
+export class CompositeDisposable extends Set<IDisposableOrSubscription> implements IDisposable {
     private _isDisposed = false;
 
     constructor(...disposables: IDisposableOrSubscription[]) {
-        disposables.forEach((item) => this._disposables.add(item));
+        super(disposables);
     }
 
     public get isDisposed() {
@@ -16,9 +15,9 @@ export class CompositeDisposable implements IDisposable {
 
     public dispose() {
         this._isDisposed = true;
-        if (this._disposables.size) {
-            this._disposables.forEach(disposable => Disposable.of(disposable).dispose());
-            this._disposables.clear();
+        if (this.size) {
+            this.forEach(disposable => Disposable.of(disposable).dispose());
+            this.clear();
         }
     }
 
@@ -26,13 +25,13 @@ export class CompositeDisposable implements IDisposable {
         if (this.isDisposed) {
             disposables.forEach((item) => Disposable.of(item).dispose());
         } else {
-            disposables.forEach((item) => this._disposables.add(item));
+            disposables.forEach((item) => this.add(item));
         }
         return this;
     }
 
     public remove(disposable: IDisposableOrSubscription) {
-        this._disposables.delete(disposable);
+        this.delete(disposable);
         return this;
     }
 }

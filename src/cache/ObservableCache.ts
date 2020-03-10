@@ -164,8 +164,8 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         });
     }
 
-    public preview(predicate: (value: TObject) => boolean): Observable<IChangeSet<TObject, TKey>> {
-        return predicate == null ? this._changesPreview : this._changesPreview.pipe(filter(predicate));
+    public preview(predicate?: (value: TObject) => boolean): Observable<IChangeSet<TObject, TKey>> {
+        return predicate ? this._changesPreview.pipe(filter(predicate)) : this._changesPreview;
     }
 
     /**
@@ -199,3 +199,5 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         this._cleanUp.dispose();
     }
 }
+
+
