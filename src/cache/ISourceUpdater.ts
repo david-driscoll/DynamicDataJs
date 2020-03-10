@@ -1,5 +1,6 @@
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
 import { IEqualityComparer } from '../util/isEqualityComparer';
+import { ICacheUpdater } from './ICacheUpdater';
 
 /**
  *  Api for updating  a source cache
@@ -13,7 +14,7 @@ import { IEqualityComparer } from '../util/isEqualityComparer';
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */
-export interface ISourceUpdater<TObject, TKey> // extends ICacheUpdater<TObject, TKey>
+export interface ISourceUpdater<TObject, TKey> extends ICacheUpdater<TObject, TKey>
 {
     /**
      *  Clears existing values and loads the specified items
@@ -63,6 +64,12 @@ export interface ISourceUpdater<TObject, TKey> // extends ICacheUpdater<TObject,
      * @param entries The entries.
      */
     refreshValues(...entries: TObject[]): void;
+
+    /**
+     * Refreshes the specified item
+     * @param item The item.
+     */
+    refresh(): void;
 
     /**
      * Refreshes the specified item

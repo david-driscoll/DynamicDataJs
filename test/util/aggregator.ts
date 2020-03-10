@@ -11,7 +11,7 @@ import { ChangeSummary } from '../../src/diagnostics/ChangeSummary';
 import { collectUpdateStats } from '../../src/diagnostics/operators/CollectUpdateStats';
 import { asObservableCache } from '../../src/cache/operators/asObservableCache';
 
-export class ChangeSetAggregator<TChangeSet extends IChangeSet<TObject, TKey>, TObject, TKey> implements IDisposable {
+export class ChangeSetAggregator<TChangeSet extends IChangeSet<TObject, TKey>, TObject = any, TKey = any> implements IDisposable {
     private readonly _disposer: IDisposable;
     private _summary: ChangeSummary = ChangeSummary.empty;
     private _error?: Error;
@@ -25,9 +25,12 @@ export class ChangeSetAggregator<TChangeSet extends IChangeSet<TObject, TKey>, T
 
         const error = published.subscribe(updates => {
         }, ex => this._error = ex);
-        const results = published.subscribe(updates => this.messages.push(updates));
+        const results = published
+            .subscribe(updates => this.messages.push(updates));
         this.data = asObservableCache(published);
-        const summariser = published.pipe(collectUpdateStats()).subscribe(summary => this._summary = summary);
+        const summariser = published
+            .pipe(collectUpdateStats())
+            .subscribe(summary => this._summary = summary);
 
         const connected = published.connect();
         this._disposer = Disposable.create(() => {

@@ -3,6 +3,8 @@ import { ArrayOrIterable } from '../util/ArrayOrIterable';
 import { IChangeSet } from './IChangeSet';
 import { ICache } from './ICache';
 import { ChangeSet } from './ChangeSet';
+import { isIterable } from '../util/isIterable';
+import { tryGetValue } from '../util/tryGetValue';
 
 /**
  *  A cache which captures all changes which are made to it. These changes are recorded until CaptureChanges() at which point thw changes are cleared.
@@ -69,12 +71,12 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
             return;
         }
 
-        if (Array.isArray(keys)) {
+        if (Array.isArray(keys) && typeof keys !== 'string') {
             this.ensureInitialised();
             for (let i = 0; i < keys.length; i++) {
                 this.remove(keys[i]);
             }
-        } else if (isIterable(keys)) {
+        } else if (isIterable(keys) && typeof keys !== 'string') {
             this.ensureInitialised();
             for (const key of keys) {
                 this.remove(key);

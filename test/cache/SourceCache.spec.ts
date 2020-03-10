@@ -1,5 +1,11 @@
-import { SourceCache } from '../../src/cache/SourceCache';
-import { asAggregator } from '../util/aggregator';
+import { SourceCache, updatable } from '../../src/cache/SourceCache';
+import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
+import { IChangeSet } from '../../src/cache/IChangeSet';
+import faker from 'faker'
+import { finalize } from 'rxjs/operators';
+import { using } from '../../src/util';
+import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
+import { ISourceCache } from '../../src/cache/ISourceCache';
 
 export interface Person
 {
@@ -7,12 +13,12 @@ export interface Person
     age: number;
 }
 
-
 describe('SourceCacheFixture', () => {
-    let _source = new SourceCache<Person, string>(p => p.name);
-    let _results = asAggregator(_source.connect());
+    let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
+    let _results: ChangeSetAggregator<IChangeSet<Person, string>>;
     beforeEach(() => {
-
+        _source= updatable(new SourceCache<Person, string>(p => p.name));
+        _results = asAggregator(_source.connect());
     });
     afterEach(() => {
         _source.dispose();
@@ -42,99 +48,77 @@ describe('SourceCacheFixture', () => {
 
         expect(_results.data.size).toBe(0);
     });
+
+    it ('Count changed should always invoke upon subscription', () => {
+
+        let result: number | undefined ;
+        const subscription = _source.countChanged.subscribe(count => result = count);
+
+        expect(result).toBeDefined();
+        expect(result).toBe(0);
+
+        subscription.unsubscribe();
+    });
+
+    it ('Count changed should reflect contents of cache invoke upon subscription', () => {
+
+        let result: number | undefined;
+        const subscription = _source.countChanged.subscribe(count => result = count);
+
+        const data: Person[] = [];
+        for (let i = 0; i < 100; i++) data.push({ name: faker.random.alphaNumeric(20) , age: faker.random.number({ min: 1, max: 100 }) });
+
+        _source.edit(updater => updater.addOrUpdateValues(data));
+
+        expect(result).toBeDefined();
+        expect(result).toBe(100);
+        subscription.unsubscribe();
+    });
+    
+    it ('Subscribes disposes correctly', () => {
+
+        let called = false;
+        let errored = false;
+        let completed = false;
+        const subscription = _source.connect()
+            .pipe(
+                finalize(() => completed = true),
+            )
+            .subscribe(updates => { called = true; }, ex => errored = true, () => completed = true);
+        _source.edit(updater => updater.addOrUpdate({ name: "Adult1", age: 40}));
+
+        subscription.unsubscribe();
+        _source.dispose();
+
+        expect(errored).toBeFalsy();
+        expect(called).toBeTruthy();
+        expect(completed).toBeTruthy();
+    });
+
+    it('Count changed', () => {
+
+        let count = 0;
+        let invoked = 0;
+        using(_source.countChanged.subscribe(c =>
+        {
+            count = c;
+            invoked++;
+        }), () => {
+
+            expect(invoked).toBe(1);
+            expect(count).toBe(0);
+
+            const data: Person[] = [];
+            for (let i = 0; i < 100; i++) data.push({ name: faker.random.alphaNumeric(20) , age: faker.random.number({ min: 1, max: 100 }) });
+
+
+            _source.edit(updater => updater.addOrUpdateValues(data));
+            expect(invoked).toBe(2);
+            expect(count).toBe(100);
+
+            _source.edit(updater => updater.clear());
+            expect(invoked).toBe(3);
+            expect(count).toBe(0);
+        });
+    });
 });
-//     [Fact]
-// public void CanHandleABatchOfUpdates()
-//     {
-//         _source.Edit(updater =>
-//         {
-//             var torequery = { name: "Adult1", 44);
-//
-//             updater.AddOrUpdate({ name: "Adult1", age: 40});
-//             updater.AddOrUpdate({ name: "Adult1", age: 41});
-//             updater.AddOrUpdate({ name: "Adult1", age: 42});
-//             updater.AddOrUpdate({ name: "Adult1", age: 43});
-//             updater.Refresh(torequery);
-//             updater.Remove(torequery);
-//             updater.Refresh(torequery);
-//         });
-//
-//         _results.Summary.Overall.Count).toBe(6, "Should be  6 up`dates");
-//         _results.Messages.Count).toBe(1, "Should be 1 message");
-//         _results.Messages[0].Adds).toBe(1, "Should be 1 update");
-//         _results.Messages[0].Updates).toBe(3, "Should be 3 updates");
-//         _results.Messages[0].Removes).toBe(1, "Should be  1 remove");
-//         _results.Messages[0].Refreshes).toBe(1, "Should be 1 evaluate");
-//
-//         _results.Data.Count).toBe(0, "Should be 1 item in` the cache");
-//     }
-//
-//     [Fact]
-// public void CountChangedShouldAlwaysInvokeUponeSubscription()
-//     {
-//         int? result = null;
-//         var subscription = _source.CountChanged.Subscribe(count => result = count);
-//
-//         result.HasValue.Should().BeTrue();
-//         result.Value).toBe(0, "Count should be zero");
-//
-//         subscription.Dispose();
-//     }
-//
-//     [Fact]
-// public void CountChangedShouldReflectContentsOfCacheInvokeUponSubscription()
-//     {
-//         var generator = new RandomPersonGenerator();
-//         int? result = null;
-//         var subscription = _source.CountChanged.Subscribe(count => result = count);
-//
-//         _source.AddOrUpdate(generator.Take(100));
-//
-//         result.HasValue.Should().BeTrue();
-//         result.Value).toBe(100, "Count should be 100");
-//         subscription.Dispose();
-//     }
-//
-//     [Fact]
-// public void SubscribesDisposesCorrectly()
-//     {
-//         bool called = false;
-//         bool errored = false;
-//         bool completed = false;
-//         var subscription = _source.Connect()
-//             .Finally(() => completed = true)
-//             .Subscribe(updates => { called = true; }, ex => errored = true, () => completed = true);
-//         _source.AddOrUpdate({ name: "Adult1", age: 40});
-//
-//         subscription.Dispose();
-//         _source.Dispose();
-//
-//         errored.Should().BeFalse();
-//         called.Should().BeTrue();
-//         completed.Should().BeTrue();
-//     }
-//
-//     [Fact]
-// public void CountChanged()
-//     {
-//         int count = 0;
-//         int invoked = 0;
-//         using (_source.CountChanged.Subscribe(c =>
-//         {
-//             count = c;
-//             invoked++;
-//         }))
-//         {
-//             invoked).toBe(1);
-//             count).toBe(0);
-//
-//             _source.AddOrUpdate(new RandomPersonGenerator().Take(100));
-//             invoked).toBe(2);
-//             count).toBe(100);
-//
-//             _source.Clear();
-//             invoked).toBe(3);
-//             count).toBe(0);
-//         }
-//     }
-// }

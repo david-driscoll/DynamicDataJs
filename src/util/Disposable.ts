@@ -41,11 +41,14 @@ export class Disposable implements IDisposable {
         return new Disposable(value);
     }
 
-    public static create(action: () => void) {
+    public static create(value: IDisposableOrSubscription): IDisposable;
+    public static create(action: () => void): IDisposable;
+    public static create(action: IDisposableOrSubscription | (() => void)) {
         return new Disposable(action);
     }
 
-    private _action: () => void = () => {};
+    private _action: () => void = () => {
+    };
     private _isDisposed = false;
 
     constructor(value: IDisposableOrSubscription);
@@ -79,3 +82,4 @@ export class Disposable implements IDisposable {
 empty = new Disposable(() => {
     /* */
 });
+

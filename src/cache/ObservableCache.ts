@@ -1,4 +1,4 @@
-import { asapScheduler, concat, defer, Observable, scheduled, Subject } from 'rxjs';
+import { queueScheduler, concat, defer, Observable, scheduled, Subject } from 'rxjs';
 import { IChangeSet } from './IChangeSet';
 import { Disposable, IDisposable, Lazy } from '../util';
 import { ReaderWriter } from './ReaderWriter';
@@ -18,10 +18,12 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     private readonly _readerWriter: ReaderWriter<TObject, TKey>;
     private readonly _cleanUp: IDisposable;
     private _editLevel = 0; // The level of recursion in editing.
+    private _keySelector?:  ((obj: TObject) => TKey);
 
 
     constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((obj: TObject) => TKey)) {
         if (!sourceOrKeySelector || typeof sourceOrKeySelector == 'function') {
+            this._keySelector = sourceOrKeySelector;
             this._readerWriter = new ReaderWriter<TObject, TKey>(sourceOrKeySelector);
 
             this._cleanUp = Disposable.create(() => {
@@ -111,13 +113,13 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     }
 
     private invokePreview(changes: ChangeSet<TObject, TKey>) {
-        if (changes.size != 0) {
+        if (changes.size !== 0) {
             this._changesPreview.next(changes);
         }
     }
 
     private invokeNext(changes: ChangeSet<TObject, TKey>) {
-        if (changes.size != 0) {
+        if (changes.size !== 0) {
             this._changes.next(changes);
         }
 
@@ -158,9 +160,9 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     public connect(predicate?: (value: TObject) => boolean): Observable<IChangeSet<TObject, TKey>> {
         return defer(() => {
             const initial = this.getInitialUpdates(predicate) as IChangeSet<TObject, TKey>;
-            const changes = concat(scheduled([initial], asapScheduler), this._changes.asObservable());
+            const changes = concat(scheduled([initial], queueScheduler), this._changes.asObservable());
 
-            return predicate ? changes.pipe(filter(x => predicate(x)), notEmpty()) : changes;
+            return predicate ? changes.pipe(filter(x => predicate(x)), notEmpty()) : changes.pipe(notEmpty());
         });
     }
 
@@ -197,6 +199,10 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
     public dispose() {
         this._cleanUp.dispose();
+    }
+
+    public getKey(item: TObject) {
+        return this._keySelector?.(item)!;
     }
 }
 

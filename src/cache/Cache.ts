@@ -1,6 +1,7 @@
 import { ICache } from './ICache';
 import { IChangeSet } from './IChangeSet';
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
+import { isIterable } from '../util/isIterable';
 
 export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     private readonly _data: Map<TKey, TObject>;

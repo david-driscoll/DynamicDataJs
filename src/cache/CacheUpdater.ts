@@ -5,8 +5,10 @@ import { IEqualityComparer, isEqualityComparer } from '../util/isEqualityCompare
 import { IChangeSet } from './IChangeSet';
 import { ICache } from './ICache';
 import { Cache } from './Cache';
+import { isIterable } from '../util/isIterable';
+import { iterator } from 'rxjs/internal-compatibility';
 
-export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey>, ICacheUpdater<TObject, TKey> {
+export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey> {
     private readonly _cache: ICache<TObject, TKey>;
     private readonly _keySelector?: (obj: TObject) => TKey;
 
@@ -27,7 +29,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
             this._cache = new Cache<TObject, TKey>(map);
         } else {
             const cache = data as ICache<TObject, TKey>;
-            this._cache = new Cache<TObject, TKey>(new Map<TKey, TObject>(cache.entries()));
+            this._cache = cache;
         }
         this._keySelector = keySelector;
     }
@@ -201,11 +203,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     }
 
     public clear(): void {
-        throw new Error('Method not implemented.');
+        this._cache.clear();
     }
 
     [Symbol.iterator](): IterableIterator<[TKey, TObject]> {
-        throw new Error('Method not implemented.');
+        return this._cache[Symbol.iterator]();
     }
 
     public addOrUpdateValues(entries: ArrayOrIterable<TObject>): void;

@@ -15,7 +15,8 @@ import { filter } from 'rxjs/operators';
  */
 export function notEmpty<TObject, TKey>(): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     return function notEmptyOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-        return source.pipe(filter(changes => changes.size != 0))
+        return source.pipe(filter(
+            changes => changes.size !== 0))
     }
 }
 
