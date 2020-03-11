@@ -1,5 +1,19 @@
-import { ConnectableObservable, merge, MonoTypeOperatorFunction, Observable, OperatorFunction, Subject } from 'rxjs';
-import { distinctUntilChanged, map, publish, scan, startWith, tap } from 'rxjs/operators';
+import {
+    ConnectableObservable,
+    merge,
+    MonoTypeOperatorFunction,
+    Observable,
+    OperatorFunction,
+    Subject,
+    defer,
+    concat,
+    scheduled,
+    asapScheduler,
+    queueScheduler,
+    of,
+    isObservable,
+} from 'rxjs';
+import { distinctUntilChanged, map, publish, scan, startWith, tap, filter } from 'rxjs/operators';
 import { IChangeSet } from '../IChangeSet';
 import { Change } from '../Change';
 import { Cache } from '../Cache';
@@ -8,6 +22,8 @@ import { from as ixFrom } from 'ix/iterable';
 import { ChangeAwareCache } from '../ChangeAwareCache';
 import { notEmpty } from './notEmpty';
 import { ChangeSet } from '../ChangeSet';
+import { notificationsFor } from '../../notify';
+import { ObjectType, Npc, npc, isNpc } from '../../notify/notifyPropertyChanged';
 
 export type ConnectionStatus = 'pending' | 'loaded' | 'errored' | 'completed';
 export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
@@ -48,21 +64,15 @@ export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
 
             const monitor = source.subscribe(updated, error, completion);
 
-            const subscriber = statusSubject
-                .pipe(
-                    startWith(status),
-                    distinctUntilChanged(),
-                )
-                .subscribe(observer);
+            const subscriber = statusSubject.pipe(startWith(status), distinctUntilChanged()).subscribe(observer);
 
             return () => {
                 statusSubject.complete();
                 monitor.unsubscribe();
                 subscriber.unsubscribe();
             };
-
-        })
-    }
+        });
+    };
 }
 
 /**
@@ -74,49 +84,40 @@ export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
 export function forEachChange<TObject, TKey>(action: (change: Change<TObject, TKey>) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     return function forEachChangeOperator(source) {
         return source.pipe(tap(changes => changes.forEach(action)));
-    }
+    };
 }
 /**
  * Disposes each item when no longer required.
  * Individual items are disposed when removed or replaced. All items
  * are disposed when the stream is disposed
-* @typeparam TObject The type of the object.
-* @typeparam TKey The type of the key.
-*/
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ */
 export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     if (!removeAction) {
         removeAction = function(value: TObject) {
             if (isDisposable(value)) value.dispose();
             if (isSubscription(value)) value.unsubscribe();
-        }
+        };
     }
 
-    return function  disposeManyOperator(source) {
-        return new Observable<IChangeSet<TObject, TKey>>(observer =>
-        {
+    return function disposeManyOperator(source) {
+        return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const cache = new Cache<TObject, TKey>();
-            const subscriber = source
-                .pipe(
-                    tap(changes => registerForRemoval(changes, cache), observer.error),
-                )
-                .subscribe(observer);
+            const subscriber = source.pipe(tap(changes => registerForRemoval(changes, cache), observer.error)).subscribe(observer);
 
-            return Disposable.create(() =>
-            {
+            return Disposable.create(() => {
                 subscriber.unsubscribe();
 
                 ixFrom(cache.values()).forEach(t => removeAction!(t));
                 cache.clear();
             });
         });
-    }
+    };
 
-    function registerForRemoval( changes: IChangeSet<TObject, TKey>,  cache: Cache<TObject, TKey>)
-    {
-        changes.forEach(change =>
-        {
-            switch (change.reason)
-            {
+    function registerForRemoval(changes: IChangeSet<TObject, TKey>, cache: Cache<TObject, TKey>) {
+        changes.forEach(change => {
+            switch (change.reason) {
                 case 'update':
                     if (change.previous) removeAction!(change.previous);
                     break;
@@ -139,55 +140,44 @@ export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => vo
  * @param exceptionCallback callback when exceptions happen
  */
 export function transform<TObject, TKey, TDestination>(
-    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) =>  TDestination,
+    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) => TDestination,
     transformOnRefresh?: boolean,
     exceptionCallback?: (error: DynamicDataError<TObject, TKey>) => void
 ): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<TDestination, TKey>> {
     return function transformOperator(source) {
-        return source            .pipe(
+        return source.pipe(
             scan((cache, changes) => {
-                for (let change of changes)
-                {
-                    switch (change.reason)
-                    {
+                for (let change of changes) {
+                    switch (change.reason) {
                         case 'add':
                         case 'update':
-                        {
-                            let transformed: TDestination;
-                            if (exceptionCallback != null)
                             {
-                                try
-                                {
+                                let transformed: TDestination;
+                                if (exceptionCallback != null) {
+                                    try {
+                                        transformed = transformFactory(change.current, change.previous, change.key);
+                                        cache.addOrUpdate(transformed, change.key);
+                                    } catch (error) {
+                                        exceptionCallback({ error: error, key: change.key, value: change.current });
+                                    }
+                                } else {
                                     transformed = transformFactory(change.current, change.previous, change.key);
                                     cache.addOrUpdate(transformed, change.key);
                                 }
-                                catch (ex)
-                                {
-                                    exceptionCallback(                                        {                                            error: ex,                                            key: change.key,                                            value: change.current                                        }                                        );
-                                }
                             }
-                            else
-                            {
-                                transformed = transformFactory(change.current, change.previous, change.key);
-                                cache.addOrUpdate(transformed, change.key);
-                            }
-                        }
                             break;
                         case 'remove':
                             cache.remove(change.key);
                             break;
                         case 'refresh':
-                        {
-                            if (transformOnRefresh)
                             {
-                                const transformed = transformFactory(change.current, change.previous, change.key);
-                                cache.addOrUpdate(transformed, change.key);
+                                if (transformOnRefresh) {
+                                    const transformed = transformFactory(change.current, change.previous, change.key);
+                                    cache.addOrUpdate(transformed, change.key);
+                                } else {
+                                    cache.refresh(change.key);
+                                }
                             }
-                            else
-                            {
-                                cache.refresh(change.key);
-                            }
-                        }
 
                             break;
                         case 'moved':
@@ -199,8 +189,8 @@ export function transform<TObject, TKey, TDestination>(
             }, new ChangeAwareCache<TDestination, TKey>()),
             map(cache => cache.captureChanges()),
             notEmpty()
-        )
-    }
+        );
+    };
 }
 
 /**
@@ -213,13 +203,12 @@ export function transform<TObject, TKey, TDestination>(
  * @param exceptionCallback callback when exceptions happen
  */
 export function forceTransform<TObject, TKey, TDestination>(
-    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) =>  TDestination,
+    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) => TDestination,
     forceTransform: Observable<(value: TObject, key: TKey) => boolean>,
     exceptionCallback?: (error: DynamicDataError<TObject, TKey>) => void
 ): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<TDestination, TKey>> {
     return function forceTransformOperator(source) {
-        return new Observable<IChangeSet<TDestination, TKey>>(observer =>
-        {
+        return new Observable<IChangeSet<TDestination, TKey>>(observer => {
             const shared: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
 
             //capture all items so we can apply a forced transform
@@ -227,188 +216,170 @@ export function forceTransform<TObject, TKey, TDestination>(
             const cacheLoader = shared.subscribe(changes => cache.clone(changes));
 
             //create change set of items where force refresh is applied
-            const refresher: Observable<IChangeSet<TObject, TKey>> = forceTransform
-                .pipe(
-                    map(selector => captureChanges(cache, selector)),
-                    map(changes => new ChangeSet(changes)),
-                    notEmpty(),
-                );
+            const refresher: Observable<IChangeSet<TObject, TKey>> = forceTransform.pipe(
+                map(selector => captureChanges(cache, selector)),
+                map(changes => new ChangeSet(changes)),
+                notEmpty()
+            );
 
             const sourceAndRefreshes = merge(shared, refresher);
 
             //do raw transform
-            const rawTransform = sourceAndRefreshes
-                .pipe(
-                    transform(transformFactory, true, exceptionCallback),
-                );
+            const rawTransform = sourceAndRefreshes.pipe(transform(transformFactory, true, exceptionCallback));
 
-            return new CompositeDisposable(cacheLoader,rawTransform.subscribe(observer), shared.connect());
+            return new CompositeDisposable(cacheLoader, rawTransform.subscribe(observer), shared.connect());
         });
 
-        function* captureChanges( cache: Cache<TObject, TKey> , shouldTransform: (value: TObject, key: TKey) => boolean)
-        {
-            for (const [key, value] of cache.entries())
-            {
-                if (shouldTransform(value, key))
-                {
-                    yield new Change<TObject, TKey>('refresh', key,value);
+        // eslint-disable-next-line unicorn/consistent-function-scoping
+        function* captureChanges(cache: Cache<TObject, TKey>, shouldTransform: (value: TObject, key: TKey) => boolean) {
+            for (const [key, value] of cache.entries()) {
+                if (shouldTransform(value, key)) {
+                    yield new Change<TObject, TKey>('refresh', key, value);
                 }
             }
         }
-    }
+    };
 }
 
 /**
  * Subscribes to each item when it is added to the stream and unsubcribes when it is removed.  All items will be unsubscribed when the stream is disposed
-* @typeparam TObject The type of the object.
-* @typeparam TKey The type of the key.
-* @param subscriptionFactory The subsription function
-*/
-export function subscribeMany<TObject, TKey>(subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>  {
-    return function  subscribeManyOperator(source) {
-        return new Observable<IChangeSet<TObject, TKey>>        (            observer =>
-            {
-                const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
-                const subscriptions = published
-                    .pipe(
-                        transform(                            (c, p, k) => subscriptionFactory(c, k)),
-                        disposeMany()
-                    )
-                    .subscribe();
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @param subscriptionFactory The subsription function
+ */
+export function subscribeMany<TObject, TKey>(
+    subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription
+): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+    return function subscribeManyOperator(source) {
+        return new Observable<IChangeSet<TObject, TKey>>(observer => {
+            const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
+            const subscriptions = published
+                .pipe(
+                    transform((c, p, k) => subscriptionFactory(c, k)),
+                    disposeMany()
+                )
+                .subscribe();
 
-                return new CompositeDisposable(
-                    subscriptions,
-                    published.subscribe(observer),
-                    published.connect()
-                );
-            });
-    }
+            return new CompositeDisposable(subscriptions, published.subscribe(observer), published.connect());
+        });
+    };
 }
-
-// public static IObservable<IChangeSet<TObject, TKey>> SubscribeMany<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TKey, IDisposable> subscriptionFactory)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (subscriptionFactory == null)
-// {
-// throw new ArgumentNullException(nameof(subscriptionFactory));
-// }
-
-// return new SubscribeMany<TObject, TKey>(source, subscriptionFactory).Run();
-// }
-
 
 export type ItemWithValue<TObject, TValue> = { item: TObject; value: TValue };
 
 /**
  * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
  * when it is no longer part of the stream.
-* @typeparam TObject The type of the object.
-* @typeparam TKey The type of the key.
-* @typeparam TDestination The type of the destination.
-* @param observableSelector The observable selector.
-*/
-export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: (value: TObject, key: TKey) => TDestination): OperatorFunction<IChangeSet<TObject, TKey>, ItemWithValue<TObject, TDestination>> {
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @typeparam TDestination The type of the destination.
+ * @param observableSelector The observable selector.
+ */
+export function mergeManyItems<TObject, TKey, TDestination>(
+    observableSelector: (value: TObject, key: TKey) => Observable<TDestination>
+): OperatorFunction<IChangeSet<TObject, TKey>, ItemWithValue<TObject, TDestination>> {
     return function mergeManyItemsOperator(source) {
-        return new Observable<ItemWithValue<TObject, TDestination>>        (            observer =>
-            return source                .pipe(
-                subscribeMany((t, v) => observableSelector(t, v)
-                    .pipe(                        map(z => ({ item: t, value: z })))
-            ))
-                .subscribe(observer);
-    }
+        return new Observable<ItemWithValue<TObject, TDestination>>(observer => {
+            return source
+                .pipe(
+                    subscribeMany((t, v) =>
+                        observableSelector(t, v)
+                            .pipe(map(z => ({ item: t, value: z })))
+                            .subscribe(observer)
+                    )
+                )
+                .subscribe();
+        });
+    };
 }
-// public static IObservable<ItemWithValue<TObject, TDestination>> MergeManyItems<TObject, TKey, TDestination>(
-//     this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, IObservable<TDestination>> observableSelector)
-// {
-//     if (source == null)
-//     {
-//         throw new ArgumentNullException(nameof(source));
-//     }
-//
-//     if (observableSelector == null)
-//     {
-//         throw new ArgumentNullException(nameof(observableSelector));
-//     }
-//
-//     return new MergeManyItems<TObject, TKey, TDestination>(source, observableSelector).Run();
-// }
+/**
+ * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
+ * when it is no longer part of the stream.
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @typeparam TDestination The type of the destination.
+ * @param observableSelector The observable selector.
+ */
 
-// /**
-//  * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
-//  * when it is no longer part of the stream.
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TDestination The type of the destination.
-// * @param observableSelector The observable selector.
+export function mergeMany<TObject, TKey, TDestination>(
+    observableSelector: (value: TObject, key: TKey) => Observable<TDestination>
+): OperatorFunction<IChangeSet<TObject, TKey>, TDestination> {
+    return function mergeManyOperator(source) {
+        return new Observable<TDestination>(observer => {
+            return source.pipe(subscribeMany((t, v) => observableSelector(t, v).subscribe(x => observer.next(x)))).subscribe(
+                x => {},
+                ex => observer.error(ex),
+                // TODO: Is this needed
+                () => observer.complete()
+            );
+        });
+    };
+}
 
-// */
-// public static IObservable<ItemWithValue<TObject, TDestination>> MergeManyItems<TObject, TKey, TDestination>(
-//             this IObservable<IChangeSet<TObject, TKey>> source,
-//             Func<TObject, TKey, IObservable<TDestination>> observableSelector)
-//         {
-//             if (source == null)
-//             {
-//                 throw new ArgumentNullException(nameof(source));
-//             }
-//
-//             if (observableSelector == null)
-//             {
-//                 throw new ArgumentNullException(nameof(observableSelector));
-//             }
-//
-//             return new MergeManyItems<TObject, TKey, TDestination>(source, observableSelector).Run();
-//         }
+/**
+ * Notifies when any any property on the object has changed
+ * @typeparam TObject The type of the object
+ * @param source The source
+ * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
+ */
+export function whenAnyPropertyChanged<TObject>(value: Npc<TObject>, ...keys: (keyof TObject)[]): Observable<TObject>;
+/**
+ * Watches each item in the collection and notifies when any of them has changed
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
+ */
+export function whenAnyPropertyChanged<TObject>(...keys: (keyof TObject)[]): MonoTypeOperatorFunction<TObject>;
+export function whenAnyPropertyChanged<TObject>(value: Npc<TObject> | keyof TObject, ...keys: (keyof TObject)[]) {
+    if (isNpc(value)) {
+        return (keys.length > 0 ? notificationsFor(value).pipe(filter(property => keys.includes(property))) : notificationsFor(value)).pipe(
+            map(z => value)
+        );
+    }
+    return function
+}
 
-// /**
-//  * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
-//  * when it is no longer part of the stream.
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TDestination The type of the destination.
-// * @param observableSelector The observable selector.
+type PropertyValue<TObject, TKey extends keyof TObject> = { sender: TObject; value: TObject[TKey] };
 
-// */public static IObservable<TDestination> MergeMany<TObject, TKey, TDestination>(this IObservable<IChangeSet<TObject, TKey>> source, Func<TObject, IObservable<TDestination>> observableSelector)
+function whenChangedValues<TObject, TKey extends keyof TObject>(
+    value: Npc<TObject>,
+    key: TKey,
+    notifyInitial = true,
+    fallbackValue?: () => TObject[TKey]
+) {
+    const propertyChanged = notificationsFor(value).pipe(
+        filter(x => x === key),
+        map(t => ({ sender: value, value: value[key] } as PropertyValue<Npc<TObject>, TKey>))
+    );
+    return notifyInitial
+        ? concat(
+              defer(() => of({ sender: value, value: value[key] || fallbackValue?.() } as PropertyValue<Npc<TObject>, TKey>)),
+              propertyChanged
+          )
+        : propertyChanged;
+}
+
+export function whenChanged<TObject, TKey extends keyof TObject>(
+    value: Npc<TObject>,
+    key: TKey,
+    notifyInitial = true,
+    fallbackValue: () => TObject[TKey]
+) {
+    return whenChangedValues(value, key, notifyInitial, fallbackValue).pipe(
+        filter(x => !!x.value),
+        map(z => z.value)
+    );
+}
+
+// public static IObservable < TObject > WhenAnyPropertyChanged<TObject, TKey>([NotNull] this IObservable < IChangeSet < TObject, TKey >> source, params string[] propertiesToMonitor)
+// where TObject : INotifyPropertyChanged
 // {
 // if (source == null)
 // {
 // throw new ArgumentNullException(nameof(source));
 // }
 
-// if (observableSelector == null)
-// {
-// throw new ArgumentNullException(nameof(observableSelector));
-// }
-
-// return new MergeMany<TObject, TKey, TDestination>(source, observableSelector).Run();
-// }
-
-// /**
-//  * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
-//  * when it is no longer part of the stream.
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TDestination The type of the destination.
-// * @param observableSelector The observable selector.
-
-// */public static IObservable<TDestination> MergeMany<TObject, TKey, TDestination>(this IObservable<IChangeSet<TObject, TKey>> source, Func<TObject, TKey, IObservable<TDestination>> observableSelector)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (observableSelector == null)
-// {
-// throw new ArgumentNullException(nameof(observableSelector));
-// }
-
-// return new MergeMany<TObject, TKey, TDestination>(source, observableSelector).Run();
+// return source.MergeMany(t => t.WhenAnyPropertyChanged(propertiesToMonitor));
 // }
 
 // /**
@@ -464,23 +435,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // }
 
 // /**
-//  * Watches each item in the collection and notifies when any of them has changed
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
-
-// */public static IObservable<TObject> WhenAnyPropertyChanged<TObject, TKey>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source, params string[] propertiesToMonitor)
-// where TObject : INotifyPropertyChanged
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return source.MergeMany(t => t.WhenAnyPropertyChanged(propertiesToMonitor));
-// }
-
-// /**
 //  * Subscribes to each item when it is added to the stream and unsubcribes when it is removed.  All items will be unsubscribed when the stream is disposed
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
@@ -502,13 +456,11 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // return new SubscribeMany<TObject, TKey>(source, subscriptionFactory).Run();
 // }
 
-
 // /**
 //  * Callback for each item as and when it is being added to the stream
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
 // * @param addAction The add action.
-
 
 // */public static IObservable<IChangeSet<TObject, TKey>> OnItemAdded<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, [NotNull] Action<TObject> addAction)
 // {
@@ -569,7 +521,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // return source.Do(changes => changes.Where(c => c.Reason == ChangeReason.Update)
 // .ForEach(c => updateAction(c.Current, c.Previous.Value)));
 // }
-
 
 // /**
 //  * Includes changes for the specified reasons only
@@ -729,7 +680,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // /**
 //  * Supress  refresh notifications
 
-
 // */public static IObservable<IChangeSet<TObject, TKey>> SupressRefresh<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
 // {
 // return source.WhereReasonsAreNot(ChangeReason.Refresh);
@@ -745,7 +695,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // /**
 //  * Prepends an empty changeset to the source
 
-
 // */public static IObservable<ISortedChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<ISortedChangeSet<TObject, TKey>> source)
 // {
 // return source.StartWith(SortedChangeSet<TObject, TKey>.Empty);
@@ -753,7 +702,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 
 // /**
 //  * Prepends an empty changeset to the source
-
 
 // */public static IObservable<IVirtualChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<IVirtualChangeSet<TObject, TKey>> source)
 // {
@@ -763,7 +711,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // /**
 //  * Prepends an empty changeset to the source
 
-
 // */public static IObservable<IPagedChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<IPagedChangeSet<TObject, TKey>> source)
 // {
 // return source.StartWith(PagedChangeSet<TObject, TKey>.Empty);
@@ -772,7 +719,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // /**
 //  * Prepends an empty changeset to the source
 
-
 // */public static IObservable<IGroupChangeSet<TObject, TKey, TGroupKey>> StartWithEmpty<TObject, TKey, TGroupKey>(this IObservable<IGroupChangeSet<TObject, TKey, TGroupKey>> source)
 // {
 // return source.StartWith(GroupChangeSet<TObject, TKey, TGroupKey>.Empty);
@@ -780,7 +726,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 
 // /**
 //  * Prepends an empty changeset to the source
-
 
 // */public static IObservable<IImmutableGroupChangeSet<TObject, TKey, TGroupKey>> StartWithEmpty<TObject, TKey, TGroupKey>(this IObservable<IImmutableGroupChangeSet<TObject, TKey, TGroupKey>> source)
 // {
@@ -926,7 +871,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
 
-
 // */public static IObservable<IChangeSet<TObject, TKey>> FlattenBufferResult<TObject, TKey>([NotNull] this IObservable<IList<IChangeSet<TObject, TKey>>> source)
 // {
 // if (source == null)
@@ -1055,7 +999,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
 
-
 // */public static IObservable<IChangeSet<TObject, TKey>> DeferUntilLoaded<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
 // {
 // if (source == null)
@@ -1070,7 +1013,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 //  * Defer the subscription until the stream has been inflated with data
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
-
 
 // */public static IObservable<IChangeSet<TObject, TKey>> DeferUntilLoaded<TObject, TKey>(this IObservableCache<TObject, TKey> source)
 // {
@@ -1117,7 +1059,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TValue The type of the value.
 // * @param observableSelector Selector which returns the target observable
 // * @param equalityCondition The equality condition.
-
 
 // */public static IObservable<bool> TrueForAll<TObject, TKey, TValue>(this IObservable<IChangeSet<TObject, TKey>> source,
 // Func<TObject, IObservable<TValue>> observableSelector,
@@ -1253,7 +1194,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
 
-
 // */public static IObservable<IReadOnlyCollection<TObject>> ToCollection<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
 // {
 // return source.QueryWhenChanged(query => new ReadOnlyCollectionLight<TObject>(query.Items));
@@ -1266,7 +1206,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TSortKey The sort key
 // * @param sort The sort function
 // * @param sortOrder The sort order. Defaults to ascending
-
 
 // */public static IObservable<IReadOnlyCollection<TObject>> ToSortedCollection<TObject, TKey, TSortKey>(this IObservable<IChangeSet<TObject, TKey>> source,
 // Func<TObject, TSortKey> sort, SortDirection sortOrder = SortDirection.Ascending)
@@ -1281,7 +1220,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
 // * @param comparer The sort comparer
-
 
 // */public static IObservable<IReadOnlyCollection<TObject>> ToSortedCollection<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
 // IComparer<TObject> comparer)
@@ -1332,7 +1270,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // * @typeparam TKey The type of the key.
 // * @param key The key.
 
-
 // */public static IObservable<Change<TObject, TKey>> Watch<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, TKey key)
 // {
 // if (source == null)
@@ -1342,7 +1279,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 
 // return source.SelectMany(updates => updates).Where(update => update.Key.Equals(key));
 // }
-
 
 // /**
 //  * Clones the changes  into the specified collection
@@ -4877,7 +4813,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 // source.Edit(updater => updater.Refresh());
 // }
 
-
 // /**
 //  * Removes the specified key from the cache.
 //  * If the item is not contained in the cache then the operation does nothing.
@@ -4900,7 +4835,6 @@ export function mergeManyItems<TObject, TKey, TDestination>(observableSelector: 
 
 // source.Edit(updater => updater.AddOrUpdate(item, key));
 // }
-
 
 // /**
 //  * Removes the specified key from the cache.

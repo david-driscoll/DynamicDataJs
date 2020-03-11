@@ -1,4 +1,4 @@
-import { queueScheduler, concat, defer, Observable, scheduled, Subject } from 'rxjs';
+import { concat, defer, Observable, of, Subject } from 'rxjs';
 import { IChangeSet } from './IChangeSet';
 import { Disposable, IDisposable, Lazy } from '../util';
 import { ReaderWriter } from './ReaderWriter';
@@ -18,8 +18,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     private readonly _readerWriter: ReaderWriter<TObject, TKey>;
     private readonly _cleanUp: IDisposable;
     private _editLevel = 0; // The level of recursion in editing.
-    private _keySelector?:  ((obj: TObject) => TKey);
-
+    private _keySelector?: (obj: TObject) => TKey;
 
     constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((obj: TObject) => TKey)) {
         if (!sourceOrKeySelector || typeof sourceOrKeySelector == 'function') {
@@ -41,18 +40,18 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                     finalize(() => {
                         this._changes.complete();
                         this._changesPreview.complete();
-                    }),
+                    })
                 )
                 .subscribe(
                     changeset => {
-                        const previewHandler = this._changesPreview.observers.length ? this.invokePreview : undefined;
+                        const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
                         const changes = this._readerWriter.write(changeset, previewHandler, !!this._changesPreview.observers.length);
                         this.invokeNext(changes);
                     },
                     ex => {
                         this._changesPreview.error(ex);
                         this._changes.error(ex);
-                    },
+                    }
                 );
 
             this._cleanUp = Disposable.create(() => {
@@ -78,7 +77,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
         this._editLevel++;
         if (this._editLevel == 1) {
-            const previewHandler = this._changesPreview.observers.length ? this.invokePreview : undefined;
+            const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
             changes = this._readerWriter.write(updateAction, previewHandler, !!this._changes.observers.length);
         } else {
             this._readerWriter.writeNested(updateAction);
@@ -99,7 +98,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
         this._editLevel++;
         if (this._editLevel == 1) {
-            const previewHandler = this._changesPreview.observers.length ? this.invokePreview : undefined;
+            const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
             changes = this._readerWriter.write(updateAction, previewHandler, !!this._changes.observers.length);
         } else {
             this._readerWriter.writeNested(updateAction);
@@ -126,43 +125,35 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         if (this._countChanged.isValueCreated) {
             this._countChanged.value!.next(this._readerWriter.size);
         }
-
     }
 
     public get countChanged() {
-        return this._countChanged.value!.pipe(
-            startWith(this._readerWriter.size),
-            distinctUntilChanged(),
-        );
+        return this._countChanged.value!.pipe(startWith(this._readerWriter.size), distinctUntilChanged());
     }
 
     public watch(key: TKey) {
-        return new Observable<Change<TObject, TKey>>(
-            observer => {
-                const initial = this._readerWriter.lookup(key);
-                if (initial) {
-                    observer.next(new Change<TObject, TKey>('add', key, initial));
+        return new Observable<Change<TObject, TKey>>(observer => {
+            const initial = this._readerWriter.lookup(key);
+            if (initial) {
+                observer.next(new Change<TObject, TKey>('add', key, initial));
+            }
+
+            return this._changes.pipe(finalize(observer.complete)).subscribe(changes => {
+                for (let change of changes) {
+                    if (change.key === key) {
+                        observer.next(change);
+                    }
                 }
-
-                return this._changes
-                    .pipe(finalize(observer.complete))
-                    .subscribe(changes => {
-                        for (let change of changes) {
-                            if (change.key === key) {
-                                observer.next(change);
-                            }
-                        }
-                    });
-
             });
+        });
     }
 
     public connect(predicate?: (value: TObject) => boolean): Observable<IChangeSet<TObject, TKey>> {
-        return defer(() => {
-            const initial = this.getInitialUpdates(predicate) as IChangeSet<TObject, TKey>;
-            const changes = concat(scheduled([initial], queueScheduler), this._changes.asObservable());
+        return defer<Observable<IChangeSet<TObject, TKey>>>(() => {
+            const initial = of(this.getInitialUpdates(predicate));
+            const changes = concat(initial, this._changes.asObservable());
 
-            return predicate ? changes.pipe(filter(x => predicate(x)), notEmpty()) : changes.pipe(notEmpty());
+            return (predicate ? changes.pipe(filter(x => predicate(x))) : changes).pipe(notEmpty());
         });
     }
 
@@ -205,5 +196,3 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         return this._keySelector?.(item)!;
     }
 }
-
-

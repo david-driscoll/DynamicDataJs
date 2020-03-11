@@ -26,5 +26,6 @@ module.exports = {
         semi: ['error', 'always'],
         'no-undef': 0,
         'no-unused-vars': 0,
+        'unicorn/filename-case': 0,
     },
 };

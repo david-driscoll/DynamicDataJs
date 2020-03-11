@@ -5,6 +5,7 @@ import { Change } from './Change';
 import { ChangeAwareCache } from './ChangeAwareCache';
 import { ChangeSet } from './ChangeSet';
 import { CacheUpdater } from './CacheUpdater';
+import { toArray } from 'ix/iterable';
 
 export class ReaderWriter<TObject, TKey> {
     private readonly _keySelector?: (obj: TObject) => TKey;
@@ -15,14 +16,22 @@ export class ReaderWriter<TObject, TKey> {
         this._keySelector = keySelector;
     }
 
-    public write(changes: IChangeSet<TObject, TKey> | ((updater: ICacheUpdater<TObject, TKey>) => void) | ((updater: ISourceUpdater<TObject, TKey>) => void), previewHandler: ((changes: ChangeSet<TObject, TKey>) => void) | undefined, collectChanges: boolean): ChangeSet<TObject, TKey> {
-        if (typeof (changes) === 'function') {
+    public write(
+        changes: IChangeSet<TObject, TKey> | ((updater: ICacheUpdater<TObject, TKey>) => void) | ((updater: ISourceUpdater<TObject, TKey>) => void),
+        previewHandler: ((changes: ChangeSet<TObject, TKey>) => void) | undefined,
+        collectChanges: boolean
+    ): ChangeSet<TObject, TKey> {
+        if (typeof changes === 'function') {
             return this.doUpdate(changes, previewHandler, collectChanges);
         }
         return this.doUpdate((updater: ICacheUpdater<TObject, TKey>) => updater.clone(changes), previewHandler, collectChanges);
     }
 
-    private doUpdate(updateAction: (updater: CacheUpdater<TObject, TKey>) => void, previewHandler: ((changes: ChangeSet<TObject, TKey>) => void) | undefined, collectChanges: boolean): ChangeSet<TObject, TKey> {
+    private doUpdate(
+        updateAction: (updater: CacheUpdater<TObject, TKey>) => void,
+        previewHandler: ((changes: ChangeSet<TObject, TKey>) => void) | undefined,
+        collectChanges: boolean
+    ): ChangeSet<TObject, TKey> {
         let changeAwareCache;
         if (previewHandler) {
             let copy = new Map<TKey, TObject>(this._data);
