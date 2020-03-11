@@ -1,7 +1,7 @@
 /**
  *
  */
-import { Disposable, IDisposable, IDisposableOrSubscription } from './Disposable';
+import { Disposable, IDisposable, IDisposableOrSubscription, ISubscription } from './Disposable';
 
 export class RefCountDisposable implements IDisposable {
     private _underlyingDisposable: IDisposable;
@@ -23,6 +23,10 @@ export class RefCountDisposable implements IDisposable {
                 this._underlyingDisposable.dispose();
             }
         }
+    }
+
+    public unsubscribe(): void {
+        this.dispose();
     }
 
     public getDisposable() {

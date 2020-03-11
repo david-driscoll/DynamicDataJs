@@ -24,7 +24,7 @@ export function canBeDisposed(value: any): value is IDisposableOrSubscription {
 export type IDisposableOrSubscription = IDisposable | ISubscription | (() => void);
 let empty: Disposable;
 
-export class Disposable implements IDisposable {
+export class Disposable implements IDisposable, ISubscription {
     public static get empty() {
         return empty;
     }
@@ -41,8 +41,8 @@ export class Disposable implements IDisposable {
         return new Disposable(value);
     }
 
-    public static create(value: IDisposableOrSubscription): IDisposable;
-    public static create(action: () => void): IDisposable;
+    public static create(value: IDisposableOrSubscription): IDisposable & ISubscription;
+    public static create(action: () => void): IDisposable & ISubscription;
     public static create(action: IDisposableOrSubscription | (() => void)) {
         return new Disposable(action);
     }
@@ -76,6 +76,10 @@ export class Disposable implements IDisposable {
             this._isDisposed = true;
             this._action();
         }
+    }
+
+    public unsubscribe(): void {
+        this.dispose();
     }
 }
 

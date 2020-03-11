@@ -1,7 +1,7 @@
 /**
  *
  */
-import { IDisposable } from './Disposable';
+import { IDisposable, ISubscription } from './Disposable';
 
 export class SingleAssignmentDisposable implements IDisposable {
     private _currentDisposable?: IDisposable | null;
@@ -24,6 +24,10 @@ export class SingleAssignmentDisposable implements IDisposable {
         if (this.isDisposed && value) {
             value.dispose();
         }
+    }
+
+    public unsubscribe(): void {
+        this.dispose();
     }
 
     public dispose() {

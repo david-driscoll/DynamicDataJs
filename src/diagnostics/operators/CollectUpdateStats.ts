@@ -4,14 +4,12 @@ import { IChangeSet } from '../../cache/IChangeSet';
 import { scan } from 'rxjs/operators';
 import { ChangeStatistics } from '../ChangeStatistics';
 
-/// <summary>
-/// Accumulates update statistics
-/// </summary>
-/// <typeparam name="TSource">The type of the source.</typeparam>
-/// <typeparam name="TKey">The type of the key.</typeparam>
-/// <param name="source">The source.</param>
-/// <returns></returns>
-/// <exception cref="System.ArgumentNullException">source</exception>
+/**
+* Accumulates update statistics
+ * @typeparam TSource The type of the source.
+ * @typeparam TKey The type of the key.
+ * @param source The source.
+ */
 export function collectUpdateStats<TSource, TKey>(): OperatorFunction<IChangeSet<TSource, TKey>, ChangeSummary> {
     return function collectUpdateStatsOperator(source: Observable<IChangeSet<TSource, TKey>>) {
         return source.pipe(scan((seed, next) => {

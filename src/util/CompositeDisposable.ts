@@ -1,8 +1,8 @@
 /**
  *
  */
-import { Disposable, IDisposable, IDisposableOrSubscription } from './Disposable';
-export class CompositeDisposable extends Set<IDisposableOrSubscription> implements IDisposable {
+import { Disposable, IDisposable, IDisposableOrSubscription, ISubscription } from './Disposable';
+export class CompositeDisposable extends Set<IDisposableOrSubscription> implements IDisposable, ISubscription {
     private _isDisposed = false;
 
     constructor(...disposables: IDisposableOrSubscription[]) {
@@ -19,6 +19,10 @@ export class CompositeDisposable extends Set<IDisposableOrSubscription> implemen
             this.forEach(disposable => Disposable.of(disposable).dispose());
             this.clear();
         }
+    }
+
+    public unsubscribe(): void {
+        this.dispose();
     }
 
     public add(...disposables: IDisposableOrSubscription[]) {

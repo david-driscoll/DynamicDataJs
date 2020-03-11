@@ -45,4 +45,11 @@ export interface IChangeSet<TObject, TKey> {
      * Returns an iterable of key, value pairs for every entry in the changeset
      */
     values(): IterableIterator<Change<TObject, TKey>>;
+
+    /**
+     * foreach item in the changeset
+     * @param callbackfn
+     * @param thisArg
+     */
+    forEach(callbackfn: (value: Change<TObject, TKey>) => void, thisArg?: any): void;
 }

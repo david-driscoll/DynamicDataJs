@@ -43,6 +43,7 @@
   "dependencies": {
     "@vue/reactivity": "^3.0.0-alpha.8",
     "eslint-plugin-prettier": "^3.1.2",
+    "ix": "^3.0.2",
     "rxjs": "^6.5.4"
   }
 }

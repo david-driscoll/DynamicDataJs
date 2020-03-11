@@ -1,7 +1,7 @@
 /**
  *
  */
-import { IDisposable } from './Disposable';
+import { IDisposable, ISubscription } from './Disposable';
 
 export class SerialDisposable implements IDisposable {
     private _currentDisposable?: IDisposable | null;
@@ -25,6 +25,10 @@ export class SerialDisposable implements IDisposable {
         if (this.isDisposed && value) {
             value.dispose();
         }
+    }
+
+    public unsubscribe(): void {
+        this.dispose();
     }
 
     public dispose() {

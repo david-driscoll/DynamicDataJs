@@ -1,9 +1,9 @@
-/// <summary>
+/**
 /// Supresses updates which are empty
-/// </summary>
-/// <typeparam name="TObject">The type of the object.</typeparam>
-/// <typeparam name="TKey">The type of the key.</typeparam>
-/// <param name="source">The source.</param>
+ */
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @param source The source.
 import { MonoTypeOperatorFunction, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { filter } from 'rxjs/operators';
