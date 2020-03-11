@@ -5,7 +5,9 @@ type IterableCollections = Map<any, any> | Set<any>;
 type WeakCollections = WeakMap<any, any> | WeakSet<any>;
 type CollectionTypes = IterableCollections | WeakCollections;
 type PrimitiveTypes = string | number | symbol | any[];
-export type Npc<T> = T extends CollectionType<T> | ObjectType<T> ? T & { __npc: Observable<string> } : never;
+export const notifyPropertyChanged = Symbol.for('NotifyPropertyChanged')
+export type NpcType<T = any> = CollectionType<T> | ObjectType<T>;
+export type Npc<T> = T extends NpcType<T> ? T & { [notifyPropertyChanged]: Observable<string> } : never;
 export type CollectionType<T> = T extends CollectionTypes ? never : T;
 export type ObjectType<T> = T extends CollectionTypes ? never : T extends PrimitiveTypes ? never : T;
 
@@ -34,7 +36,6 @@ const isObservableType = (() => {
 export function toRaw<T>(observed: T): T {
     return npcToRaw.get(observed) || observed;
 }
-export function isNpc(target: Npc<any>): target is Npc<any>;
 export function isNpc(target: any): target is Npc<any>;
 export function isNpc(target: any): target is Npc<any> {
     return npcToRaw.has(target);
@@ -53,9 +54,9 @@ export function notificationsFor<T>(target: Npc<T>): Observable<keyof T>;
 export function notificationsFor<T>(target: Npc<T>): Observable<unknown>;
 export function notificationsFor(target: ObjectType<any> | CollectionType<any>): Observable<any> {
     if (isNpc(target)) {
-        return target.__npc;
+        return target[notifyPropertyChanged];
     }
-    return npc(target).__npc;
+    return npc(target)[notifyPropertyChanged];
 }
 
 function objectHandlers(observer: Observer<string | symbol>) {
@@ -95,7 +96,7 @@ const collectionHandlers = (() => {
     type SetTypes = Set<any> | WeakSet<any>;
 
     // eslint-disable-next-line unicorn/consistent-function-scoping
-    const toReactive = <T extends unknown>(value: T): T => (isObject(value) ? npc(value) : value);
+    const toReactive = <T extends unknown>(value: any): any => (isObject(value) ? npc(value) : value);
 
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const getProto = <T extends CollectionTypes>(v: T): any => Reflect.getPrototypeOf(v);
@@ -272,7 +273,7 @@ function createNotifyPropertyChanged<TObject extends new (...args: any) => any>(
     toObserver.set(observed, observer);
     toProxy.set(target, observed);
     toRaw.set(observed, target);
-    Object.defineProperty(observed, '__npc', {
+    Object.defineProperty(observed, notifyPropertyChanged, {
         get() {
             return observer.asObservable();
         },

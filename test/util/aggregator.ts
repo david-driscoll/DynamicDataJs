@@ -1,3 +1,4 @@
+import { IObservableCache } from '../../src/cache/IObservableCache';
 /**
 /// Aggregates all events and statistics for a distinct changeset to help assertions when testing
  */
@@ -18,8 +19,8 @@ export class ChangeSetAggregator<TChangeSet extends IChangeSet<TObject, TKey>, T
 
     /**
     /// Initializes a new instance of the <see cref="DistinctChangeSetAggregator{TValue}"/> class.
-     */
      * @param source The source.
+     */
     public constructor(source: Observable<TChangeSet>) {
         const published: ConnectableObservable<TChangeSet> = source.pipe(publish()) as any;
 

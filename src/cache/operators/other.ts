@@ -1,833 +1,65 @@
-import {
-    ConnectableObservable,
-    merge,
-    MonoTypeOperatorFunction,
-    Observable,
-    OperatorFunction,
-    Subject,
-    defer,
-    concat,
-    scheduled,
-    asapScheduler,
-    queueScheduler,
-    of,
-    isObservable,
-} from 'rxjs';
-import { distinctUntilChanged, map, publish, scan, startWith, tap, filter } from 'rxjs/operators';
+import { MonoTypeOperatorFunction } from 'rxjs';
+import { startWith } from 'rxjs/operators';
 import { IChangeSet } from '../IChangeSet';
-import { Change } from '../Change';
-import { Cache } from '../Cache';
-import { CompositeDisposable, Disposable, IDisposableOrSubscription, isDisposable, isSubscription } from '../../util';
-import { from as ixFrom } from 'ix/iterable';
-import { ChangeAwareCache } from '../ChangeAwareCache';
-import { notEmpty } from './notEmpty';
 import { ChangeSet } from '../ChangeSet';
-import { notificationsFor } from '../../notify';
-import { ObjectType, Npc, npc, isNpc } from '../../notify/notifyPropertyChanged';
 
-export type ConnectionStatus = 'pending' | 'loaded' | 'errored' | 'completed';
-export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
 
 /**
- * Monitors the status of a stream
- * @typeparam T
- */
-export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
-    return function statusMonitorOperator(source) {
-        return new Observable<ConnectionStatus>(observer => {
-            const statusSubject = new Subject<ConnectionStatus>();
-            let status: ConnectionStatus = 'pending';
-
-            function error(ex: Error) {
-                status = 'errored';
-                statusSubject.next(status);
-                observer.error(ex);
-            }
-
-            function completion() {
-                if (status == 'errored') {
-                    return;
-                }
-
-                status = 'completed';
-                statusSubject.next(status);
-            }
-
-            function updated() {
-                if (status != 'pending') {
-                    return;
-                }
-
-                status = 'loaded';
-                statusSubject.next(status);
-            }
-
-            const monitor = source.subscribe(updated, error, completion);
-
-            const subscriber = statusSubject.pipe(startWith(status), distinctUntilChanged()).subscribe(observer);
-
-            return () => {
-                statusSubject.complete();
-                monitor.unsubscribe();
-                subscriber.unsubscribe();
-            };
-        });
-    };
-}
-
-/**
- * Provides a call back for each change
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @param action The action.
- */
-export function forEachChange<TObject, TKey>(action: (change: Change<TObject, TKey>) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function forEachChangeOperator(source) {
-        return source.pipe(tap(changes => changes.forEach(action)));
-    };
-}
-/**
- * Disposes each item when no longer required.
- * Individual items are disposed when removed or replaced. All items
- * are disposed when the stream is disposed
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- */
-export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    if (!removeAction) {
-        removeAction = function(value: TObject) {
-            if (isDisposable(value)) value.dispose();
-            if (isSubscription(value)) value.unsubscribe();
-        };
-    }
-
-    return function disposeManyOperator(source) {
-        return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            const cache = new Cache<TObject, TKey>();
-            const subscriber = source.pipe(tap(changes => registerForRemoval(changes, cache), observer.error)).subscribe(observer);
-
-            return Disposable.create(() => {
-                subscriber.unsubscribe();
-
-                ixFrom(cache.values()).forEach(t => removeAction!(t));
-                cache.clear();
-            });
-        });
-    };
-
-    function registerForRemoval(changes: IChangeSet<TObject, TKey>, cache: Cache<TObject, TKey>) {
-        changes.forEach(change => {
-            switch (change.reason) {
-                case 'update':
-                    if (change.previous) removeAction!(change.previous);
-                    break;
-                case 'remove':
-                    removeAction!(change.current);
-                    break;
-            }
-        });
-        cache.clone(changes);
+ * Prepends an empty changeset to the source
+*/
+export function startWithEmpty<TChangeSet extends IChangeSet<TObject, TKey>, TObject, TKey>(changesSetClass: { empty<TObject, TKey>(): TChangeSet }  ): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>{
+    return function startWithEmptyOperator(source) {
+        return source.pipe(startWith(changesSetClass.empty<TObject, TKey>()));
     }
 }
 
-/**
- * Projects each update item to a new form using the specified transform function
- * @typeparam TDestination The type of the destination.
- * @typeparam TSource The type of the source.
- * @typeparam TKey The type of the key.
- * @param transformFactory The transform factory.
- * @param transformOnRefresh Should a new transform be applied when a refresh event is received
- * @param exceptionCallback callback when exceptions happen
- */
-export function transform<TObject, TKey, TDestination>(
-    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) => TDestination,
-    transformOnRefresh?: boolean,
-    exceptionCallback?: (error: DynamicDataError<TObject, TKey>) => void
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<TDestination, TKey>> {
-    return function transformOperator(source) {
-        return source.pipe(
-            scan((cache, changes) => {
-                for (let change of changes) {
-                    switch (change.reason) {
-                        case 'add':
-                        case 'update':
-                            {
-                                let transformed: TDestination;
-                                if (exceptionCallback != null) {
-                                    try {
-                                        transformed = transformFactory(change.current, change.previous, change.key);
-                                        cache.addOrUpdate(transformed, change.key);
-                                    } catch (error) {
-                                        exceptionCallback({ error: error, key: change.key, value: change.current });
-                                    }
-                                } else {
-                                    transformed = transformFactory(change.current, change.previous, change.key);
-                                    cache.addOrUpdate(transformed, change.key);
-                                }
-                            }
-                            break;
-                        case 'remove':
-                            cache.remove(change.key);
-                            break;
-                        case 'refresh':
-                            {
-                                if (transformOnRefresh) {
-                                    const transformed = transformFactory(change.current, change.previous, change.key);
-                                    cache.addOrUpdate(transformed, change.key);
-                                } else {
-                                    cache.refresh(change.key);
-                                }
-                            }
 
-                            break;
-                        case 'moved':
-                            //Do nothing !
-                            break;
-                    }
-                }
-                return cache;
-            }, new ChangeAwareCache<TDestination, TKey>()),
-            map(cache => cache.captureChanges()),
-            notEmpty()
-        );
-    };
-}
-
-/**
- * Projects each update item to a new form using the specified transform function
- * @typeparam TDestination The type of the destination.
- * @typeparam TSource The type of the source.
- * @typeparam TKey The type of the key.
- * @param transformFactory The transform factory.
- * @param forceTransform Invoke to force a new transform for items matching the selected objects
- * @param exceptionCallback callback when exceptions happen
- */
-export function forceTransform<TObject, TKey, TDestination>(
-    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) => TDestination,
-    forceTransform: Observable<(value: TObject, key: TKey) => boolean>,
-    exceptionCallback?: (error: DynamicDataError<TObject, TKey>) => void
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<TDestination, TKey>> {
-    return function forceTransformOperator(source) {
-        return new Observable<IChangeSet<TDestination, TKey>>(observer => {
-            const shared: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
-
-            //capture all items so we can apply a forced transform
-            const cache = new Cache<TObject, TKey>();
-            const cacheLoader = shared.subscribe(changes => cache.clone(changes));
-
-            //create change set of items where force refresh is applied
-            const refresher: Observable<IChangeSet<TObject, TKey>> = forceTransform.pipe(
-                map(selector => captureChanges(cache, selector)),
-                map(changes => new ChangeSet(changes)),
-                notEmpty()
-            );
-
-            const sourceAndRefreshes = merge(shared, refresher);
-
-            //do raw transform
-            const rawTransform = sourceAndRefreshes.pipe(transform(transformFactory, true, exceptionCallback));
-
-            return new CompositeDisposable(cacheLoader, rawTransform.subscribe(observer), shared.connect());
-        });
-
-        // eslint-disable-next-line unicorn/consistent-function-scoping
-        function* captureChanges(cache: Cache<TObject, TKey>, shouldTransform: (value: TObject, key: TKey) => boolean) {
-            for (const [key, value] of cache.entries()) {
-                if (shouldTransform(value, key)) {
-                    yield new Change<TObject, TKey>('refresh', key, value);
-                }
-            }
-        }
-    };
-}
-
-/**
- * Subscribes to each item when it is added to the stream and unsubcribes when it is removed.  All items will be unsubscribed when the stream is disposed
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @param subscriptionFactory The subsription function
- */
-export function subscribeMany<TObject, TKey>(
-    subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function subscribeManyOperator(source) {
-        return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
-            const subscriptions = published
-                .pipe(
-                    transform((c, p, k) => subscriptionFactory(c, k)),
-                    disposeMany()
-                )
-                .subscribe();
-
-            return new CompositeDisposable(subscriptions, published.subscribe(observer), published.connect());
-        });
-    };
-}
-
-export type ItemWithValue<TObject, TValue> = { item: TObject; value: TValue };
-
-/**
- * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
- * when it is no longer part of the stream.
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @typeparam TDestination The type of the destination.
- * @param observableSelector The observable selector.
- */
-export function mergeManyItems<TObject, TKey, TDestination>(
-    observableSelector: (value: TObject, key: TKey) => Observable<TDestination>
-): OperatorFunction<IChangeSet<TObject, TKey>, ItemWithValue<TObject, TDestination>> {
-    return function mergeManyItemsOperator(source) {
-        return new Observable<ItemWithValue<TObject, TDestination>>(observer => {
-            return source
-                .pipe(
-                    subscribeMany((t, v) =>
-                        observableSelector(t, v)
-                            .pipe(map(z => ({ item: t, value: z })))
-                            .subscribe(observer)
-                    )
-                )
-                .subscribe();
-        });
-    };
-}
-/**
- * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
- * when it is no longer part of the stream.
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @typeparam TDestination The type of the destination.
- * @param observableSelector The observable selector.
- */
-
-export function mergeMany<TObject, TKey, TDestination>(
-    observableSelector: (value: TObject, key: TKey) => Observable<TDestination>
-): OperatorFunction<IChangeSet<TObject, TKey>, TDestination> {
-    return function mergeManyOperator(source) {
-        return new Observable<TDestination>(observer => {
-            return source.pipe(subscribeMany((t, v) => observableSelector(t, v).subscribe(x => observer.next(x)))).subscribe(
-                x => {},
-                ex => observer.error(ex),
-                // TODO: Is this needed
-                () => observer.complete()
-            );
-        });
-    };
-}
-
-/**
- * Notifies when any any property on the object has changed
- * @typeparam TObject The type of the object
- * @param source The source
- * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
- */
-export function whenAnyPropertyChanged<TObject>(value: Npc<TObject>, ...keys: (keyof TObject)[]): Observable<TObject>;
-/**
- * Watches each item in the collection and notifies when any of them has changed
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
- */
-export function whenAnyPropertyChanged<TObject>(...keys: (keyof TObject)[]): MonoTypeOperatorFunction<TObject>;
-export function whenAnyPropertyChanged<TObject>(value: Npc<TObject> | keyof TObject, ...keys: (keyof TObject)[]) {
-    if (isNpc(value)) {
-        return (keys.length > 0 ? notificationsFor(value).pipe(filter(property => keys.includes(property))) : notificationsFor(value)).pipe(
-            map(z => value)
-        );
-    }
-    return function
-}
-
-type PropertyValue<TObject, TKey extends keyof TObject> = { sender: TObject; value: TObject[TKey] };
-
-function whenChangedValues<TObject, TKey extends keyof TObject>(
-    value: Npc<TObject>,
-    key: TKey,
-    notifyInitial = true,
-    fallbackValue?: () => TObject[TKey]
-) {
-    const propertyChanged = notificationsFor(value).pipe(
-        filter(x => x === key),
-        map(t => ({ sender: value, value: value[key] } as PropertyValue<Npc<TObject>, TKey>))
-    );
-    return notifyInitial
-        ? concat(
-              defer(() => of({ sender: value, value: value[key] || fallbackValue?.() } as PropertyValue<Npc<TObject>, TKey>)),
-              propertyChanged
-          )
-        : propertyChanged;
-}
-
-export function whenChanged<TObject, TKey extends keyof TObject>(
-    value: Npc<TObject>,
-    key: TKey,
-    notifyInitial = true,
-    fallbackValue: () => TObject[TKey]
-) {
-    return whenChangedValues(value, key, notifyInitial, fallbackValue).pipe(
-        filter(x => !!x.value),
-        map(z => z.value)
-    );
-}
-
-// public static IObservable < TObject > WhenAnyPropertyChanged<TObject, TKey>([NotNull] this IObservable < IChangeSet < TObject, TKey >> source, params string[] propertiesToMonitor)
-// where TObject : INotifyPropertyChanged
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return source.MergeMany(t => t.WhenAnyPropertyChanged(propertiesToMonitor));
-// }
-
-// /**
-//  * Watches each item in the collection and notifies when any of them has changed
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TValue The type of the value.
-// * @param propertyAccessor The property accessor.
-// * @param notifyOnInitialValue if set to <c>true</c> [notify on initial value].
-
-// */public static IObservable<TValue> WhenValueChanged<TObject, TKey, TValue>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source,
-// [NotNull] Expression<Func<TObject, TValue>> propertyAccessor,
-// bool notifyOnInitialValue = true)
-// where TObject : INotifyPropertyChanged
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (propertyAccessor == null)
-// {
-// throw new ArgumentNullException(nameof(propertyAccessor));
-// }
-
-// return source.MergeMany(t => t.WhenChanged(propertyAccessor, notifyOnInitialValue));
-// }
-
-// /**
-//  * Watches each item in the collection and notifies when any of them has changed
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TValue The type of the value.
-// * @param propertyAccessor The property accessor.
-// * @param notifyOnInitialValue if set to <c>true</c> [notify on initial value].
-
-// */public static IObservable<PropertyValue<TObject, TValue>> WhenPropertyChanged<TObject, TKey, TValue>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source,
-// [NotNull] Expression<Func<TObject, TValue>> propertyAccessor,
-// bool notifyOnInitialValue = true)
-// where TObject : INotifyPropertyChanged
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (propertyAccessor == null)
-// {
-// throw new ArgumentNullException(nameof(propertyAccessor));
-// }
-
-// return source.MergeMany(t => t.WhenPropertyChanged(propertyAccessor, notifyOnInitialValue));
-// }
-
-// /**
-//  * Subscribes to each item when it is added to the stream and unsubcribes when it is removed.  All items will be unsubscribed when the stream is disposed
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param subscriptionFactory The subsription function
-
-// */public static IObservable<IChangeSet<TObject, TKey>> SubscribeMany<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, IDisposable> subscriptionFactory)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (subscriptionFactory == null)
-// {
-// throw new ArgumentNullException(nameof(subscriptionFactory));
-// }
-
-// return new SubscribeMany<TObject, TKey>(source, subscriptionFactory).Run();
-// }
-
-// /**
-//  * Callback for each item as and when it is being added to the stream
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param addAction The add action.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> OnItemAdded<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, [NotNull] Action<TObject> addAction)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (addAction == null)
-// {
-// throw new ArgumentNullException(nameof(addAction));
-// }
-
-// return source.Do(changes => changes.Where(c => c.Reason == ChangeReason.Add)
-// .ForEach(c => addAction(c.Current)));
-// }
-
-// /**
-//  * Callback for each item as and when it is being removed from the stream
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param removeAction The remove action.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> OnItemRemoved<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, Action<TObject> removeAction)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (removeAction == null)
-// {
-// throw new ArgumentNullException(nameof(removeAction));
-// }
-
-// return source.Do(changes => changes.Where(c => c.Reason == ChangeReason.Remove)
-// .ForEach(c => removeAction(c.Current)));
-// }
-
-// /**
-//  * Callback when an item has been updated eg. (current, previous)=>{}
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param updateAction The update action.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> OnItemUpdated<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, Action<TObject, TObject> updateAction)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (updateAction == null)
-// {
-// throw new ArgumentNullException(nameof(updateAction));
-// }
-
-// return source.Do(changes => changes.Where(c => c.Reason == ChangeReason.Update)
-// .ForEach(c => updateAction(c.Current, c.Previous.Value)));
-// }
-
-// /**
-//  * Includes changes for the specified reasons only
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param reasons The reasons.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> WhereReasonsAre<TObject, TKey>(
-// this IObservable<IChangeSet<TObject, TKey>> source, params ChangeReason[] reasons)
-// {
-// if (reasons == null)
-// {
-// throw new ArgumentNullException(nameof(reasons));
-// }
-
-// if (!reasons.Any())
-// {
-// throw new ArgumentException("Must select at least one reason");
-// }
-
-// var hashed = new HashSet<ChangeReason>(reasons);
-
-// return source.Select(updates =>
-// {
-// return new ChangeSet<TObject, TKey>(updates.Where(u => hashed.Contains(u.Reason)));
-// }).NotEmpty();
-// }
-
-// /**
-//  * Excludes updates for the specified reasons
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param reasons The reasons.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> WhereReasonsAreNot<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, params ChangeReason[] reasons)
-// {
-// if (reasons == null)
-// {
-// throw new ArgumentNullException(nameof(reasons));
-// }
-
-// if (!reasons.Any())
-// {
-// throw new ArgumentException("Must select at least one reason");
-// }
-
-// var hashed = new HashSet<ChangeReason>(reasons);
-
-// return source.Select(updates =>
-// {
-// return new ChangeSet<TObject, TKey>(updates.Where(u => !hashed.Contains(u.Reason)));
-// }).NotEmpty();
-// }
-
-// #endregion
-
-// #region Auto Refresh
-
-// /**
-//  * Automatically refresh downstream operators when any properties change.
-// * @param changeSetBuffer Batch up changes by specifying the buffer. This greatly increases performance when many elements have sucessive property changes
-// * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
-// * @param scheduler The scheduler
-
-// */public static IObservable<IChangeSet<TObject, TKey>> AutoRefresh<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// TimeSpan? changeSetBuffer = null,
-// TimeSpan? propertyChangeThrottle = null,
-// IScheduler scheduler = null)
-// where TObject : INotifyPropertyChanged
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return source.AutoRefreshOnObservable((t, v) =>
-// {
-// if (propertyChangeThrottle == null)
-// {
-// return t.WhenAnyPropertyChanged();
-// }
-
-// return t.WhenAnyPropertyChanged()
-// .Throttle(propertyChangeThrottle.Value, scheduler ?? Scheduler.Default);
-// }, changeSetBuffer, scheduler);
-// }
-
-// /**
-//  * Automatically refresh downstream operators when properties change.
-// * @param propertyAccessor Specify a property to observe changes. When it changes a Refresh is invoked
-// * @param changeSetBuffer Batch up changes by specifying the buffer. This greatly increases performance when many elements have sucessive property changes
-// * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
-// * @param scheduler The scheduler
-
-// */public static IObservable<IChangeSet<TObject, TKey>> AutoRefresh<TObject, TKey, TProperty>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Expression<Func<TObject, TProperty>> propertyAccessor,
-// TimeSpan? changeSetBuffer = null,
-// TimeSpan? propertyChangeThrottle = null,
-// IScheduler scheduler = null)
-// where TObject : INotifyPropertyChanged
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return source.AutoRefreshOnObservable((t, v) =>
-// {
-// if (propertyChangeThrottle == null)
-// {
-// return t.WhenPropertyChanged(propertyAccessor, false);
-// }
-
-// return t.WhenPropertyChanged(propertyAccessor, false)
-// .Throttle(propertyChangeThrottle.Value, scheduler ?? Scheduler.Default);
-// }, changeSetBuffer, scheduler);
-// }
-
-// /**
-//  * Automatically refresh downstream operator. The refresh is triggered when the observable receives a notification
-// * @param reevaluator An observable which acts on items within the collection and produces a value when the item should be refreshed
-// * @param changeSetBuffer Batch up changes by specifying the buffer. This greatly increases performance when many elements require a refresh
-// * @param scheduler The scheduler
-
-// */public static IObservable<IChangeSet<TObject, TKey>> AutoRefreshOnObservable<TObject, TKey, TAny>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, IObservable<TAny>> reevaluator,
-// TimeSpan? changeSetBuffer = null,
-// IScheduler scheduler = null)
-// {
-// return source.AutoRefreshOnObservable((t, v) => reevaluator(t), changeSetBuffer, scheduler);
-// }
-
-// /**
-//  * Automatically refresh downstream operator. The refresh is triggered when the observable receives a notification
-// * @param reevaluator An observable which acts on items within the collection and produces a value when the item should be refreshed
-// * @param changeSetBuffer Batch up changes by specifying the buffer. This g  reatly increases performance when many elements require a refresh
-// * @param scheduler The scheduler
-
-// */public static IObservable<IChangeSet<TObject, TKey>> AutoRefreshOnObservable<TObject, TKey, TAny>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TKey, IObservable<TAny>> reevaluator,
-// TimeSpan? changeSetBuffer = null,
-// IScheduler scheduler = null)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (reevaluator == null)
-// {
-// throw new ArgumentNullException(nameof(reevaluator));
-// }
-
-// return new AutoRefresh<TObject, TKey, TAny>(source, reevaluator, changeSetBuffer,  scheduler).Run();
-// }
-
-// /**
-//  * Supress  refresh notifications
-
-// */public static IObservable<IChangeSet<TObject, TKey>> SupressRefresh<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
-// {
-// return source.WhereReasonsAreNot(ChangeReason.Refresh);
-// }
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<IChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
-// {
-// return source.StartWith(ChangeSet<TObject, TKey>.Empty);
-// }
-
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<ISortedChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<ISortedChangeSet<TObject, TKey>> source)
-// {
-// return source.StartWith(SortedChangeSet<TObject, TKey>.Empty);
-// }
-
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<IVirtualChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<IVirtualChangeSet<TObject, TKey>> source)
-// {
-// return source.StartWith(VirtualChangeSet<TObject, TKey>.Empty);
-// }
-
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<IPagedChangeSet<TObject, TKey>> StartWithEmpty<TObject, TKey>(this IObservable<IPagedChangeSet<TObject, TKey>> source)
-// {
-// return source.StartWith(PagedChangeSet<TObject, TKey>.Empty);
-// }
-
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<IGroupChangeSet<TObject, TKey, TGroupKey>> StartWithEmpty<TObject, TKey, TGroupKey>(this IObservable<IGroupChangeSet<TObject, TKey, TGroupKey>> source)
-// {
-// return source.StartWith(GroupChangeSet<TObject, TKey, TGroupKey>.Empty);
-// }
-
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<IImmutableGroupChangeSet<TObject, TKey, TGroupKey>> StartWithEmpty<TObject, TKey, TGroupKey>(this IObservable<IImmutableGroupChangeSet<TObject, TKey, TGroupKey>> source)
-// {
-// return source.StartWith(ImmutableGroupChangeSet<TObject, TKey, TGroupKey>.Empty);
-// }
-
-// /**
-//  * Prepends an empty changeset to the source
-
-// */public static IObservable<IReadOnlyCollection<T>> StartWithEmpty<T>(this IObservable<IReadOnlyCollection<T>> source)
-// {
-// return source.StartWith(ReadOnlyCollectionLight<T>.Empty);
-// }
-
+// TODO:
 // /**
 //  * Removes the key which enables all observable list features of dynamic data
 // * @typeparam TObject The type of  object.
 // * @typeparam TKey The type of  key.
-
-// */public static IObservable<IChangeSet<TObject>> RemoveKey<TObject, TKey>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
+// */
+// export function removeKey<TObject, TKey>(): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+//     return function removeKeyOperator(source) {
+//         return source.pipe(
+//             map(changes => {
+//                 ixFrom(changes).pipe()
+//                 return new Change<TObject>()
+//             })
+//         );
+//     }
 // }
 
-// return source.Select(changes =>
-// {
-// var enumerator = new RemoveKeyEnumerator<TObject, TKey>(changes);
-// return new ChangeSet<TObject>(enumerator);
-// });
-// }
-
+// TODO:
 // /**
 //  * Changes the primary key.
 // * @typeparam TObject The type of the object.
 // * @typeparam TSourceKey The type of the source key.
 // * @typeparam TDestinationKey The type of the destination key.
 // * @param keySelector The key selector eg. (item) => newKey;
-
-// */public static IObservable<IChangeSet<TObject, TDestinationKey>> ChangeKey<TObject, TSourceKey, TDestinationKey>(this IObservable<IChangeSet<TObject, TSourceKey>> source, Func<TObject, TDestinationKey> keySelector)
+// */
+// public static IObservable<IChangeSet<TObject, TDestinationKey>> ChangeKey<TObject, TSourceKey, TDestinationKey>(this IObservable<IChangeSet<TObject, TSourceKey>> source, Func<TObject, TDestinationKey> keySelector)
 // {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (keySelector == null)
-// {
-// throw new ArgumentNullException(nameof(keySelector));
-// }
-
 // return source.Select(updates =>
 // {
 // var changed = updates.Select(u => new Change<TObject, TDestinationKey>(u.Reason, keySelector(u.Current), u.Current, u.Previous));
 // return new ChangeSet<TObject, TDestinationKey>(changed);
 // });
 // }
-
 // /**
 //  * Changes the primary key.
 // * @typeparam TObject The type of the object.
 // * @typeparam TSourceKey The type of the source key.
 // * @typeparam TDestinationKey The type of the destination key.
 // * @param keySelector The key selector eg. (key, item) => newKey;
-
 // */public static IObservable<IChangeSet<TObject, TDestinationKey>> ChangeKey<TObject, TSourceKey, TDestinationKey>(this IObservable<IChangeSet<TObject, TSourceKey>> source, Func<TSourceKey, TObject, TDestinationKey> keySelector)
 // {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (keySelector == null)
-// {
-// throw new ArgumentNullException(nameof(keySelector));
-// }
-
 // return source.Select(updates =>
 // {
 // var changed = updates.Select(u => new Change<TObject, TDestinationKey>(u.Reason, keySelector(u.Key, u.Current), u.Current, u.Previous));
 // return new ChangeSet<TObject, TDestinationKey>(changed);
 // });
-// }
-
-// /**
-//  * Cast the object to the specified type.
-//  * Alas, I had to add the converter due to type inference issues
-// * @typeparam TSource The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TDestination The type of the destination.
-// * @param converter The conversion factory.
-
-// */public static IObservable<IChangeSet<TDestination, TKey>> Cast<TSource, TKey, TDestination>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, TDestination> converter)
-
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return new Cast<TSource, TKey, TDestination>(source, converter).Run();
 // }
 
 // /**
@@ -905,15 +137,14 @@ export function whenChanged<TObject, TKey extends keyof TObject>(
 // * @param pauseIfTrueSelector When true, observable begins to buffer and when false, window closes and buffered result if notified
 // * @param intialPauseState if set to <c>true</c> [intial pause state].
 // * @param scheduler The scheduler.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
+// */
+// public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
 // IObservable<bool> pauseIfTrueSelector,
 // bool intialPauseState = false,
 // IScheduler scheduler = null)
 // {
 // return new BatchIf<TObject, TKey>(source, pauseIfTrueSelector, null, intialPauseState, scheduler: scheduler).Run();
 // }
-
 // /**
 //  * Batches the underlying updates if a pause signal (i.e when the buffer selector return true) has been received.
 //  * When a resume signal has been received the batched updates will  be fired.
@@ -922,8 +153,8 @@ export function whenChanged<TObject, TKey extends keyof TObject>(
 // * @param pauseIfTrueSelector When true, observable begins to buffer and when false, window closes and buffered result if notified
 // * @param timeOut Specify a time to ensure the buffer window does not stay open for too long. On completion buffering will cease
 // * @param scheduler The scheduler.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
+// */
+// public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
 // IObservable<bool> pauseIfTrueSelector,
 // TimeSpan? timeOut = null,
 // IScheduler scheduler = null)
@@ -940,23 +171,13 @@ export function whenChanged<TObject, TKey extends keyof TObject>(
 // * @param intialPauseState if set to <c>true</c> [intial pause state].
 // * @param timeOut Specify a time to ensure the buffer window does not stay open for too long. On completion buffering will cease
 // * @param scheduler The scheduler.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
+// */
+// public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
 // IObservable<bool> pauseIfTrueSelector,
 // bool intialPauseState = false,
 // TimeSpan? timeOut = null,
 // IScheduler scheduler = null)
 // {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (pauseIfTrueSelector == null)
-// {
-// throw new ArgumentNullException(nameof(pauseIfTrueSelector));
-// }
-
 // return new BatchIf<TObject, TKey>(source, pauseIfTrueSelector, timeOut, intialPauseState,scheduler: scheduler).Run();
 // }
 
@@ -969,8 +190,8 @@ export function whenChanged<TObject, TKey extends keyof TObject>(
 // * @param intialPauseState if set to <c>true</c> [intial pause state].
 // * @param timer Specify a time observable. The buffer will be emptied each time the timer produces a value and when it completes. On completion buffering will cease
 // * @param scheduler The scheduler.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
+// */
+// public static IObservable<IChangeSet<TObject, TKey>> BatchIf<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
 // IObservable<bool> pauseIfTrueSelector,
 // bool intialPauseState = false,
 // IObservable<Unit> timer = null,
@@ -983,31 +204,12 @@ export function whenChanged<TObject, TKey extends keyof TObject>(
 //  * Defer the subscribtion until loaded and skip initial changeset
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> SkipInitial<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
+// */
+// public static IObservable<IChangeSet<TObject, TKey>> SkipInitial<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
 // {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
 // return source.DeferUntilLoaded().Skip(1);
 // }
 
-// /**
-//  * Defer the subscription until the stream has been inflated with data
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> DeferUntilLoaded<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return new DeferUntilLoaded<TObject, TKey>(source).Run();
-// }
 
 // /**
 //  * Defer the subscription until the stream has been inflated with data
@@ -1474,129 +676,6 @@ export function whenChanged<TObject, TKey extends keyof TObject>(
 // }
 
 // return new Page<TObject, TKey>(source, pageRequests).Run();
-// }
-
-// #endregion
-
-// #region  Filter
-
-// /**
-//  * Filters the specified source.
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param filter The filter.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Filter<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, Func<TObject, bool> filter)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return new StaticFilter<TObject, TKey>(source, filter).Run();
-// }
-
-// /**
-//  * Creates a filtered stream which can be dynamically filtered
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param predicateChanged Observable to change the underlying predicate.
-
-// public static IObservable<IChangeSet<TObject, TKey>> Filter<TObject, TKey>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source,
-// [NotNull] IObservable<Func<TObject, bool>> predicateChanged)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (predicateChanged == null)
-// {
-// throw new ArgumentNullException(nameof(predicateChanged));
-// }
-
-// return new DynamicFilter<TObject, TKey>(source, predicateChanged).Run();
-// }
-
-// /**
-//  * Creates a filtered stream which can be dynamically filtered
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param reapplyFilter Observable to re-evaluate whether the filter still matches items. Use when filtering on mutable values
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Filter<TObject, TKey>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source,
-// [NotNull] IObservable<Unit> reapplyFilter)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (reapplyFilter == null)
-// {
-// throw new ArgumentNullException(nameof(reapplyFilter));
-// }
-
-// var empty = Observable.Empty<Func<TObject, bool>>();
-// return new DynamicFilter<TObject, TKey>(source, empty, reapplyFilter).Run();
-// }
-
-// /**
-//  * Creates a filtered stream which can be dynamically filtered
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param reapplyFilter Observable to re-evaluate whether the filter still matches items. Use when filtering on mutable values
-// * @param predicateChanged Observable to change the underlying predicate.
-
-// public static IObservable<IChangeSet<TObject, TKey>> Filter<TObject, TKey>([NotNull] this IObservable<IChangeSet<TObject, TKey>> source,
-// [NotNull] IObservable<Func<TObject, bool>> predicateChanged,
-// [NotNull] IObservable<Unit> reapplyFilter)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (predicateChanged == null)
-// {
-// throw new ArgumentNullException(nameof(predicateChanged));
-// }
-
-// if (reapplyFilter == null)
-// {
-// throw new ArgumentNullException(nameof(reapplyFilter));
-// }
-
-// return new DynamicFilter<TObject, TKey>(source, predicateChanged, reapplyFilter).Run();
-// }
-
-// /**
-//  * Updates the index for an object which implements IIndexAware
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-
-// */public static IObservable<ISortedChangeSet<TObject, TKey>> UpdateIndex<TObject, TKey>(this IObservable<ISortedChangeSet<TObject, TKey>> source)
-// where TObject : IIndexAware
-// {
-// return source.Do(changes => changes.SortedItems.Select((update, index) => new { update, index })
-// .ForEach(u => u.update.Value.Index = u.index));
-// }
-
-// /**
-//  * Invokes Refresh method for an object which implements IEvaluateAware
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-
-// public static IObservable<IChangeSet<TObject, TKey>> InvokeEvaluate<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source)
-// where TObject : IEvaluateAware
-// {
-// return source.Do(changes => changes.Where(u => u.Reason == ChangeReason.Refresh).ForEach(u => u.Current.Evaluate()));
 // }
 
 // #endregion
