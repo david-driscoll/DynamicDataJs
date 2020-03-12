@@ -11,6 +11,14 @@ export interface IObservableCache<TObject, TKey> extends IConnectableCache<TObje
      * @param item The item.
      */
     getKey(item: TObject): TKey;
+
+    /**
+     * The symbol name of the cache
+     */
+    readonly [Symbol.toStringTag]: 'ObservableCache';
 }
 
-
+export function isObservableCache(value: any): value is IObservableCache<any, any>
+{
+    return value && value[Symbol.toStringTag] === 'ObservableCache'
+}

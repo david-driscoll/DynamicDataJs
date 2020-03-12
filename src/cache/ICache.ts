@@ -71,5 +71,5 @@ export interface ICache<TObject, TKey> extends IQuery<TObject, TKey> {
     /**
      * The tag of this class, should return `Cache`
      */
-    readonly [Symbol.toStringTag]: string;
+    readonly [Symbol.toStringTag]: 'Cache';
 }

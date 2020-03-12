@@ -195,4 +195,5 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     public getKey(item: TObject) {
         return this._keySelector?.(item)!;
     }
+    readonly [Symbol.toStringTag] = 'ObservableCache' as const;
 }

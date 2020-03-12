@@ -109,7 +109,7 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     public refreshKey(key: TKey) {
     }
 
-    [Symbol.toStringTag]: 'Cache';
+    readonly [Symbol.toStringTag] = 'Cache' as const;
 
     [Symbol.iterator](): IterableIterator<[TKey, TObject]> {
         return this.entries();

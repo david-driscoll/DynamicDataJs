@@ -2,7 +2,7 @@ import { OperatorFunction } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { queryWhenChanged } from './queryWhenChanged';
 import { map } from 'rxjs/operators';
-import { toArray as ixToArray } from 'ix/Ix.dom.iterable';
+import { toArray as ixToArray } from 'ix/iterable';
 
 /**
  * Converts the changeset into a fully formed collection. Each change in the source results in a new collection

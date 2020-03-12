@@ -15,135 +15,138 @@
 //     }
 // }
 
+import {
+    MonoTypeOperatorFunction,
+    Observable,
+    OperatorFunction,
+    SchedulerLike,
+    queueScheduler,
+    interval,
+    timer,
+} from 'rxjs';
+import { IChangeSet } from '../IChangeSet';
+import { ArrayOrIterable } from '../../util/ArrayOrIterable';
+import { take, tap } from 'rxjs/operators';
+import { transform } from './transform';
+import { asObservableCache } from './asObservableCache';
+import { from as ixFrom, toArray as ixToArray } from 'ix/iterable'
+import { filter as ixFilter, map as ixMap } from 'ix/iterable/operators'
+import { Disposable, SingleAssignmentDisposable } from '../../util';
+import { ExpirableItem } from '../ExpirableItem';
 
-// /**
-//  * Converts the changeset into a fully formed sorted collection. Each change in the source results in a new sorted collection
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @typeparam TSortKey The sort key
-// * @param sort The sort function
-// * @param sortOrder The sort order. Defaults to ascending
 
-// */public static IObservable<IReadOnlyCollection<TObject>> ToSortedCollection<TObject, TKey, TSortKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TSortKey> sort, SortDirection sortOrder = SortDirection.Ascending)
-// {
-// return source.QueryWhenChanged(query => sortOrder == SortDirection.Ascending
-// ? new ReadOnlyCollectionLight<TObject>(query.Items.OrderBy(sort))
-// : new ReadOnlyCollectionLight<TObject>(query.Items.OrderByDescending(sort)));
-// }
 
-// /**
-//  * Converts the changeset into a fully formed sorted collection. Each change in the source results in a new sorted collection
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param comparer The sort comparer
+export function forExpiry<TObject, TKey>(
+    timeSelector: (value: TObject) => number | undefined,
+    timerInterval?: number | undefined,
+    scheduler: SchedulerLike = queueScheduler
+): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
+    return function forExpiryOperator(source) {
 
-// */public static IObservable<IReadOnlyCollection<TObject>> ToSortedCollection<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// IComparer<TObject> comparer)
-// {
-// return source.QueryWhenChanged(query =>
-// {
-// var items = query.Items.AsList();
-// items.Sort(comparer);
-// return new ReadOnlyCollectionLight<TObject>(items);
-// });
-// }
+        return new Observable<Iterable<readonly [TKey, TObject]>>(observer =>
+        {
+            var dateTime = Date.now();
 
-// /**
-//  * Watches updates for a single value matching the specified key
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param key The key.
+            var autoRemover = asObservableCache( source
+                .pipe(
+                    tap(x => dateTime = scheduler.now()),
+                    transform((value, previous, key) => {
+                        var removeAt = timeSelector(value);
+                        var expireAt = removeAt ? dateTime + removeAt : undefined;
+                        return <ExpirableItem<TObject, TKey>>{                            expireAt,                            key,                            value                        };
+                    })
+                )
+            );
 
-// */public static IObservable<TObject> WatchValue<TObject, TKey>(this IObservableCache<TObject, TKey> source, TKey key)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+            function removalAction()
+            {
+                try
+                {
+                    var toRemove =
+                        ixFrom(autoRemover.values())
+                        .pipe(
+                            ixFilter((x) => x.expireAt !== undefined && x.expireAt <= scheduler.now()),
+                            ixMap((x) => ([x.key, x.value] as const))
+                        );
 
-// return source.Watch(key).Select(u => u.Current);
-// }
+                    observer.next(toRemove);
+                }
+                catch (ex)
+                {
+                    observer.error(ex);
+                }
+            }
 
-// /**
-//  * Watches updates for a single value matching the specified key
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param key The key.
+            var removalSubscription = new SingleAssignmentDisposable();
+            if (timerInterval)
+            {
+                // use polling
+                removalSubscription.disposable = interval(timerInterval).subscribe();
+            }
+            else
+            {
+                //create a timer for each distinct time
+                removalSubscription.disposable = autoRemover
+                    .connect()
+                    .DistinctValues(ei => ei.ExpireAt)
+                    .SubscribeMany(datetime =>
+                    {
+                        var expireAt = datetime.Subtract(scheduler.now());
+                        return timer(expireAt, scheduler)
+                            .pipe(                                take(1)                            )
+                            .subscribe(_ => removalAction());
+                    })
+                    .subscribe();
+            }
 
-// */public static IObservable<TObject> WatchValue<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, TKey key)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+            return Disposable.create(() =>
+            {
+                removalSubscription.dispose();
+                autoRemover.dispose();
+            });
+        });
+    }
+}
 
-// return source.Watch(key).Select(u => u.Current);
-// }
+export function expireAfter<TObject, TKey>(
+    timeSelector: (value: TObject) => number,
+    interval?: number,
+    scheduler: SchedulerLike = queueScheduler
+): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+    return function expireAfterOperator(source) {return Observable.Create<IChangeSet<TObject, TKey>>(observer =>
+    {
+        var cache = new IntermediateCache<TObject, TKey>(_source);
 
-// /**
-//  * Returns an observable of any updates which match the specified key,  preceeded with the initital cache state
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param key The key.
+        var published = cache.Connect().Publish();
+        var subscriber = published.SubscribeSafe(observer);
 
-// */public static IObservable<Change<TObject, TKey>> Watch<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, TKey key)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+        var autoRemover = published.ForExpiry(_timeSelector, _interval, _scheduler)
+            .Finally(observer.OnCompleted)
+            .Subscribe(keys =>
+            {
+                try
+                {
+                    cache.Edit(updater => updater.Remove(keys.Select(kv => kv.Key)));
+                }
+                catch (Exception ex)
+                {
+                    observer.OnError(ex);
+                }
+            });
 
-// return source.SelectMany(updates => updates).Where(update => update.Key.Equals(key));
-// }
+        var connected = published.Connect();
 
-// /**
-//  * Clones the changes  into the specified collection
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param target The target.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Clone<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source, [NotNull] ICollection<TObject> target)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (target == null)
-// {
-// throw new ArgumentNullException(nameof(target));
-// }
-
-// return source.Do(changes =>
-// {
-// foreach (var item in changes)
-// {
-// switch (item.Reason)
-// {
-// case ChangeReason.Add:
-// {
-// target.Add(item.Current);
-// }
-
-// break;
-// case ChangeReason.Update:
-// {
-// target.Remove(item.Previous.Value);
-// target.Add(item.Current);
-// }
-
-// break;
-// case ChangeReason.Remove:
-// target.Remove(item.Current);
-// break;
-// }
-// }
-// });
-// }
-
-// #endregion
+        return Disposable.Create(() =>
+        {
+            connected.Dispose();
+            subscriber.Dispose();
+            autoRemover.Dispose();
+            cache.Dispose();
+        });
+    });
+    }
+    }
+}
 
 // #region Auto removal
 

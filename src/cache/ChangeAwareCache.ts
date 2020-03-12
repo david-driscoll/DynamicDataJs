@@ -175,7 +175,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
         return copy;
     }
 
-    readonly [Symbol.toStringTag]: string;
+    readonly [Symbol.toStringTag] = 'Cache';
 
     [Symbol.iterator](): IterableIterator<[TKey, TObject]> {
         return this.entries();

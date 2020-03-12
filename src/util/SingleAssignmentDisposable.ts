@@ -1,10 +1,10 @@
 /**
  *
  */
-import { IDisposable, ISubscription } from './Disposable';
+import { Disposable, IDisposable, IDisposableOrSubscription, ISubscription } from './Disposable';
 
 export class SingleAssignmentDisposable implements IDisposable {
-    private _currentDisposable?: IDisposable | null;
+    private _currentDisposable?: Disposable | null;
     private _isDisposed = false;
 
     public get isDisposed() {
@@ -14,15 +14,15 @@ export class SingleAssignmentDisposable implements IDisposable {
     public get disposable() {
         return this._currentDisposable;
     }
-    public set disposable(value) {
+    public set disposable(value: IDisposableOrSubscription | null | undefined) {
         if (this._currentDisposable) {
             throw new Error('Disposable has already been assigned');
         }
         if (!this.isDisposed) {
-            this._currentDisposable = value;
+            this._currentDisposable = value ? new Disposable(value) : null;
         }
         if (this.isDisposed && value) {
-            value.dispose();
+            new Disposable(value).dispose();
         }
     }
 
