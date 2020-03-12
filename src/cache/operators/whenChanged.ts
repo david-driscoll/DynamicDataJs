@@ -1,11 +1,11 @@
-import { notificationsFor, Npc } from '../../notify/notifyPropertyChanged';
+import { notificationsFor, NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
 import { filter, map } from 'rxjs/operators';
 import { concat, defer, Observable, of } from 'rxjs';
 
 export type PropertyValue<TObject, TProperty extends keyof TObject> = { sender: TObject; value: TObject[TProperty] };
 
 export function whenChanged<TObject, TProperty extends keyof TObject>(
-    value: Npc<TObject>,
+    value: NotifyPropertyChanged<TObject>,
     key: TProperty,
     notifyInitial = true,
     fallbackValue?: () => TObject[TProperty],
@@ -17,21 +17,21 @@ export function whenChanged<TObject, TProperty extends keyof TObject>(
 }
 
 function whenChangedValues<TObject, TProperty extends keyof TObject>(
-    value: Npc<TObject>,
+    value: NotifyPropertyChanged<TObject>,
     key: TProperty,
     notifyInitial = true,
     fallbackValue?: () => TObject[TProperty],
-): Observable<PropertyValue<Npc<TObject>, TProperty>> {
+): Observable<PropertyValue<NotifyPropertyChanged<TObject>, TProperty>> {
     const propertyChanged = notificationsFor(value).pipe(
         filter(x => x === key),
-        map(t => ({ sender: value, value: value[key] } as PropertyValue<Npc<TObject>, TProperty>)),
+        map(t => ({ sender: value, value: value[key] } as PropertyValue<NotifyPropertyChanged<TObject>, TProperty>)),
     );
     return notifyInitial
         ? concat(
             defer(() => of({
                 sender: value,
                 value: value[key] || fallbackValue?.(),
-            } as PropertyValue<Npc<TObject>, TProperty>)),
+            } as PropertyValue<NotifyPropertyChanged<TObject>, TProperty>)),
             propertyChanged,
         )
         : propertyChanged;

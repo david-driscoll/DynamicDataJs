@@ -1,4 +1,4 @@
-import { Npc, NpcType } from '../../notify/notifyPropertyChanged';
+import { NotifyPropertyChanged, ChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { MonoTypeOperatorFunction, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { autoRefreshOnObservable } from './autoRefreshOnObservable';
@@ -11,11 +11,11 @@ import { throttleTime } from 'rxjs/operators';
  * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
  * @param scheduler The scheduler
  */
-export function autoRefresh<TObject extends NpcType, TKey>(
+export function autoRefresh<TObject extends ChangedType, TKey>(
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<Npc<TObject>, TKey>>;
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>;
 /**
  * Automatically refresh downstream operators when any properties change.
  * @param key the property to watch
@@ -23,18 +23,18 @@ export function autoRefresh<TObject extends NpcType, TKey>(
  * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
  * @param scheduler The scheduler
  */
-export function autoRefresh<TObject extends NpcType, TKey>(
+export function autoRefresh<TObject extends ChangedType, TKey>(
     key: keyof TObject,
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<Npc<TObject>, TKey>>;
-export function autoRefresh<TObject extends NpcType, TKey>(
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>;
+export function autoRefresh<TObject extends ChangedType, TKey>(
     key?: number | keyof TObject,
     changeSetBuffer?: number,
     propertyChangeThrottle?: number | SchedulerLike,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<Npc<TObject>, TKey>> {
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>> {
     let props: string[] = [];
     if (typeof key === 'string' || typeof key === 'symbol') {
         props.push(key as any);

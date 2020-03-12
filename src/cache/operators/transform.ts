@@ -15,11 +15,11 @@ export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error
  * @param transformOnRefresh Should a new transform be applied when a refresh event is received
  * @param exceptionCallback callback when exceptions happen
  */
-export function transform<TObject, TKey, TDestination>(
-    transformFactory: (current: TObject, previous: TObject | undefined, key: TKey) => TDestination,
+export function transform<TSource, TKey, TDestination>(
+    transformFactory: (current: TSource, previous: TSource | undefined, key: TKey) => TDestination,
     transformOnRefresh?: boolean,
-    exceptionCallback?: (error: DynamicDataError<TObject, TKey>) => void,
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<TDestination, TKey>> {
+    exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
+): OperatorFunction<IChangeSet<TSource, TKey>, IChangeSet<TDestination, TKey>> {
     return function transformOperator(source) {
         return source.pipe(
             scan((cache, changes) => {
@@ -66,3 +66,5 @@ export function transform<TObject, TKey, TDestination>(
         );
     };
 }
+
+
