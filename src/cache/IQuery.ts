@@ -33,4 +33,3 @@ export interface IQuery<TObject, TKey> {
 
     [Symbol.iterator](): IterableIterator<[TKey, TObject]>;
 }
-

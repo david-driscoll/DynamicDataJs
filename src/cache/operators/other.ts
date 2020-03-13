@@ -15,270 +15,27 @@
 //     }
 // }
 
-import {
-    MonoTypeOperatorFunction,
-    Observable,
-    OperatorFunction,
-    SchedulerLike,
-    queueScheduler,
-    interval,
-    timer,
-} from 'rxjs';
-import { IChangeSet } from '../IChangeSet';
-import { ArrayOrIterable } from '../../util/ArrayOrIterable';
-import { take, tap } from 'rxjs/operators';
-import { transform } from './transform';
-import { asObservableCache } from './asObservableCache';
-import { from as ixFrom, toArray as ixToArray } from 'ix/iterable'
-import { filter as ixFilter, map as ixMap } from 'ix/iterable/operators'
-import { Disposable, SingleAssignmentDisposable } from '../../util';
-import { ExpirableItem } from '../ExpirableItem';
-
-
-
-export function forExpiry<TObject, TKey>(
-    timeSelector: (value: TObject) => number | undefined,
-    timerInterval?: number | undefined,
-    scheduler: SchedulerLike = queueScheduler
-): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
-    return function forExpiryOperator(source) {
-
-        return new Observable<Iterable<readonly [TKey, TObject]>>(observer =>
-        {
-            var dateTime = Date.now();
-
-            var autoRemover = asObservableCache( source
-                .pipe(
-                    tap(x => dateTime = scheduler.now()),
-                    transform((value, previous, key) => {
-                        var removeAt = timeSelector(value);
-                        var expireAt = removeAt ? dateTime + removeAt : undefined;
-                        return <ExpirableItem<TObject, TKey>>{                            expireAt,                            key,                            value                        };
-                    })
-                )
-            );
-
-            function removalAction()
-            {
-                try
-                {
-                    var toRemove =
-                        ixFrom(autoRemover.values())
-                        .pipe(
-                            ixFilter((x) => x.expireAt !== undefined && x.expireAt <= scheduler.now()),
-                            ixMap((x) => ([x.key, x.value] as const))
-                        );
-
-                    observer.next(toRemove);
-                }
-                catch (ex)
-                {
-                    observer.error(ex);
-                }
-            }
-
-            var removalSubscription = new SingleAssignmentDisposable();
-            if (timerInterval)
-            {
-                // use polling
-                removalSubscription.disposable = interval(timerInterval).subscribe();
-            }
-            else
-            {
-                //create a timer for each distinct time
-                removalSubscription.disposable = autoRemover
-                    .connect()
-                    .DistinctValues(ei => ei.ExpireAt)
-                    .SubscribeMany(datetime =>
-                    {
-                        var expireAt = datetime.Subtract(scheduler.now());
-                        return timer(expireAt, scheduler)
-                            .pipe(                                take(1)                            )
-                            .subscribe(_ => removalAction());
-                    })
-                    .subscribe();
-            }
-
-            return Disposable.create(() =>
-            {
-                removalSubscription.dispose();
-                autoRemover.dispose();
-            });
-        });
-    }
-}
-
-export function expireAfter<TObject, TKey>(
-    timeSelector: (value: TObject) => number,
-    interval?: number,
-    scheduler: SchedulerLike = queueScheduler
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function expireAfterOperator(source) {return Observable.Create<IChangeSet<TObject, TKey>>(observer =>
-    {
-        var cache = new IntermediateCache<TObject, TKey>(_source);
-
-        var published = cache.Connect().Publish();
-        var subscriber = published.SubscribeSafe(observer);
-
-        var autoRemover = published.ForExpiry(_timeSelector, _interval, _scheduler)
-            .Finally(observer.OnCompleted)
-            .Subscribe(keys =>
-            {
-                try
-                {
-                    cache.Edit(updater => updater.Remove(keys.Select(kv => kv.Key)));
-                }
-                catch (Exception ex)
-                {
-                    observer.OnError(ex);
-                }
-            });
-
-        var connected = published.Connect();
-
-        return Disposable.Create(() =>
-        {
-            connected.Dispose();
-            subscriber.Dispose();
-            autoRemover.Dispose();
-            cache.Dispose();
-        });
-    });
-    }
-    }
-}
-
-// #region Auto removal
-
-// /**
-//  * Automatically removes items from the stream after the time specified by
-//  * the timeSelector elapses.  Return null if the item should never be removed
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param timeSelector The time selector.
-// public static IObservable<IChangeSet<TObject, TKey>> ExpireAfter<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TimeSpan?> timeSelector)
-// {
-// return ExpireAfter(source, timeSelector, Scheduler.Default);
-// }
-
-// /**
-//  * Automatically removes items from the stream after the time specified by
-//  * the timeSelector elapses.  Return null if the item should never be removed
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param timeSelector The time selector.
-// * @param scheduler The scheduler.
-// */public static IObservable<IChangeSet<TObject, TKey>> ExpireAfter<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TimeSpan?> timeSelector, IScheduler scheduler)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (timeSelector == null)
-// {
-// throw new ArgumentNullException(nameof(timeSelector));
-// }
-
-// return source.ExpireAfter(timeSelector, null, scheduler);
-// }
-
-// /**
-//  * Automatically removes items from the stream on the next poll after the time specified by
-//  * the time selector elapses
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param source The cache.
-// * @param timeSelector The time selector.  Return null if the item should never be removed
-// * @param pollingInterval The polling interval.  if this value is specified,  items are expired on an interval. This will result in a loss of accuracy of the time which the item is expired but is less computationally expensive.
-// public static IObservable<IChangeSet<TObject, TKey>> ExpireAfter<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TimeSpan?> timeSelector, TimeSpan? pollingInterval)
-// {
-// return ExpireAfter(source, timeSelector, pollingInterval, Scheduler.Default);
-// }
-
-// /**
-//  * Automatically removes items from the stream on the next poll after the time specified by
-//  * the time selector elapses
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param source The cache.
-// * @param timeSelector The time selector.  Return null if the item should never be removed
-// * @param pollingInterval The polling interval.  if this value is specified,  items are expired on an interval. This will result in a loss of accuracy of the time which the item is expired but is less computationally expensive.
-// * @param scheduler The scheduler.
-// */public static IObservable<IChangeSet<TObject, TKey>> ExpireAfter<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TimeSpan?> timeSelector, TimeSpan? pollingInterval, IScheduler scheduler)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (timeSelector == null)
-// {
-// throw new ArgumentNullException(nameof(timeSelector));
-// }
-
-// return new TimeExpirer<TObject, TKey>(source, timeSelector, pollingInterval, scheduler).ExpireAfter();
-// }
-
-// /**
-//  * Automatically removes items from the cache after the time specified by
-//  * the time selector elapses.
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param source The cache.
-// * @param timeSelector The time selector.  Return null if the item should never be removed
-// * @param interval The polling interval.  Since multiple timer subscriptions can be expensive, it may be worth setting the interval.
-// * @param scheduler The scheduler.
-// internal static IObservable<IEnumerable<KeyValuePair<TKey, TObject>>> ForExpiry<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// Func<TObject, TimeSpan?> timeSelector,
-// TimeSpan? interval,
-// IScheduler scheduler)
-// {
-// return new TimeExpirer<TObject, TKey>(source, timeSelector, interval, scheduler).ForExpiry();
-// }
-
-// /**
-//  * Applies a size limiter to the number of records which can be included in the
-//  * underlying cache.  When the size limit is reached the oldest items are removed.
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param size The size.
-// */public static IObservable<IChangeSet<TObject, TKey>> LimitSizeTo<TObject, TKey>(
-// this IObservable<IChangeSet<TObject, TKey>> source, int size)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (size <= 0)
-// {
-// throw new ArgumentException("Size limit must be greater than zero");
-// }
-
-// return new SizeExpirer<TObject, TKey>(source, size).Run();
-// }
-
-// #endregion
-
-// #region Paged
-
 // /**
 //  * Returns the page as specified by the pageRequests observable
+//  * @typeparam TObject The type of the object.
+//  * @typeparam TKey The type of the key.
+//  * @param pageRequests The page requests.
+//  */
+// export function page<TObject, TKey>(
+//     pageRequests: Observable<PageRequest>
+// ): OperatorFunction<IChangeSet<TObject, TKey>, IPagedChangeSet<TObject, TKey>> {
+//     return function pageOperator(source) {
+//         return new Observable<IPagedChangeSet<TObject, TKey>>(observer => {
+//             var paginator = new Paginator();
+//             var request = pageRequests.pipe(map(paginator.Paginate));
+//             var datachange = source.pipe(map(paginator.update));
 
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param pageRequests The page requests.
+//             return merge(request, datachange)
+//                 .pipe(filter(updates => updates !== undefined))
+//                 .subscribe(observer);
+//         });
+//     };
+// }
 
 // public static IObservable<IPagedChangeSet<TObject, TKey>> Page<TObject, TKey>([NotNull] this IObservable<ISortedChangeSet<TObject, TKey>> source,
 // [NotNull] IObservable<IPageRequest> pageRequests)
@@ -296,12 +53,337 @@ export function expireAfter<TObject, TKey>(
 // return new Page<TObject, TKey>(source, pageRequests).Run();
 // }
 
-// #endregion
+import {
+    MonoTypeOperatorFunction,
+    Observable,
+    OperatorFunction,
+    SchedulerLike,
+    queueScheduler,
+    interval,
+    timer,
+    ConnectableObservable,
+    merge,
+} from 'rxjs';
+import { IChangeSet } from '../IChangeSet';
+import { DistinctChangeSet } from '../DistinctChangeSet';
+import { IPagedChangeSet } from '../IPagedChangeSet';
+import { ArrayOrIterable } from '../../util/ArrayOrIterable';
+import { take, tap, map, filter, publish, finalize } from 'rxjs/operators';
+import { transform } from './transform';
+import { asObservableCache } from './asObservableCache';
+import { from as ixFrom, toArray as ixToArray, some } from 'ix/iterable';
+import { filter as ixFilter, map as ixMap, skip as ixSkip, orderByDescending } from 'ix/iterable/operators';
+import { Disposable, SingleAssignmentDisposable } from '../../util';
+import { ExpirableItem } from '../ExpirableItem';
+import { ChangeSet } from '../ChangeSet';
+import { notEmpty } from './notEmpty';
+import { Change } from '../Change';
+import { subscribeMany } from './subscribeMany';
+import { IntermediateCache } from '../IntermediateCache';
+import { ChangeAwareCache } from '../ChangeAwareCache';
+import { PageRequest } from '../PageRequest';
 
-// #region Sort
+export function distinctValues<TObject, TKey, TValue>(
+    valueSelector: (value: TObject) => TValue
+): OperatorFunction<IChangeSet<TObject, TKey>, DistinctChangeSet<TValue>> {
+    const _valueCounters = new Map<TValue, number>();
+    const _keyCounters = new Map<TKey, number>();
+    const _itemCache = new Map<TKey, TValue>();
 
-// private const int DefaultSortResetThreshold = 100;
+    return function distinctValuesOperator(source) {
+        return source.pipe(map(calculate), notEmpty());
+    };
+    function addKeyAction(key: TKey, value: TValue) {
+        const count = _keyCounters.get(key);
+        if (count !== undefined) {
+            _keyCounters.set(key, count + 1);
+        } else {
+            _keyCounters.set(key, 1);
+            _itemCache.set(key, value);
+        }
+    }
 
+    function removeKeyAction(key: TKey) {
+        var counter = _keyCounters.get(key);
+        if (counter === undefined) {
+            return;
+        }
+
+        //decrement counter
+        var newCount = counter - 1;
+        _keyCounters.set(key, newCount);
+        if (newCount != 0) {
+            return;
+        }
+
+        //if there are none, then remove from cache
+        _keyCounters.delete(key);
+        _itemCache.delete(key);
+    }
+
+    function calculate(changes: IChangeSet<TObject, TKey>): DistinctChangeSet<TValue> {
+        var result = new ChangeSet<TValue, TValue>();
+
+        function addValueAction(value: TValue) {
+            const count = _keyCounters.get(key);
+            if (count !== undefined) {
+                _valueCounters.set(value, count + 1);
+            } else {
+                _valueCounters.set(value, 1);
+                result.add(new Change('add', value, value));
+            }
+        }
+
+        function removeValueAction(value: TValue) {
+            var counter = _valueCounters.get(value);
+            if (counter === undefined) {
+                return;
+            }
+
+            //decrement counter
+            var newCount = counter - 1;
+            _valueCounters.set(value, newCount);
+            if (newCount != 0) {
+                return;
+            }
+
+            //if there are none, then remove and notify
+            _valueCounters.delete(value);
+            result.add(new Change('remove', value, value));
+        }
+
+        for (var change of changes) {
+            var key = change.key;
+            switch (change.reason) {
+                case 'add': {
+                    var value = valueSelector(change.current);
+                    addKeyAction(key, value);
+                    addValueAction(value);
+                    break;
+                }
+                case 'refresh':
+                case 'update': {
+                    var value = valueSelector(change.current);
+                    var previous = _itemCache.get(key)!;
+                    if (value === previous) {
+                        continue;
+                    }
+
+                    removeValueAction(previous);
+                    addValueAction(value);
+                    _itemCache.set(key, value);
+                    break;
+                }
+                case 'remove': {
+                    var previous = _itemCache.get(key)!;
+                    removeKeyAction(key);
+                    removeValueAction(previous);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+}
+
+/**
+ * Automatically removes items from the stream after the time specified by
+ * the timeSelector elapses.  Return null if the item should never be removed
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @param timeSelector The time selector.
+ * @param timerInterval The time interval.
+ * @param scheduler The scheduler.
+ */
+export function forExpiry<TObject, TKey>(
+    timeSelector: (value: TObject) => number | undefined,
+    timerInterval?: number | undefined,
+    scheduler: SchedulerLike = queueScheduler
+): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
+    return function forExpiryOperator(source) {
+        return new Observable<Iterable<readonly [TKey, TObject]>>(observer => {
+            var dateTime = Date.now();
+
+            var autoRemover = asObservableCache(
+                source.pipe(
+                    tap(x => (dateTime = scheduler.now())),
+                    transform((value, previous, key) => {
+                        var removeAt = timeSelector(value);
+                        var expireAt = removeAt ? dateTime + removeAt : undefined;
+                        return <ExpirableItem<TObject, TKey>>{ expireAt, key, value };
+                    })
+                )
+            );
+
+            function removalAction() {
+                try {
+                    var toRemove = ixFrom(autoRemover.values()).pipe(
+                        ixFilter(x => x.expireAt !== undefined && x.expireAt <= scheduler.now()),
+                        ixMap(x => [x.key, x.value] as const)
+                    );
+
+                    observer.next(toRemove);
+                } catch (error) {
+                    observer.error(error);
+                }
+            }
+
+            var removalSubscription = new SingleAssignmentDisposable();
+            if (timerInterval) {
+                // use polling
+                removalSubscription.disposable = interval(timerInterval).subscribe();
+            } else {
+                //create a timer for each distinct time
+                removalSubscription.disposable = autoRemover
+                    .connect()
+                    .pipe(
+                        distinctValues(ei => ei.expireAt),
+                        subscribeMany(datetime => {
+                            var expireAt = datetime - scheduler.now();
+                            return timer(expireAt, scheduler)
+                                .pipe(take(1))
+                                .subscribe(_ => removalAction());
+                        })
+                    )
+                    .subscribe();
+            }
+
+            return Disposable.create(() => {
+                removalSubscription.dispose();
+                autoRemover.dispose();
+            });
+        });
+    };
+}
+
+/**
+ * Automatically removes items from the cache after the time specified by
+ * the time selector elapses.
+
+* @typeparam TObject The type of the object.
+* @typeparam TKey The type of the key.
+* @param timeSelector The time selector.  Return null if the item should never be removed
+* @param interval The polling interval.  Since multiple timer subscriptions can be expensive, it may be worth setting the interval.
+* @param scheduler The scheduler.
+*/
+export function expireAfter<TObject, TKey>(
+    timeSelector: (value: TObject) => number,
+    interval?: number,
+    scheduler: SchedulerLike = queueScheduler
+): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+    return function expireAfterOperator(source) {
+        return new Observable<IChangeSet<TObject, TKey>>(observer => {
+            var cache = new IntermediateCache<TObject, TKey>(source);
+
+            const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
+            var subscriber = published.subscribe(observer);
+
+            var autoRemover = published
+                .pipe(
+                    forExpiry(timeSelector, interval, scheduler),
+                    finalize(() => observer.complete())
+                )
+                .subscribe(keys => {
+                    try {
+                        cache.edit(updater => updater.removeKeys(ixFrom(keys).pipe(ixMap(([key, _]) => key))));
+                    } catch (error) {
+                        observer.error(error);
+                    }
+                });
+
+            var connected = published.connect();
+
+            return Disposable.create(() => {
+                connected.unsubscribe();
+                subscriber.unsubscribe();
+                autoRemover.unsubscribe();
+                cache.dispose();
+            });
+        });
+    };
+}
+
+/**
+ * Applies a size limiter to the number of records which can be included in the
+ * underlying cache.  When the size limit is reached the oldest items are removed.
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ * @param size The size.
+ */
+export function limitSizeTo<TObject, TKey>(size: number): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+    return function limitSizeToOperaor(source) {
+        return new Observable<IChangeSet<TObject, TKey>>(observer => {
+            var sizeLimiter = new SizeLimiter<TObject, TKey>(size);
+            var root = new IntermediateCache<TObject, TKey>(source);
+
+            var subscriber = root
+                .connect()
+                .pipe(
+                    transform((value, previous, key) => {
+                        return <ExpirableItem<TObject, TKey>>{ expireAt: Date.now(), value, key };
+                    }),
+                    map(changes => {
+                        var result = sizeLimiter.change(changes);
+
+                        var removes = ixFrom(result).pipe(ixFilter(c => c.reason === 'remove'));
+                        root.edit(updater => removes.forEach(c => updater.removeKey(c.key)));
+                        return result;
+                    }),
+                    finalize(() => observer.complete())
+                )
+                .subscribe(observer);
+
+            return Disposable.create(() => {
+                subscriber.unsubscribe();
+                root.dispose();
+            });
+        });
+    };
+}
+
+class SizeLimiter<TObject, TKey> {
+    private readonly _cache = new ChangeAwareCache<ExpirableItem<TObject, TKey>, TKey>();
+
+    private readonly _sizeLimit: number;
+
+    public constructor(size: number) {
+        this._sizeLimit = size;
+    }
+
+    public change(updates: IChangeSet<ExpirableItem<TObject, TKey>, TKey>): IChangeSet<TObject, TKey> {
+        this._cache.clone(updates);
+
+        var itemstoexpire = ixFrom(this._cache.entries()).pipe(
+            orderByDescending(([key, value]) => value.expireAt),
+            ixSkip(this._sizeLimit),
+            ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value))
+        );
+
+        if (some(itemstoexpire, z => true)) {
+            this._cache.removeKeys(itemstoexpire.pipe(ixMap(x => x.key)));
+        }
+
+        var notifications = this._cache.captureChanges();
+        var changed = ixFrom(notifications).pipe(
+            ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value))
+        );
+
+        return new ChangeSet<TObject, TKey>(changed);
+    }
+
+    public CloneAndReturnExpiredOnly(updates: IChangeSet<ExpirableItem<TObject, TKey>, TKey>): TKey[] {
+        this._cache.clone(updates);
+        this._cache.captureChanges(); //Clear any changes
+
+        return ixToArray(
+            ixFrom(this._cache.entries()).pipe(
+                orderByDescending(([key, value]) => value.expireAt),
+                ixSkip(this._sizeLimit),
+                ixMap(x => x[0])
+            )
+        );
+    }
+}
 // /**
 //  * Sorts using the specified comparer.
 //  * Returns the underlying ChangeSet as as per the system conventions.
@@ -310,9 +392,26 @@ export function expireAfter<TObject, TKey>(
 // * @typeparam TObject The type of the object.
 // * @typeparam TKey The type of the key.
 // * @param comparer The comparer.
-// * @param sortOptimisations Sort optimisation flags. Specify one or more sort optimisations
+// * @param sortOptimizations Sort optimization flags. Specify one or more sort optimizations
 // * @param resetThreshold The number of updates before the entire list is resorted (rather than inline sort)
-// */public static IObservable<ISortedChangeSet<TObject, TKey>> Sort<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
+// */
+export function sort<TObject, TKey>(
+    comparer: IComparer<TObject>,
+    sortOptimisations: SortOptimizations = 'none',
+    comparerChangedObservable?: Observable<IComparer<TObject>>,
+    resorter?: Observable<unknown>,
+    resetThreshold = -1
+) {
+    return function sortOperator() {};
+}
+
+// #endregion
+
+// #region Sort
+
+// private const int DefaultSortResetThreshold = 100;
+
+// public static IObservable < ISortedChangeSet < TObject, TKey >> Sort<TObject, TKey>(this IObservable < IChangeSet < TObject, TKey >> source,
 // IComparer<TObject> comparer,
 // SortOptimisations sortOptimisations = SortOptimisations.None,
 // int resetThreshold = DefaultSortResetThreshold)
@@ -1245,13 +1344,11 @@ export function expireAfter<TObject, TKey>(
 
 // #region Transform Async
 
-
 // #region Transform many
 
 // #endregion
 
 // #region Transform safe
-
 
 // /**
 //  * Transforms the object to a fully recursive tree, create a hiearchy based on the pivot function
