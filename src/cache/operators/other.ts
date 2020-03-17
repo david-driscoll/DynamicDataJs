@@ -62,7 +62,7 @@ import {
     interval,
     timer,
     ConnectableObservable,
-    merge,
+    merge, never, NEVER,
 } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { DistinctChangeSet } from '../DistinctChangeSet';
@@ -82,6 +82,8 @@ import { subscribeMany } from './subscribeMany';
 import { IntermediateCache } from '../IntermediateCache';
 import { ChangeAwareCache } from '../ChangeAwareCache';
 import { PageRequest } from '../PageRequest';
+import { Comparer, ISortedChangeSet, SortReason } from '../ISortedChangeSet';
+import { SortOptimizations } from '../SortOptimizations';
 
 export function distinctValues<TObject, TKey, TValue>(
     valueSelector: (value: TObject) => TValue
@@ -104,13 +106,13 @@ export function distinctValues<TObject, TKey, TValue>(
     }
 
     function removeKeyAction(key: TKey) {
-        var counter = _keyCounters.get(key);
+        const counter = _keyCounters.get(key);
         if (counter === undefined) {
             return;
         }
 
         //decrement counter
-        var newCount = counter - 1;
+        const newCount = counter - 1;
         _keyCounters.set(key, newCount);
         if (newCount != 0) {
             return;
@@ -122,7 +124,7 @@ export function distinctValues<TObject, TKey, TValue>(
     }
 
     function calculate(changes: IChangeSet<TObject, TKey>): DistinctChangeSet<TValue> {
-        var result = new ChangeSet<TValue, TValue>();
+        const result = new ChangeSet<TValue, TValue>();
 
         function addValueAction(value: TValue) {
             const count = _keyCounters.get(key);
@@ -135,13 +137,13 @@ export function distinctValues<TObject, TKey, TValue>(
         }
 
         function removeValueAction(value: TValue) {
-            var counter = _valueCounters.get(value);
+            const counter = _valueCounters.get(value);
             if (counter === undefined) {
                 return;
             }
 
             //decrement counter
-            var newCount = counter - 1;
+            const newCount = counter - 1;
             _valueCounters.set(value, newCount);
             if (newCount != 0) {
                 return;
@@ -152,7 +154,7 @@ export function distinctValues<TObject, TKey, TValue>(
             result.add(new Change('remove', value, value));
         }
 
-        for (var change of changes) {
+        for (let change of changes) {
             var key = change.key;
             switch (change.reason) {
                 case 'add': {
@@ -202,24 +204,24 @@ export function forExpiry<TObject, TKey>(
 ): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
     return function forExpiryOperator(source) {
         return new Observable<Iterable<readonly [TKey, TObject]>>(observer => {
-            var dateTime = Date.now();
+            const dateTime = Date.now();
 
-            var autoRemover = asObservableCache(
+            const autoRemover = asObservableCache(
                 source.pipe(
                     tap(x => (dateTime = scheduler.now())),
                     transform((value, previous, key) => {
-                        var removeAt = timeSelector(value);
-                        var expireAt = removeAt ? dateTime + removeAt : undefined;
+                        const removeAt = timeSelector(value);
+                        const expireAt = removeAt ? dateTime + removeAt : undefined;
                         return <ExpirableItem<TObject, TKey>>{ expireAt, key, value };
-                    })
-                )
+                    }),
+                ),
             );
 
             function removalAction() {
                 try {
-                    var toRemove = ixFrom(autoRemover.values()).pipe(
+                    const toRemove = ixFrom(autoRemover.values()).pipe(
                         ixFilter(x => x.expireAt !== undefined && x.expireAt <= scheduler.now()),
-                        ixMap(x => [x.key, x.value] as const)
+                        ixMap(x => [x.key, x.value] as const),
                     );
 
                     observer.next(toRemove);
@@ -228,7 +230,7 @@ export function forExpiry<TObject, TKey>(
                 }
             }
 
-            var removalSubscription = new SingleAssignmentDisposable();
+            const removalSubscription = new SingleAssignmentDisposable();
             if (timerInterval) {
                 // use polling
                 removalSubscription.disposable = interval(timerInterval).subscribe();
@@ -239,7 +241,7 @@ export function forExpiry<TObject, TKey>(
                     .pipe(
                         distinctValues(ei => ei.expireAt),
                         subscribeMany(datetime => {
-                            var expireAt = datetime - scheduler.now();
+                            const expireAt = datetime - scheduler.now();
                             return timer(expireAt, scheduler)
                                 .pipe(take(1))
                                 .subscribe(_ => removalAction());
@@ -273,15 +275,15 @@ export function expireAfter<TObject, TKey>(
 ): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     return function expireAfterOperator(source) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            var cache = new IntermediateCache<TObject, TKey>(source);
+            const cache = new IntermediateCache<TObject, TKey>(source);
 
             const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
-            var subscriber = published.subscribe(observer);
+            const subscriber = published.subscribe(observer);
 
-            var autoRemover = published
+            const autoRemover = published
                 .pipe(
                     forExpiry(timeSelector, interval, scheduler),
-                    finalize(() => observer.complete())
+                    finalize(() => observer.complete()),
                 )
                 .subscribe(keys => {
                     try {
@@ -291,7 +293,7 @@ export function expireAfter<TObject, TKey>(
                     }
                 });
 
-            var connected = published.connect();
+            const connected = published.connect();
 
             return Disposable.create(() => {
                 connected.unsubscribe();
@@ -313,23 +315,23 @@ export function expireAfter<TObject, TKey>(
 export function limitSizeTo<TObject, TKey>(size: number): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     return function limitSizeToOperaor(source) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            var sizeLimiter = new SizeLimiter<TObject, TKey>(size);
-            var root = new IntermediateCache<TObject, TKey>(source);
+            const sizeLimiter = new SizeLimiter<TObject, TKey>(size);
+            const root = new IntermediateCache<TObject, TKey>(source);
 
-            var subscriber = root
+            const subscriber = root
                 .connect()
                 .pipe(
                     transform((value, previous, key) => {
                         return <ExpirableItem<TObject, TKey>>{ expireAt: Date.now(), value, key };
                     }),
                     map(changes => {
-                        var result = sizeLimiter.change(changes);
+                        const result = sizeLimiter.change(changes);
 
-                        var removes = ixFrom(result).pipe(ixFilter(c => c.reason === 'remove'));
+                        const removes = ixFrom(result).pipe(ixFilter(c => c.reason === 'remove'));
                         root.edit(updater => removes.forEach(c => updater.removeKey(c.key)));
                         return result;
                     }),
-                    finalize(() => observer.complete())
+                    finalize(() => observer.complete()),
                 )
                 .subscribe(observer);
 
@@ -353,19 +355,19 @@ class SizeLimiter<TObject, TKey> {
     public change(updates: IChangeSet<ExpirableItem<TObject, TKey>, TKey>): IChangeSet<TObject, TKey> {
         this._cache.clone(updates);
 
-        var itemstoexpire = ixFrom(this._cache.entries()).pipe(
+        const itemstoexpire = ixFrom(this._cache.entries()).pipe(
             orderByDescending(([key, value]) => value.expireAt),
             ixSkip(this._sizeLimit),
-            ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value))
+            ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value)),
         );
 
         if (some(itemstoexpire, z => true)) {
             this._cache.removeKeys(itemstoexpire.pipe(ixMap(x => x.key)));
         }
 
-        var notifications = this._cache.captureChanges();
-        var changed = ixFrom(notifications).pipe(
-            ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value))
+        const notifications = this._cache.captureChanges();
+        const changed = ixFrom(notifications).pipe(
+            ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value)),
         );
 
         return new ChangeSet<TObject, TKey>(changed);
@@ -396,13 +398,156 @@ class SizeLimiter<TObject, TKey> {
 // * @param resetThreshold The number of updates before the entire list is resorted (rather than inline sort)
 // */
 export function sort<TObject, TKey>(
-    comparer: IComparer<TObject>,
+    comparer: Comparer<TObject>,
     sortOptimisations: SortOptimizations = 'none',
-    comparerChangedObservable?: Observable<IComparer<TObject>>,
+    comparerChangedObservable?: Observable<Comparer<TObject>>,
     resorter?: Observable<unknown>,
     resetThreshold = -1
-) {
-    return function sortOperator() {};
+): OperatorFunction<IChangeSet<TObject, TKey>, ISortedChangeSet<TObject, TKey>> {
+    return function sortOperator(source) {
+        return new Observable<ISortedChangeSet<TObject, TKey>>(observer =>
+        {
+            //check for nulls so we can prevent a lock when not required
+            if (comparerChangedObservable === undefined && resorter === undefined)
+            {
+                return source
+                    .pipe(
+                        map(sortChanges),
+                        filter(z => !!z)
+                    ).subscribe(observer);
+            }
+
+            const comparerChanged = (comparerChangedObservable ?? NEVER)
+                .pipe(map(sortComparer));
+
+            const sortAgain = (resorter ?? NEVER)
+                .pipe(map(sorter));
+
+            const dataChanged = source
+                .pipe(map(sorter));
+
+            return merge(comparerChanged, dataChanged, sortAgain)
+                .pipe(filter(z => !!z))
+                .subscribe(observer);
+        });
+
+        function resort(changes: IChangeSet<TObject, TKey> ) {
+
+        }
+
+        function sortChanges(changes: IChangeSet<TObject, TKey> ) {
+
+        }
+
+        function sortComparer(comparer: Comparer<TObject>) {
+
+        }
+
+        const _cache = new ChangeAwareCache<TObject, TKey>();
+
+    let  _comparer: KeyValueComparer<TObject, TKey>;
+     let _sorted= new KeyValueCollection<TObject, TKey>();
+    let  _haveReceivedData  = false;
+    let  _initialised= false;
+    let  _calculator: IndexCalculator<TObject, TKey>;
+
+        function doSort(sortReason: SortReason , changes?: IChangeSet<TObject, TKey> ): ISortedChangeSet<TObject, TKey> | undefined {
+                if (changes != null)
+                {
+                    _cache.clone(changes);
+                    changes = _cache.captureChanges();
+                    _haveReceivedData = true;
+                    if (_comparer == null)
+                    {
+                        return;
+                    }
+                }
+
+                //if the comparer is not set, return nothing
+                if (_comparer == null || !_haveReceivedData)
+                {
+                    return
+                }
+
+                if (!_initialised)
+                {
+                    sortReason = 'initialLoad';
+                    _initialised = true;
+                }
+                else if (changes != null && (resetThreshold > 0 && changes.size >= resetThreshold))
+                {
+                    sortReason = 'reset';
+                }
+
+                let changeSet: IChangeSet<TObject, TKey> ;
+                switch (sortReason)
+                {
+                    case 'initialLoad':
+                    {
+                        //For the first batch, changes may have arrived before the comparer was set.
+                        //therefore infer the first batch of changes from the cache
+                        _calculator = new IndexCalculator<TObject, TKey>(_comparer, sortOptimisations);
+                        changeSet = _calculator.Load(_cache);
+                    }
+
+                        break;
+                    case 'reset':
+                    {
+                        _calculator.Reset(_cache);
+                        changeSet = changes;
+                    }
+
+                        break;
+                    case 'dataChanged':
+                    {
+                        changeSet = _calculator.Calculate(changes);
+                    }
+
+                        break;
+
+                    case 'comparerChanged':
+                    {
+                        changeSet = _calculator.ChangeComparer(_comparer);
+                        if (resetThreshold > 0 && _cache.size >= resetThreshold)
+                        {
+                            sortReason = 'reset';
+                            _calculator.Reset(_cache);
+                        }
+                        else
+                        {
+                            sortReason = 'reorder';
+                            changeSet = _calculator.Reorder();
+                        }
+                    }
+
+                        break;
+
+                    case 'reorder':
+                    {
+                        changeSet = _calculator.Reorder();
+                    }
+
+                        break;
+                    default:
+                        throw new Error('sortReason');
+                }
+
+                if ((sortReason === 'initialLoad' || sortReason === 'dataChanged')
+                    && changeSet.size == 0)
+                {
+                    return ;
+                }
+
+                if (sortReason == 'reorder' && changeSet.size === 0)
+                {
+                    return ;
+                }
+
+                _sorted = new KeyValueCollection<TObject, TKey>(_calculator.List.ToList(), _comparer, sortReason, sortOptimisations);
+                return new SortedChangeSet<TObject, TKey>(_sorted, changeSet);
+
+        }
+    };
 }
 
 // #endregion
