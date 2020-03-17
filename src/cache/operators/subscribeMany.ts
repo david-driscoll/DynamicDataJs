@@ -19,7 +19,7 @@ export function subscribeMany<TObject, TKey>(
             const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
             const subscriptions = published
                 .pipe(
-                    transform((c, p, k) => subscriptionFactory(c, k)),
+                    transform((c, k, p) => subscriptionFactory(c, k)),
                     disposeMany(),
                 )
                 .subscribe();

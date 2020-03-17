@@ -16,7 +16,7 @@ export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error
  * @param exceptionCallback callback when exceptions happen
  */
 export function transform<TSource, TKey, TDestination>(
-    transformFactory: (current: TSource, previous: TSource | undefined, key: TKey) => TDestination,
+    transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
     transformOnRefresh?: boolean,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
 ): OperatorFunction<IChangeSet<TSource, TKey>, IChangeSet<TDestination, TKey>> {
@@ -30,13 +30,13 @@ export function transform<TSource, TKey, TDestination>(
                             let transformed: TDestination;
                             if (exceptionCallback != null) {
                                 try {
-                                    transformed = transformFactory(change.current, change.previous, change.key);
+                                    transformed = transformFactory(change.current, change.key, change.previous);
                                     cache.addOrUpdate(transformed, change.key);
                                 } catch (error) {
                                     exceptionCallback({ error: error, key: change.key, value: change.current });
                                 }
                             } else {
-                                transformed = transformFactory(change.current, change.previous, change.key);
+                                transformed = transformFactory(change.current, change.key, change.previous);
                                 cache.addOrUpdate(transformed, change.key);
                             }
                         }
@@ -46,7 +46,7 @@ export function transform<TSource, TKey, TDestination>(
                             break;
                         case 'refresh': {
                             if (transformOnRefresh) {
-                                const transformed = transformFactory(change.current, change.previous, change.key);
+                                const transformed = transformFactory(change.current, change.key, change.previous);
                                 cache.addOrUpdate(transformed, change.key);
                             } else {
                                 cache.refresh(change.key);

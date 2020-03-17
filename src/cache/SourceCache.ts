@@ -24,6 +24,8 @@ export class SourceCache<TObject, TKey> implements ISourceCache<TObject, TKey> {
         this._innerCache = new ObservableCache<TObject, TKey>(keySelector);
     }
 
+    [Symbol.toStringTag]: "ObservableCache" = 'ObservableCache';
+
     edit(updateAction: (updater: ISourceUpdater<TObject, TKey>) => void): void {
         this._innerCache.updateFromSource(updateAction);
     }
@@ -84,6 +86,8 @@ export function updatable<TObject, TKey>(sourceCache: ISourceCache<TObject, TKey
 class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, ISourceUpdater<TObject, TKey> {
     constructor(private readonly _sourceCache: ISourceCache<TObject, TKey>) {
     }
+
+    [Symbol.toStringTag]: "ObservableCache" = 'ObservableCache';
 
     edit(updateAction: (updater: ISourceUpdater<TObject, TKey>) => void): void {
         return this._sourceCache.edit(updateAction);

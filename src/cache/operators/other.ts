@@ -37,1194 +37,6 @@
 //     };
 // }
 
-// public static IObservable<IPagedChangeSet<TObject, TKey>> Page<TObject, TKey>([NotNull] this IObservable<ISortedChangeSet<TObject, TKey>> source,
-// [NotNull] IObservable<IPageRequest> pageRequests)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (pageRequests == null)
-// {
-// throw new ArgumentNullException(nameof(pageRequests));
-// }
-
-// return new Page<TObject, TKey>(source, pageRequests).Run();
-// }
-
-import {
-    MonoTypeOperatorFunction,
-    Observable,
-    OperatorFunction,
-    SchedulerLike,
-    queueScheduler,
-    interval,
-    timer,
-    ConnectableObservable,
-    merge, never, NEVER,
-} from 'rxjs';
-import { IChangeSet } from '../IChangeSet';
-import { DistinctChangeSet } from '../DistinctChangeSet';
-import { IPagedChangeSet } from '../IPagedChangeSet';
-import { ArrayOrIterable } from '../../util/ArrayOrIterable';
-import { take, tap, map, filter, publish, finalize } from 'rxjs/operators';
-import { transform } from './transform';
-import { asObservableCache } from './asObservableCache';
-import { from as ixFrom, toArray as ixToArray, some } from 'ix/iterable';
-import { filter as ixFilter, map as ixMap, skip as ixSkip, orderByDescending } from 'ix/iterable/operators';
-import { Disposable, SingleAssignmentDisposable } from '../../util';
-import { ExpirableItem } from '../ExpirableItem';
-import { ChangeSet } from '../ChangeSet';
-import { notEmpty } from './notEmpty';
-import { Change } from '../Change';
-import { subscribeMany } from './subscribeMany';
-import { IntermediateCache } from '../IntermediateCache';
-import { ChangeAwareCache } from '../ChangeAwareCache';
-import { PageRequest } from '../PageRequest';
-import { Comparer, ISortedChangeSet, SortReason } from '../ISortedChangeSet';
-import { SortOptimizations } from '../SortOptimizations';
-
-export function distinctValues<TObject, TKey, TValue>(
-    valueSelector: (value: TObject) => TValue
-): OperatorFunction<IChangeSet<TObject, TKey>, DistinctChangeSet<TValue>> {
-    const _valueCounters = new Map<TValue, number>();
-    const _keyCounters = new Map<TKey, number>();
-    const _itemCache = new Map<TKey, TValue>();
-
-    return function distinctValuesOperator(source) {
-        return source.pipe(map(calculate), notEmpty());
-    };
-    function addKeyAction(key: TKey, value: TValue) {
-        const count = _keyCounters.get(key);
-        if (count !== undefined) {
-            _keyCounters.set(key, count + 1);
-        } else {
-            _keyCounters.set(key, 1);
-            _itemCache.set(key, value);
-        }
-    }
-
-    function removeKeyAction(key: TKey) {
-        const counter = _keyCounters.get(key);
-        if (counter === undefined) {
-            return;
-        }
-
-        //decrement counter
-        const newCount = counter - 1;
-        _keyCounters.set(key, newCount);
-        if (newCount != 0) {
-            return;
-        }
-
-        //if there are none, then remove from cache
-        _keyCounters.delete(key);
-        _itemCache.delete(key);
-    }
-
-    function calculate(changes: IChangeSet<TObject, TKey>): DistinctChangeSet<TValue> {
-        const result = new ChangeSet<TValue, TValue>();
-
-        function addValueAction(value: TValue) {
-            const count = _keyCounters.get(key);
-            if (count !== undefined) {
-                _valueCounters.set(value, count + 1);
-            } else {
-                _valueCounters.set(value, 1);
-                result.add(new Change('add', value, value));
-            }
-        }
-
-        function removeValueAction(value: TValue) {
-            const counter = _valueCounters.get(value);
-            if (counter === undefined) {
-                return;
-            }
-
-            //decrement counter
-            const newCount = counter - 1;
-            _valueCounters.set(value, newCount);
-            if (newCount != 0) {
-                return;
-            }
-
-            //if there are none, then remove and notify
-            _valueCounters.delete(value);
-            result.add(new Change('remove', value, value));
-        }
-
-        for (let change of changes) {
-            var key = change.key;
-            switch (change.reason) {
-                case 'add': {
-                    var value = valueSelector(change.current);
-                    addKeyAction(key, value);
-                    addValueAction(value);
-                    break;
-                }
-                case 'refresh':
-                case 'update': {
-                    var value = valueSelector(change.current);
-                    var previous = _itemCache.get(key)!;
-                    if (value === previous) {
-                        continue;
-                    }
-
-                    removeValueAction(previous);
-                    addValueAction(value);
-                    _itemCache.set(key, value);
-                    break;
-                }
-                case 'remove': {
-                    var previous = _itemCache.get(key)!;
-                    removeKeyAction(key);
-                    removeValueAction(previous);
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-}
-
-/**
- * Automatically removes items from the stream after the time specified by
- * the timeSelector elapses.  Return null if the item should never be removed
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @param timeSelector The time selector.
- * @param timerInterval The time interval.
- * @param scheduler The scheduler.
- */
-export function forExpiry<TObject, TKey>(
-    timeSelector: (value: TObject) => number | undefined,
-    timerInterval?: number | undefined,
-    scheduler: SchedulerLike = queueScheduler
-): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
-    return function forExpiryOperator(source) {
-        return new Observable<Iterable<readonly [TKey, TObject]>>(observer => {
-            const dateTime = Date.now();
-
-            const autoRemover = asObservableCache(
-                source.pipe(
-                    tap(x => (dateTime = scheduler.now())),
-                    transform((value, previous, key) => {
-                        const removeAt = timeSelector(value);
-                        const expireAt = removeAt ? dateTime + removeAt : undefined;
-                        return <ExpirableItem<TObject, TKey>>{ expireAt, key, value };
-                    }),
-                ),
-            );
-
-            function removalAction() {
-                try {
-                    const toRemove = ixFrom(autoRemover.values()).pipe(
-                        ixFilter(x => x.expireAt !== undefined && x.expireAt <= scheduler.now()),
-                        ixMap(x => [x.key, x.value] as const),
-                    );
-
-                    observer.next(toRemove);
-                } catch (error) {
-                    observer.error(error);
-                }
-            }
-
-            const removalSubscription = new SingleAssignmentDisposable();
-            if (timerInterval) {
-                // use polling
-                removalSubscription.disposable = interval(timerInterval).subscribe();
-            } else {
-                //create a timer for each distinct time
-                removalSubscription.disposable = autoRemover
-                    .connect()
-                    .pipe(
-                        distinctValues(ei => ei.expireAt),
-                        subscribeMany(datetime => {
-                            const expireAt = datetime - scheduler.now();
-                            return timer(expireAt, scheduler)
-                                .pipe(take(1))
-                                .subscribe(_ => removalAction());
-                        })
-                    )
-                    .subscribe();
-            }
-
-            return Disposable.create(() => {
-                removalSubscription.dispose();
-                autoRemover.dispose();
-            });
-        });
-    };
-}
-
-/**
- * Automatically removes items from the cache after the time specified by
- * the time selector elapses.
-
-* @typeparam TObject The type of the object.
-* @typeparam TKey The type of the key.
-* @param timeSelector The time selector.  Return null if the item should never be removed
-* @param interval The polling interval.  Since multiple timer subscriptions can be expensive, it may be worth setting the interval.
-* @param scheduler The scheduler.
-*/
-export function expireAfter<TObject, TKey>(
-    timeSelector: (value: TObject) => number,
-    interval?: number,
-    scheduler: SchedulerLike = queueScheduler
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function expireAfterOperator(source) {
-        return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            const cache = new IntermediateCache<TObject, TKey>(source);
-
-            const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
-            const subscriber = published.subscribe(observer);
-
-            const autoRemover = published
-                .pipe(
-                    forExpiry(timeSelector, interval, scheduler),
-                    finalize(() => observer.complete()),
-                )
-                .subscribe(keys => {
-                    try {
-                        cache.edit(updater => updater.removeKeys(ixFrom(keys).pipe(ixMap(([key, _]) => key))));
-                    } catch (error) {
-                        observer.error(error);
-                    }
-                });
-
-            const connected = published.connect();
-
-            return Disposable.create(() => {
-                connected.unsubscribe();
-                subscriber.unsubscribe();
-                autoRemover.unsubscribe();
-                cache.dispose();
-            });
-        });
-    };
-}
-
-/**
- * Applies a size limiter to the number of records which can be included in the
- * underlying cache.  When the size limit is reached the oldest items are removed.
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @param size The size.
- */
-export function limitSizeTo<TObject, TKey>(size: number): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function limitSizeToOperaor(source) {
-        return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            const sizeLimiter = new SizeLimiter<TObject, TKey>(size);
-            const root = new IntermediateCache<TObject, TKey>(source);
-
-            const subscriber = root
-                .connect()
-                .pipe(
-                    transform((value, previous, key) => {
-                        return <ExpirableItem<TObject, TKey>>{ expireAt: Date.now(), value, key };
-                    }),
-                    map(changes => {
-                        const result = sizeLimiter.change(changes);
-
-                        const removes = ixFrom(result).pipe(ixFilter(c => c.reason === 'remove'));
-                        root.edit(updater => removes.forEach(c => updater.removeKey(c.key)));
-                        return result;
-                    }),
-                    finalize(() => observer.complete()),
-                )
-                .subscribe(observer);
-
-            return Disposable.create(() => {
-                subscriber.unsubscribe();
-                root.dispose();
-            });
-        });
-    };
-}
-
-class SizeLimiter<TObject, TKey> {
-    private readonly _cache = new ChangeAwareCache<ExpirableItem<TObject, TKey>, TKey>();
-
-    private readonly _sizeLimit: number;
-
-    public constructor(size: number) {
-        this._sizeLimit = size;
-    }
-
-    public change(updates: IChangeSet<ExpirableItem<TObject, TKey>, TKey>): IChangeSet<TObject, TKey> {
-        this._cache.clone(updates);
-
-        const itemstoexpire = ixFrom(this._cache.entries()).pipe(
-            orderByDescending(([key, value]) => value.expireAt),
-            ixSkip(this._sizeLimit),
-            ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value)),
-        );
-
-        if (some(itemstoexpire, z => true)) {
-            this._cache.removeKeys(itemstoexpire.pipe(ixMap(x => x.key)));
-        }
-
-        const notifications = this._cache.captureChanges();
-        const changed = ixFrom(notifications).pipe(
-            ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value)),
-        );
-
-        return new ChangeSet<TObject, TKey>(changed);
-    }
-
-    public CloneAndReturnExpiredOnly(updates: IChangeSet<ExpirableItem<TObject, TKey>, TKey>): TKey[] {
-        this._cache.clone(updates);
-        this._cache.captureChanges(); //Clear any changes
-
-        return ixToArray(
-            ixFrom(this._cache.entries()).pipe(
-                orderByDescending(([key, value]) => value.expireAt),
-                ixSkip(this._sizeLimit),
-                ixMap(x => x[0])
-            )
-        );
-    }
-}
-// /**
-//  * Sorts using the specified comparer.
-//  * Returns the underlying ChangeSet as as per the system conventions.
-//  * The resulting changeset also exposes a sorted key value collection of of the underlying cached data
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param comparer The comparer.
-// * @param sortOptimizations Sort optimization flags. Specify one or more sort optimizations
-// * @param resetThreshold The number of updates before the entire list is resorted (rather than inline sort)
-// */
-export function sort<TObject, TKey>(
-    comparer: Comparer<TObject>,
-    sortOptimisations: SortOptimizations = 'none',
-    comparerChangedObservable?: Observable<Comparer<TObject>>,
-    resorter?: Observable<unknown>,
-    resetThreshold = -1
-): OperatorFunction<IChangeSet<TObject, TKey>, ISortedChangeSet<TObject, TKey>> {
-    return function sortOperator(source) {
-        return new Observable<ISortedChangeSet<TObject, TKey>>(observer =>
-        {
-            //check for nulls so we can prevent a lock when not required
-            if (comparerChangedObservable === undefined && resorter === undefined)
-            {
-                return source
-                    .pipe(
-                        map(sortChanges),
-                        filter(z => !!z)
-                    ).subscribe(observer);
-            }
-
-            const comparerChanged = (comparerChangedObservable ?? NEVER)
-                .pipe(map(sortComparer));
-
-            const sortAgain = (resorter ?? NEVER)
-                .pipe(map(sorter));
-
-            const dataChanged = source
-                .pipe(map(sorter));
-
-            return merge(comparerChanged, dataChanged, sortAgain)
-                .pipe(filter(z => !!z))
-                .subscribe(observer);
-        });
-
-        function resort(changes: IChangeSet<TObject, TKey> ) {
-
-        }
-
-        function sortChanges(changes: IChangeSet<TObject, TKey> ) {
-
-        }
-
-        function sortComparer(comparer: Comparer<TObject>) {
-
-        }
-
-        const _cache = new ChangeAwareCache<TObject, TKey>();
-
-    let  _comparer: KeyValueComparer<TObject, TKey>;
-     let _sorted= new KeyValueCollection<TObject, TKey>();
-    let  _haveReceivedData  = false;
-    let  _initialised= false;
-    let  _calculator: IndexCalculator<TObject, TKey>;
-
-        function doSort(sortReason: SortReason , changes?: IChangeSet<TObject, TKey> ): ISortedChangeSet<TObject, TKey> | undefined {
-                if (changes != null)
-                {
-                    _cache.clone(changes);
-                    changes = _cache.captureChanges();
-                    _haveReceivedData = true;
-                    if (_comparer == null)
-                    {
-                        return;
-                    }
-                }
-
-                //if the comparer is not set, return nothing
-                if (_comparer == null || !_haveReceivedData)
-                {
-                    return
-                }
-
-                if (!_initialised)
-                {
-                    sortReason = 'initialLoad';
-                    _initialised = true;
-                }
-                else if (changes != null && (resetThreshold > 0 && changes.size >= resetThreshold))
-                {
-                    sortReason = 'reset';
-                }
-
-                let changeSet: IChangeSet<TObject, TKey> ;
-                switch (sortReason)
-                {
-                    case 'initialLoad':
-                    {
-                        //For the first batch, changes may have arrived before the comparer was set.
-                        //therefore infer the first batch of changes from the cache
-                        _calculator = new IndexCalculator<TObject, TKey>(_comparer, sortOptimisations);
-                        changeSet = _calculator.Load(_cache);
-                    }
-
-                        break;
-                    case 'reset':
-                    {
-                        _calculator.Reset(_cache);
-                        changeSet = changes;
-                    }
-
-                        break;
-                    case 'dataChanged':
-                    {
-                        changeSet = _calculator.Calculate(changes);
-                    }
-
-                        break;
-
-                    case 'comparerChanged':
-                    {
-                        changeSet = _calculator.ChangeComparer(_comparer);
-                        if (resetThreshold > 0 && _cache.size >= resetThreshold)
-                        {
-                            sortReason = 'reset';
-                            _calculator.Reset(_cache);
-                        }
-                        else
-                        {
-                            sortReason = 'reorder';
-                            changeSet = _calculator.Reorder();
-                        }
-                    }
-
-                        break;
-
-                    case 'reorder':
-                    {
-                        changeSet = _calculator.Reorder();
-                    }
-
-                        break;
-                    default:
-                        throw new Error('sortReason');
-                }
-
-                if ((sortReason === 'initialLoad' || sortReason === 'dataChanged')
-                    && changeSet.size == 0)
-                {
-                    return ;
-                }
-
-                if (sortReason == 'reorder' && changeSet.size === 0)
-                {
-                    return ;
-                }
-
-                _sorted = new KeyValueCollection<TObject, TKey>(_calculator.List.ToList(), _comparer, sortReason, sortOptimisations);
-                return new SortedChangeSet<TObject, TKey>(_sorted, changeSet);
-
-        }
-    };
-}
-
-// #endregion
-
-// #region Sort
-
-// private const int DefaultSortResetThreshold = 100;
-
-// public static IObservable < ISortedChangeSet < TObject, TKey >> Sort<TObject, TKey>(this IObservable < IChangeSet < TObject, TKey >> source,
-// IComparer<TObject> comparer,
-// SortOptimisations sortOptimisations = SortOptimisations.None,
-// int resetThreshold = DefaultSortResetThreshold)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (comparer == null)
-// {
-// throw new ArgumentNullException(nameof(comparer));
-// }
-
-// return new Sort<TObject, TKey>(source, comparer, sortOptimisations, resetThreshold: resetThreshold).Run();
-// }
-
-// /**
-//  * Sorts a sequence as, using the comparer observable to determine order
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param comparerObservable The comparer observable.
-// * @param sortOptimisations The sort optimisations.
-// * @param resetThreshold The reset threshold.
-
-// public static IObservable<ISortedChangeSet<TObject, TKey>> Sort<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// IObservable<IComparer<TObject>> comparerObservable,
-// SortOptimisations sortOptimisations = SortOptimisations.None,
-// int resetThreshold = DefaultSortResetThreshold)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (comparerObservable == null)
-// {
-// throw new ArgumentNullException(nameof(comparerObservable));
-// }
-
-// return new Sort<TObject, TKey>(source, null, sortOptimisations, comparerObservable, resetThreshold: resetThreshold).Run();
-// }
-
-// /**
-//  * Sorts a sequence as, using the comparer observable to determine order
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param comparerObservable The comparer observable.
-// * @param resorter Signal to instruct the algroirthm to re-sort the entire data set
-// * @param sortOptimisations The sort optimisations.
-// * @param resetThreshold The reset threshold.
-
-// */public static IObservable<ISortedChangeSet<TObject, TKey>> Sort<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// IObservable<IComparer<TObject>> comparerObservable,
-// IObservable<Unit> resorter,
-// SortOptimisations sortOptimisations = SortOptimisations.None,
-// int resetThreshold = DefaultSortResetThreshold)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (comparerObservable == null)
-// {
-// throw new ArgumentNullException(nameof(comparerObservable));
-// }
-
-// return new Sort<TObject, TKey>(source, null, sortOptimisations, comparerObservable, resorter, resetThreshold).Run();
-// }
-
-// /**
-//  * Sorts a sequence as, using the comparer observable to determine order
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param comparer The comparer to sort on
-// * @param resorter Signal to instruct the algroirthm to re-sort the entire data set
-// * @param sortOptimisations The sort optimisations.
-// * @param resetThreshold The reset threshold.
-
-// public static IObservable<ISortedChangeSet<TObject, TKey>> Sort<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// IComparer<TObject> comparer,
-// IObservable<Unit> resorter,
-// SortOptimisations sortOptimisations = SortOptimisations.None,
-// int resetThreshold = DefaultSortResetThreshold)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (resorter == null)
-// {
-// throw new ArgumentNullException(nameof(resorter));
-// }
-
-// return new Sort<TObject, TKey>(source, comparer, sortOptimisations, null, resorter, resetThreshold).Run();
-// }
-
-// /**
-//  * Converts moves changes to remove + add
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-//  * <returns>the same SortedChangeSets, except all moves are replaced with remove + add.</returns>
-// */public static IObservable<ISortedChangeSet<TObject, TKey>> TreatMovesAsRemoveAdd<TObject, TKey>(
-// this IObservable<ISortedChangeSet<TObject, TKey>> source)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// IEnumerable<Change<TObject, TKey>> ReplaceMoves(IChangeSet<TObject, TKey> items)
-// {
-// foreach (var change in items)
-// {
-// if (change.Reason == ChangeReason.Moved)
-// {
-// yield return new Change<TObject, TKey>(
-// ChangeReason.Remove,
-// change.Key,
-// change.Current, change.PreviousIndex);
-
-// yield return new Change<TObject, TKey>(
-// ChangeReason.Add,
-// change.Key,
-// change.Current,
-// change.CurrentIndex);
-// }
-// else
-// {
-// yield return change;
-// }
-// }
-// }
-
-// return source.Select(changes => new SortedChangeSet<TObject, TKey>(changes.SortedItems, ReplaceMoves(changes)));
-// }
-
-// #endregion
-
-// #region   And, or, except
-
-// /**
-//  * Applied a logical And operator between the collections i.e items which are in all of the sources are included
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param others The others.
-// public static IObservable<IChangeSet<TObject, TKey>> And<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// params IObservable<IChangeSet<TObject, TKey>>[] others)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (others == null || others.Length == 0)
-// {
-// throw new ArgumentNullException(nameof(others));
-// }
-
-// return source.Combine(CombineOperator.And, others);
-// }
-
-// /**
-//  * Applied a logical And operator between the collections i.e items which are in all of the sources are included
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-// */public static IObservable<IChangeSet<TObject, TKey>> And<TObject, TKey>(this ICollection<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.And);
-// }
-
-// /**
-//  * Dynamically apply a logical And operator between the items in the outer observable list.
-//  * Items which are in all of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// public static IObservable<IChangeSet<TObject, TKey>> And<TObject, TKey>(this IObservableList<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.And);
-// }
-
-// /**
-//  * Dynamically apply a logical And operator between the items in the outer observable list.
-//  * Items which are in all of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> And<TObject, TKey>(this IObservableList<IObservableCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.And);
-// }
-
-// /**
-//  * Dynamically apply a logical And operator between the items in the outer observable list.
-//  * Items which are in all of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// public static IObservable<IChangeSet<TObject, TKey>> And<TObject, TKey>(this IObservableList<ISourceCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.And);
-// }
-
-// /**
-//  * Apply a logical Or operator between the collections i.e items which are in any of the sources are included
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param others The others.
-// */public static IObservable<IChangeSet<TObject, TKey>> Or<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// params IObservable<IChangeSet<TObject, TKey>>[] others)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (others == null || others.Length == 0)
-// {
-// throw new ArgumentNullException(nameof(others));
-// }
-
-// return source.Combine(CombineOperator.Or, others);
-// }
-
-// /**
-//  * Apply a logical Or operator between the collections i.e items which are in any of the sources are included
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-// public static IObservable<IChangeSet<TObject, TKey>> Or<TObject, TKey>(this ICollection<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Or);
-// }
-
-// /**
-//  * Dynamically apply a logical Or operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Or<TObject, TKey>(this IObservableList<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Or);
-// }
-
-// //public static IObservable<IChangeSet<TObject, TKey>> Or<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> sources)
-// //{
-// //    if (sources == null) throw new ArgumentNullException(nameof(sources));
-
-// //    return sources.Combine(CombineOperator.Or);
-// //}
-
-// /**
-//  * Dynamically apply a logical Or operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// public static IObservable<IChangeSet<TObject, TKey>> Or<TObject, TKey>(this IObservableList<IObservableCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Or);
-// }
-
-// /**
-//  * Dynamically apply a logical Or operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Or<TObject, TKey>(this IObservableList<ISourceCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Or);
-// }
-
-// /**
-//  * Apply a logical Xor operator between the collections.
-//  * Items which are only in one of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param others The others.
-// public static IObservable<IChangeSet<TObject, TKey>> Xor<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// params IObservable<IChangeSet<TObject, TKey>>[] others)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (others == null || others.Length == 0)
-// {
-// throw new ArgumentNullException(nameof(others));
-// }
-
-// return source.Combine(CombineOperator.Xor, others);
-// }
-
-// /**
-//  * Apply a logical Xor operator between the collections.
-//  * Items which are only in one of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-// */public static IObservable<IChangeSet<TObject, TKey>> Xor<TObject, TKey>(this ICollection<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Xor);
-// }
-
-// /**
-//  * Dynamically apply a logical Xor operator between the items in the outer observable list.
-//  * Items which are only in one of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// public static IObservable<IChangeSet<TObject, TKey>> Xor<TObject, TKey>(this IObservableList<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Xor);
-// }
-
-// /**
-//  * Dynamically apply a logical Xor operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Xor<TObject, TKey>(this IObservableList<IObservableCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Xor);
-// }
-
-// /**
-//  * Dynamically apply a logical Xor operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// public static IObservable<IChangeSet<TObject, TKey>> Xor<TObject, TKey>(this IObservableList<ISourceCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Xor);
-// }
-
-// /**
-//  * Dynamically apply a logical Except operator between the collections
-//  * Items from the first collection in the outer list are included unless contained in any of the other lists
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param others The others.
-// */public static IObservable<IChangeSet<TObject, TKey>> Except<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// params IObservable<IChangeSet<TObject, TKey>>[] others)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (others == null || others.Length == 0)
-// {
-// throw new ArgumentNullException(nameof(others));
-// }
-
-// return source.Combine(CombineOperator.Except, others);
-// }
-
-// /**
-//  * Dynamically apply a logical Except operator between the collections
-//  * Items from the first collection in the outer list are included unless contained in any of the other lists
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The sources.
-// */public static IObservable<IChangeSet<TObject, TKey>> Except<TObject, TKey>(this ICollection<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Except);
-// }
-
-// /**
-//  * Dynamically apply a logical Except operator between the collections
-//  * Items from the first collection in the outer list are included unless contained in any of the other lists
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Except<TObject, TKey>(this IObservableList<IObservable<IChangeSet<TObject, TKey>>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Except);
-// }
-
-// /**
-//  * Dynamically apply a logical Except operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Except<TObject, TKey>(this IObservableList<IObservableCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Except);
-// }
-
-// /**
-//  * Dynamically apply a logical Except operator between the items in the outer observable list.
-//  * Items which are in any of the sources are included in the result
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param sources The source.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> Except<TObject, TKey>(this IObservableList<ISourceCache<TObject, TKey>> sources)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return sources.Combine(CombineOperator.Except);
-// }
-
-// private static IObservable<IChangeSet<TObject, TKey>> Combine<TObject, TKey>([NotNull] this IObservableList<IObservableCache<TObject, TKey>> source, CombineOperator type)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return Observable.Create<IChangeSet<TObject, TKey>>(observer =>
-// {
-// var connections = source.Connect().Transform(x => x.Connect()).AsObservableList();
-// var subscriber = connections.Combine(type).SubscribeSafe(observer);
-// return new CompositeDisposable(connections, subscriber);
-// });
-// }
-
-// private static IObservable<IChangeSet<TObject, TKey>> Combine<TObject, TKey>([NotNull] this IObservableList<ISourceCache<TObject, TKey>> source, CombineOperator type)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return Observable.Create<IChangeSet<TObject, TKey>>(observer =>
-// {
-// var connections = source.Connect().Transform(x => x.Connect()).AsObservableList();
-// var subscriber = connections.Combine(type).SubscribeSafe(observer);
-// return new CompositeDisposable(connections, subscriber);
-// });
-// }
-
-// private static IObservable<IChangeSet<TObject, TKey>> Combine<TObject, TKey>([NotNull] this IObservableList<IObservable<IChangeSet<TObject, TKey>>> source, CombineOperator type)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return new DynamicCombiner<TObject, TKey>(source, type).Run();
-// }
-
-// private static IObservable<IChangeSet<TObject, TKey>> Combine<TObject, TKey>(this ICollection<IObservable<IChangeSet<TObject, TKey>>> sources, CombineOperator type)
-// {
-// if (sources == null)
-// {
-// throw new ArgumentNullException(nameof(sources));
-// }
-
-// return Observable.Create<IChangeSet<TObject, TKey>>
-// (
-// observer =>
-// {
-// void UpdateAction(IChangeSet<TObject, TKey> updates)
-// {
-// try
-// {
-// observer.OnNext(updates);
-// }
-// catch (Exception ex)
-// {
-// observer.OnError(ex);
-// }
-// }
-
-// IDisposable subscriber = Disposable.Empty;
-// try
-// {
-// var combiner = new Combiner<TObject, TKey>(type, UpdateAction);
-// subscriber = combiner.Subscribe(sources.ToArray());
-// }
-// catch (Exception ex)
-// {
-// observer.OnError(ex);
-// observer.OnCompleted();
-// }
-
-// return subscriber;
-// });
-// }
-
-// private static IObservable<IChangeSet<TObject, TKey>> Combine<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// CombineOperator type,
-// params IObservable<IChangeSet<TObject, TKey>>[] combinetarget)
-// {
-// if (combinetarget == null)
-// {
-// throw new ArgumentNullException(nameof(combinetarget));
-// }
-
-// return Observable.Create<IChangeSet<TObject, TKey>>
-// (
-// observer =>
-// {
-// void UpdateAction(IChangeSet<TObject, TKey> updates)
-// {
-// try
-// {
-// observer.OnNext(updates);
-// }
-// catch (Exception ex)
-// {
-// observer.OnError(ex);
-// observer.OnCompleted();
-// }
-// }
-
-// IDisposable subscriber = Disposable.Empty;
-// try
-// {
-// var list = combinetarget.ToList();
-// list.Insert(0, source);
-
-// var combiner = new Combiner<TObject, TKey>(type, UpdateAction);
-// subscriber = combiner.Subscribe(list.ToArray());
-// }
-// catch (Exception ex)
-// {
-// observer.OnError(ex);
-// observer.OnCompleted();
-// }
-
-// return subscriber;
-// });
-// }
-
-// /**
-//  * The equivalent of rx startwith operator, but wraps the item in a change where reason is ChangeReason.Add
-
-// * @typeparam TObject The type of the object.
-// * @typeparam TKey The type of the key.
-// * @param item The item.
-
-// */public static IObservable<IChangeSet<TObject, TKey>> StartWithItem<TObject, TKey>(this IObservable<IChangeSet<TObject, TKey>> source,
-// TObject item) where TObject : IKey<TKey>
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// return source.StartWithItem(item, item.Key);
-// }
-
 // /**
 //  * The equivalent of rx startwith operator, but wraps the item in a change where reason is ChangeReason.Add
 
@@ -1245,253 +57,355 @@ export function sort<TObject, TKey>(
 // return source.StartWith(new ChangeSet<TObject, TKey>{change});
 // }
 
-// #endregion
 
-// #region  Transform
-
-// /**
-//  * Projects each update item to a new form using the specified transform function
-
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param transformOnRefresh Should a new transform be applied when a refresh event is received
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source,
-// Func<TSource, TDestination> transformFactory,
-// bool transformOnRefresh)
+// public static IObservable<IPagedChangeSet<TObject, TKey>> Page<TObject, TKey>([NotNull] this IObservable<ISortedChangeSet<TObject, TKey>> source,
+// [NotNull] IObservable<IPageRequest> pageRequests)
 // {
 // if (source == null)
 // {
 // throw new ArgumentNullException(nameof(source));
 // }
 
-// if (transformFactory == null)
+// if (pageRequests == null)
 // {
-// throw new ArgumentNullException(nameof(transformFactory));
+// throw new ArgumentNullException(nameof(pageRequests));
 // }
 
-// return source.Transform((current, previous, key) => transformFactory(current), transformOnRefresh);
+// return new Page<TObject, TKey>(source, pageRequests).Run();
 // }
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+import { BehaviorSubject, MonoTypeOperatorFunction, Observable, OperatorFunction } from 'rxjs';
+import { IChangeSet } from '../IChangeSet';
+import { ISortedChangeSet } from '../ISortedChangeSet';
+import { Change } from '../Change';
+import { SortedChangeSet } from '../SortedChangeSet';
+import { groupBy, map, tap } from 'rxjs/operators';
+import { CompositeDisposable, Disposable, IDisposable } from '../../util';
+import { SourceCache } from '../SourceCache';
+import { IObservableCache } from '../IObservableCache';
+import { asObservableCache } from './asObservableCache';
+import { ISourceUpdater } from '../ISourceUpdater';
+import { transform } from './transform';
+import { disposeMany } from './disposeMany';
+import { from as ixFrom } from 'ix/iterable'
+import { groupBy as ixGroupBy } from 'ix/iterable/operators'
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param transformOnRefresh Should a new transform be applied when a refresh event is received
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source,
-// Func<TSource, TKey, TDestination> transformFactory,
-// bool transformOnRefresh)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+/**
+ * Converts moves changes to remove + add
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
+ */
+export function treatMovesAsRemoveAdd<TObject, TKey>(): MonoTypeOperatorFunction<ISortedChangeSet<TObject, TKey>> {
+    return function treatMovesAsRemoveAddOperator(source) {
+        function* replaceMoves(items: IChangeSet<TObject, TKey>): Iterable<Change<TObject, TKey>> {
+            for (const change of items) {
+                if (change.reason === 'moved') {
+                    yield new Change<TObject, TKey>('remove', change.key, change.current, change.previousIndex);
+                    yield new Change<TObject, TKey>('add', change.key, change.current, change.currentIndex);
+                } else {
+                    yield change;
+                }
+            }
+        }
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+        return source
+            .pipe(map(changes => new SortedChangeSet<TObject, TKey>(changes.sortedItems, replaceMoves(changes)));
+    };
+}
 
-// return source.Transform((current, previous, key) => transformFactory(current, key), transformOnRefresh);
-// }
+/**
+ * Node describing the relationship between and item and it's ancestors and descendent
+ * @typeparam TObject The type of the object
+ * @typeparam TKey The type of the key
+ */
+public class Node<TObject, TKey> implements IDisposable {
+    private readonly _children = new SourceCache<Node<TObject, TKey>, TKey>(n => n.key);
+    private readonly _cleanUp: IDisposable;
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+    /**
+     * Initializes a new instance of the <see cref="Node{TObject, TKey}"/> class.
+     * @param item The item
+     * @param key The key
+     * @param parent The parent
+     */
+    public constructor(item: TObject, key: TKey, parent?: Node<TObject, TKey>) {
+        this.item = item;
+        this.key = key;
+        this.parent = parent;
+        this.children = asObservableCache(this._children);
+        this._cleanUp = new CompositeDisposable(this.children, this._children);
+    }
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param transformOnRefresh Should a new transform be applied when a refresh event is received
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source,
-// Func<TSource, Optional<TSource>, TKey, TDestination> transformFactory,
-// bool transformOnRefresh)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+    /**
+     * The item
+     */
+    public readonly item: TObject;
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+    /**
+     * The key
+     */
+    public readonly key: TKey;
 
-// return new Transform<TDestination, TSource, TKey>(source, transformFactory, transformOnRefresh: transformOnRefresh).Run();
-// }
+    /**
+     * Gets the parent if it has one
+     */
+    public readonly parent?: Node<TObject, TKey>;
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+    /**
+     * The child nodes
+     */
+    public readonly children: IObservableCache<Node<TObject, TKey>, TKey>;
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param forceTransform Invoke to force a new transform for items matching the selected objects
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, TDestination> transformFactory, IObservable<Func<TSource, bool>> forceTransform = null)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+    /**
+     * Gets or sets a value indicating whether this instance is root.
+     */
+    public get isRoot() {
+        return this.parent === undefined;
+    }
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+    /**
+     * Gets the depth i.e. how many degrees of separation from the parent
+     */
+    public get depth() {
+        var i = 0;
+        var parent = this.parent;
+        do {
+            if (parent === undefined) {
+                break;
+            }
 
-// return source.Transform((current, previous, key) => transformFactory(current), forceTransform.ForForced<TSource, TKey>());
-// }
+            i++;
+            parent = parent.parent;
+        } while (true);
+        return i;
+    }
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+    /**
+     * @internal
+     */
+    public update(updateAction: (updater: ISourceUpdater<Node<TObject, TKey>, TKey>) => void) {
+        this._children.edit(updateAction);
+    }
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param forceTransform Invoke to force a new transform for items matching the selected objects
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, TKey, TDestination> transformFactory, IObservable<Func<TSource, TKey, bool>> forceTransform = null)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+    public toString() {
+        const count = this.children.size === 0 ? '' : ` (${this.children.size} children)`;
+        return `${this.item}${count}`;
+    }
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+    public dispose() {
+        this._cleanUp.dispose();
+    }
+}
 
-// return source.Transform((current, previous, key) => transformFactory(current, key), forceTransform);
-// }
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+export function transformToTree<TObject, TKey>(
+    pivotOn: (value: TObject) => TKey,
+    predicateChanged?: Observable<(node: Node<TObject, TKey>) => boolean>,
+): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<Node<TObject, TKey>, TKey>> {
+    return function transformToTreeOperator(source) {
+        return new Observable<IChangeSet<Node<TObject, TKey>, TKey>>(observer =>
+        {
+            var refilterObservable = new BehaviorSubject<unknown>(null);
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param forceTransform Invoke to force a new transform for items matching the selected objects
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, Optional<TSource>, TKey, TDestination> transformFactory, IObservable<Func<TSource, TKey, bool>> forceTransform = null)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+            var allData =  asObservableCache(source);
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+            //for each object we need a node which provides
+            //a structure to set the parent and children
+            var allNodes = asObservableCache(
+                allData.connect()
+                .pipe(
+                    transform((t, v) => new Node(t, v))
+                )
+            );
+            allNodes.connect()
 
-// if (forceTransform!=null)
-// {
-// return new TransformWithForcedTransform<TDestination, TSource, TKey>(source, transformFactory, forceTransform).Run();
-// }
+            var groupedByPivot = asObservableCache(
+                allNodes.connect()
+                    .pipe(group(x => pivotOn(x.item)))
+            );
 
-// return new Transform<TDestination, TSource, TKey>(source, transformFactory).Run();
-// }
+            function updateChildren( parentNode: Node<TObject, TKey>)
+            {
+                var lookup = groupedByPivot.Lookup(parentNode.key);
+                if (lookup.HasValue)
+                {
+                    var children = lookup.Value.Cache.Items;
+                    parentNode.update(u => u.addOrUpdate(children));
+                    children.ForEach(x => x.Parent = parentNode);
+                }
+            }
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+            //as nodes change, maintain parent and children
+            var parentSetter = allNodes.connect()
+                .pipe(tap(changes =>
+                {
+                    var grouped = ixFrom(changes).pipe(ixGroupBy(c => pivotOn(c.current.item)));
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param forceTransform Invoke to force a new transform for all items
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, TDestination> transformFactory, IObservable<Unit> forceTransform)
-// {
-// return source.Transform((cur, prev, key) => transformFactory(cur), forceTransform.ForForced<TSource, TKey>());
-// }
+                    for (var group of grouped)
+                    {
+                        var parentKey = group.key;
+                        var parent = allNodes.lookup(parentKey);
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+                        if (parent !== undefined)
+                        {
+                            //deal with items which have no parent
+                            for (var change of group)
+                            {
+                                if (change.reason !== 'refresh')
+                                {
+                                    change.current.parent = null;
+                                }
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param forceTransform Invoke to force a new transform for all items#
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, TKey, TDestination> transformFactory, IObservable<Unit> forceTransform)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+                                switch (change.reason)
+                                {
+                                    case 'add':
+                                        updateChildren(change.current);
+                                        break;
+                                    case 'update':
+                                    {
+                                        //copy children to the new node amd set parent
+                                        var children = change.previous!.children;
+                                        change.current.update(updater => updater.addOrUpdate(children));
+                                        children.forEach(child => child.parent = change.current);
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+                                        //remove from old parent if different
+                                        var previous = change.previous!;
+                                        var previousParent = pivotOn(previous.item);
 
-// if (forceTransform == null)
-// {
-// throw new ArgumentNullException(nameof(forceTransform));
-// }
+                                        if (previousParent !== previous.key)
+                                        {
+                                            allNodes.lookup(previousParent)
+                                                .IfHasValue(n => { n.Update(u => u.Remove(change.Key)); });
+                                        }
 
-// return source.Transform((cur, prev, key) => transformFactory(cur, key), forceTransform.ForForced<TSource, TKey>());
-// }
+                                        break;
+                                    }
 
-// /**
-//  * Projects each update item to a new form using the specified transform function
+                                    case 'remove':
+                                    {
+                                        //remove children and null out parent
+                                        var children = change.current.children.Items;
+                                        change.current.update(updater => updater.remove(children));
+                                        children.forEach(child => child.Parent = null);
 
-// * @typeparam TDestination The type of the destination.
-// * @typeparam TSource The type of the source.
-// * @typeparam TKey The type of the key.
-// * @param transformFactory The transform factory.
-// * @param forceTransform Invoke to force a new transform for all items#
-// */public static IObservable<IChangeSet<TDestination, TKey>> Transform<TDestination, TSource, TKey>(this IObservable<IChangeSet<TSource, TKey>> source, Func<TSource, Optional<TSource>, TKey, TDestination> transformFactory, IObservable<Unit> forceTransform)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
+                                        break;
+                                    }
 
-// if (transformFactory == null)
-// {
-// throw new ArgumentNullException(nameof(transformFactory));
-// }
+                                    case 'refresh':
+                                    {
+                                        var previousParent = change.current.parent;
+                                        if (previousParent !== parent)
+                                        {
+                                            previousParent.IfHasValue(n => n.Update(u => u.Remove(change.Key)));
+                                            change.current.parent = null;
+                                        }
 
-// if (forceTransform == null)
-// {
-// throw new ArgumentNullException(nameof(forceTransform));
-// }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //deal with items have a parent
+                            parent.Value.Update(updater =>
+                            {
+                                var p = parent;
 
-// return source.Transform(transformFactory, forceTransform.ForForced<TSource, TKey>());
-// }
+                                for (var change of group)
+                                {
+                                    var previous = change.previous;
+                                    var node = change.current;
+                                    var key = node.Key;
 
-// private static IObservable<Func<TSource, TKey, bool>> ForForced<TSource, TKey>(this IObservable<Unit> source)
-// {
-// return source?.Select(_ =>
-// {
-// bool Transformer(TSource item, TKey key) => true;
-// return (Func<TSource, TKey, bool>) Transformer;
-// });
-// }
+                                    switch (change.reason)
+                                    {
+                                        case 'add':
+                                        {
+                                            // update the parent node
+                                            node.parent = p;
+                                            updater.addOrUpdate(node);
+                                            updateChildren(node);
 
-// private static IObservable<Func<TSource, TKey, bool>> ForForced<TSource, TKey>(this IObservable<Func<TSource, bool>> source)
-// {
-// return source?.Select(condition =>
-// {
-// bool Transformer(TSource item, TKey key) => condition(item);
-// return (Func<TSource, TKey, bool>) Transformer;
-// });
-// }
+                                            break;
+                                        }
 
-// #endregion
+                                        case 'update':
+                                        {
+                                            //copy children to the new node amd set parent
+                                            var children = previous.Value.Children.Items;
+                                            change.Current.Update(u => u.AddOrUpdate(children));
+                                            children.ForEach(child => child.Parent = change.Current);
 
-// #region Transform Async
+                                            //check whether the item has a new parent
+                                            var previousItem = previous.Value.Item;
+                                            var previousKey = previous.Value.Key;
+                                            var previousParent = _pivotOn(previousItem);
 
-// #region Transform many
+                                            if (!previousParent.Equals(previousKey))
+                                            {
+                                                allNodes.Lookup(previousParent)
+                                                    .IfHasValue(n => { n.Update(u => u.Remove(key)); });
+                                            }
 
-// #endregion
+                                            //finally update the parent
+                                            node.Parent = p;
+                                            updater.AddOrUpdate(node);
+
+                                            break;
+                                        }
+
+                                        case 'remove':
+                                        {
+                                            node.Parent = null;
+                                            updater.Remove(key);
+
+                                            var children = node.Children.Items;
+                                            change.Current.Update(u => u.Remove(children));
+                                            children.ForEach(child => child.Parent = null);
+
+                                            break;
+                                        }
+
+                                        case 'refresh':
+                                        {
+                                            var previousParent = change.Current.Parent;
+                                            if (!previousParent.Equals(parent))
+                                            {
+                                                previousParent.IfHasValue(n => n.Update(u => u.Remove(change.Key)));
+                                                change.Current.Parent = p;
+                                                updater.AddOrUpdate(change.Current);
+                                            }
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    refilterObservable.next(null);
+                }),
+                    disposeMany()
+                )
+                .Subscribe();
+
+            var filter = _predicateChanged.CombineLatest(refilterObservable, (predicate, _) => predicate);
+            var result = allNodes.Connect().Filter(filter).SubscribeSafe(observer);
+
+            return Disposable.Create(() =>
+            {
+                result.Dispose();
+                parentSetter.Dispose();
+                allData.Dispose();
+                allNodes.Dispose();
+                groupedByPivot.Dispose();
+                refilterObservable.OnCompleted();
+            });
+        });
+    }
+}
 
 // #region Transform safe
 
@@ -1508,15 +422,6 @@ export function sort<TObject, TKey>(
 // IObservable<Func<Node<TObject, TKey>, bool>> predicateChanged = null)
 // where TObject : class
 // {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (pivotOn == null)
-// {
-// throw new ArgumentNullException(nameof(pivotOn));
-// }
 
 // return new TreeBuilder<TObject, TKey>(source, pivotOn, predicateChanged).Run();
 // }
@@ -1524,32 +429,6 @@ export function sort<TObject, TKey>(
 // #endregion
 
 // #region Distinct values
-
-// /**
-//  *     Selects distinct values from the source.
-
-// * @typeparam TObject The tyoe object from which the distinct values are selected
-// * @typeparam TKey The type of the key.
-// * @typeparam TValue The type of the value.
-// * @param source The soure.
-// * @param valueSelector The value selector.
-// */public static IObservable<IDistinctChangeSet<TValue>> DistinctValues<TObject, TKey, TValue>(this IObservable<IChangeSet<TObject, TKey>> source, Func<TObject, TValue> valueSelector)
-// {
-// if (source == null)
-// {
-// throw new ArgumentNullException(nameof(source));
-// }
-
-// if (valueSelector == null)
-// {
-// throw new ArgumentNullException(nameof(valueSelector));
-// }
-
-// return Observable.Create<IDistinctChangeSet<TValue>>(observer =>
-// {
-// return new DistinctCalculator<TObject, TKey, TValue>(source, valueSelector).Run().SubscribeSafe(observer);
-// });
-// }
 
 // #endregion
 
