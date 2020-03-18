@@ -1,9 +1,4 @@
 import { IObservableCache } from '../../src/cache/IObservableCache';
-/**
-/// Aggregates all events and statistics for a distinct changeset to help assertions when testing
- */
- * @typeparam TValue The type of the value.
-import { IObservableCache } from '../../src/cache/IObservableCache';
 import { Disposable, IDisposable } from '../../src/util';
 import { publish } from 'rxjs/operators';
 import { IChangeSet } from '../../src/cache/IChangeSet';
@@ -18,7 +13,7 @@ export class ChangeSetAggregator<TChangeSet extends IChangeSet<TObject, TKey>, T
     private _error?: Error;
 
     /**
-    /// Initializes a new instance of the <see cref="DistinctChangeSetAggregator{TValue}"/> class.
+     * Initializes a new instance of the <see cref="DistinctChangeSetAggregator{TValue}"/> class.
      * @param source The source.
      */
     public constructor(source: Observable<TChangeSet>) {
@@ -43,34 +38,31 @@ export class ChangeSetAggregator<TChangeSet extends IChangeSet<TObject, TKey>, T
     }
 
     /**
-    /// Gets the data.
+     * Gets the data.
      */
     public readonly data: IObservableCache<TObject, TKey>;
 
     /**
-    /// Gets the messages.
+     * Gets the messages.
      */
     public readonly messages: TChangeSet[] = [];
 
     /**
-    /// Gets the summary.
+     * Gets the summary.
      */
     public get summary() {
         return this._summary;
     }
 
     /**
-    /// Gets the error.
+     * Gets the error.
      */
-    /// <value>
-    /// The error.
-    /// </value>
     public get error() {
         return this._error;
     }
 
     /**
-    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+     * Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
      */
     public dispose() {
         this._disposer?.dispose();

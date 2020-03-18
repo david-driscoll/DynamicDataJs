@@ -1,4 +1,4 @@
-import { NotifyPropertyChanged, ChangedType } from '../../notify/notifyPropertyChangedSymbol';
+import { NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
 import { MonoTypeOperatorFunction, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { autoRefreshOnObservable } from './autoRefreshOnObservable';
@@ -11,7 +11,7 @@ import { throttleTime } from 'rxjs/operators';
  * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
  * @param scheduler The scheduler
  */
-export function autoRefresh<TObject extends ChangedType, TKey>(
+export function autoRefresh<TObject extends NotifyPropertyChanged, TKey>(
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
@@ -23,13 +23,13 @@ export function autoRefresh<TObject extends ChangedType, TKey>(
  * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
  * @param scheduler The scheduler
  */
-export function autoRefresh<TObject extends ChangedType, TKey>(
+export function autoRefresh<TObject extends NotifyPropertyChanged, TKey>(
     key: keyof TObject,
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
 ): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>;
-export function autoRefresh<TObject extends ChangedType, TKey>(
+export function autoRefresh<TObject extends NotifyPropertyChanged, TKey>(
     key?: number | keyof TObject,
     changeSetBuffer?: number,
     propertyChangeThrottle?: number | SchedulerLike,

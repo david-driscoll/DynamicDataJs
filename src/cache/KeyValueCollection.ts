@@ -44,7 +44,7 @@ export class KeyValueCollection<TObject, TKey> implements IKeyValueCollection<TO
     /**
      * Gets the comparer used to peform the sort
      */
-    public readonly comparer: Comparer<[TKey, TObject]>;
+    public readonly comparer: KeyValueComparer<TObject, TKey>;
 
     public readonly size: number;
 

@@ -29,7 +29,7 @@ export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(
 export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(key: TProperty, notifyInitial?: boolean): OperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TProperty>, TObject[TProperty]>;
 export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(value: NotifyPropertyChanged<TObject> | TProperty, key: TProperty | boolean, notifyInitial?: boolean, fallbackValue?: () => TObject[TProperty]) {
     if (isNotifyPropertyChanged(value)) {
-        return whenChanged(value as NotifyPropertyChanged<TObject>, key as TProperty, notifyInitial, fallbackValue);
+        return whenChanged(value as any, key as TProperty, notifyInitial, fallbackValue);
     } else {
         return function whenValueChangedOperator(source: Observable<IChangeSet<NotifyPropertyChanged<TObject>, TProperty>>) {
             return source.pipe(mergeMany(v => whenChanged(v, value as TProperty, key as boolean | undefined)));

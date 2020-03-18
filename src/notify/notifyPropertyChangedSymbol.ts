@@ -9,10 +9,10 @@ export const notifyPropertyChangedSymbol = Symbol.for('NotifyPropertyChanged');
 export const notifyCollectionChangedSymbol = Symbol.for('NotifyCollectionChanged');
 
 export type ObjectType<T> = T extends CollectionTypes ? never : T extends PrimitiveTypes ? never : T extends any[] ? never : T;
-export type NotifyPropertyChanged<T> = T extends ObjectType<T> ? T & { [notifyPropertyChangedSymbol]: Observable<string> } : never;
+export type NotifyPropertyChanged<T = any> = T extends { [notifyPropertyChangedSymbol]: Observable<string> } ? T : T extends ObjectType<T> ? T & { [notifyPropertyChangedSymbol]: Observable<string> } : never;
 
 export type CollectionType<T> = T extends CollectionTypes ? never : T extends any[] ? never : T;
-export type NotifyCollectionChanged<T> = T extends CollectionType<T> ? T & { [notifyCollectionChangedSymbol]: Observable<unknown> } : never;
+export type NotifyCollectionChanged<T = any> = T extends { [notifyCollectionChangedSymbol]: Observable<string> } ? T : T extends CollectionType<T> ? T & { [notifyCollectionChangedSymbol]: Observable<unknown> } : never;
 
 export const objectToString = Object.prototype.toString;
 export const toTypeString = (value: unknown): string => objectToString.call(value);

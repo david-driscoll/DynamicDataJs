@@ -1,5 +1,6 @@
-import { Comparer, SortReason } from './ISortedChangeSet';
+import { SortReason } from './ISortedChangeSet';
 import { SortOptimizations } from './SortOptimizations';
+import { Comparer, KeyValueComparer } from './Comparer';
 
 /**
  *  A key collection which contains sorting information.
@@ -10,7 +11,7 @@ export interface IKeyValueCollection<TObject, TKey> extends Iterable<[TKey, TObj
     /**
      *  Gets the comparer used to peform the sort
      */
-    readonly comparer: Comparer<[TKey, TObject]>;
+    readonly comparer: KeyValueComparer<TObject, TKey>;
 
     /**
      * The count of items.

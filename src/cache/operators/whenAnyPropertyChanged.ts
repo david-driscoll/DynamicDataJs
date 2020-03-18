@@ -1,4 +1,8 @@
-import { isNotifyPropertyChanged, notificationsFor, NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
+import {
+    isNotifyPropertyChanged,
+    notificationsFor,
+    NotifyPropertyChanged,
+} from '../../notify/notifyPropertyChangedSymbol';
 import { filter, map } from 'rxjs/operators';
 import { MonoTypeOperatorFunction, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
@@ -21,8 +25,10 @@ export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>
 export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>(...value: (NotifyPropertyChanged<TObject> | keyof TObject)[]) {
     if (value.length > 0 && isNotifyPropertyChanged(value[0])) {
         const propertiesToMonitor = value.slice(1) as (keyof TObject)[];
-        return (propertiesToMonitor.length > 0 ? notificationsFor(value[0] as NotifyPropertyChanged<TObject>).pipe(filter(property => propertiesToMonitor.includes(property))) : notificationsFor(value[0] as NotifyPropertyChanged<TObject>)).pipe(
-            map(z => value),
+        return (propertiesToMonitor.length > 0 ?
+            notificationsFor(value[0] as any)
+                .pipe(filter(property => propertiesToMonitor.includes(property as any))) :
+            notificationsFor(value[0] as any)).pipe(map(z => value),
         );
     }
     return function whenAnyPropertyChangedOperator(source: Observable<IChangeSet<NotifyPropertyChanged<TObject>, TProperty>>) {

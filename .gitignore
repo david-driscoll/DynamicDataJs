@@ -107,4 +107,4 @@ dist
 .vscode-test
 .idea/
 **/*.js
-!*.js
+!./*.js

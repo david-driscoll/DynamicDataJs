@@ -18,7 +18,7 @@ import { Change } from '../Change';
  * @param exceptionCallback callback when exceptions happen
  */
 export function forceTransform<TSource, TKey, TDestination>(
-    transformFactory: (current: TSource, previous: TSource | undefined, key: TKey) => TDestination,
+    transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
     forceTransform: Observable<(value: TSource, key: TKey) => boolean>,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
 ): OperatorFunction<IChangeSet<TSource, TKey>, IChangeSet<TDestination, TKey>> {
