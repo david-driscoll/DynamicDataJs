@@ -48,10 +48,10 @@ export function autoRefresh<TObject, TKey>(
         return source.pipe(
             autoRefreshOnObservable<TObject, TKey>((t, v) => {
                 if (propertyChangeThrottle) {
-                    return whenAnyPropertyChanged(t, ...props)
+                    return whenAnyPropertyChanged(t, ...props as any[])
                         .pipe(throttleTime(propertyChangeThrottle as number, scheduler));
                 } else {
-                    return whenAnyPropertyChanged(t, ...props);
+                    return whenAnyPropertyChanged(t, ...props as any[]);
                 }
             }, changeSetBuffer as number | undefined, scheduler),
         );

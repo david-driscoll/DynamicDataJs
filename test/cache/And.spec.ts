@@ -16,7 +16,7 @@ class Person {
 describe('AndFixture', () => {
     let _source1: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _source2: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
-    let _results: ChangeSetAggregator<IChangeSet<Person, string>>;
+    let _results: ChangeSetAggregator<Person, string>;
     beforeEach(() => {
         _source1 = updateable(new SourceCache<Person, string>(p => p.name));
         _source2 = updateable(new SourceCache<Person, string>(p => p.name));
