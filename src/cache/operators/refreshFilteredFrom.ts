@@ -11,9 +11,9 @@ export function refreshFilteredFrom<TObject, TKey>(
         return ChangeSet.empty<TObject, TKey>();
     }
 
-    for (var [key, value] of allData.entries()) {
-        var exisiting = filtered.lookup(key);
-        var matches = predicate(value);
+    for (const [key, value] of allData.entries()) {
+        const exisiting = filtered.lookup(key);
+        const matches = predicate(value);
 
         if (matches) {
             if (!exisiting) {

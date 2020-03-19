@@ -3,6 +3,8 @@ import { IKeyValueCollection } from './IKeyValueCollection';
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
 import { Change } from './Change';
 import { KeyValueCollection } from './KeyValueCollection';
+import { IChangeSet } from './IChangeSet';
+import { ISortedChangeSet } from './ISortedChangeSet';
 
 export class SortedChangeSet<TObject, TKey> extends ChangeSet<TObject, TKey> {
     public readonly sortedItems: IKeyValueCollection<TObject, TKey>;

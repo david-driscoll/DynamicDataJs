@@ -30,7 +30,7 @@ export function deferUntilLoaded<TObject, TKey>(source?: IObservableCache<TObjec
         ).pipe(notEmpty());
     }
     return function deferUntilLoadedOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-        concat(source
+        return concat(source
             .pipe(
                 statusMonitor(),
                 filter(status => status == 'loaded'),

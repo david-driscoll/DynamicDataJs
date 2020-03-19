@@ -72,10 +72,9 @@ export class Disposable implements IDisposable, ISubscription {
     }
 
     public dispose() {
-        if (!this.isDisposed) {
-            this._isDisposed = true;
-            this._action();
-        }
+        if (this._isDisposed) return;
+        this._isDisposed = true;
+        this._action();
     }
 
     public unsubscribe(): void {

@@ -149,9 +149,7 @@
 // return new Virtualise<TObject, TKey>(source, virtualRequests).Run();
 // }
 
-
-import {} from 'rxjs'
-
+import {} from 'rxjs';
 
 // #endregion
 

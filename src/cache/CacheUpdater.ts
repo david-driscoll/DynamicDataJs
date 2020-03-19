@@ -97,7 +97,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
             if (isEqualityComparer(comparer)) {
                 const key = this._keySelector(item);
                 const oldItem = this._cache.lookup(key);
-                if (oldItem) {
+                if (oldItem !== undefined) {
                     if (comparer.equals(oldItem, item)) {
                         return;
                     }

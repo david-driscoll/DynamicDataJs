@@ -56,7 +56,7 @@ export function distinctValues<TObject, TKey, TValue>(
         const result = new ChangeSet<TValue, TValue>();
 
         function addValueAction(value: TValue) {
-            const count = _keyCounters.get(key);
+            const count = _valueCounters.get(value);
             if (count !== undefined) {
                 _valueCounters.set(value, count + 1);
             } else {
@@ -84,18 +84,18 @@ export function distinctValues<TObject, TKey, TValue>(
         }
 
         for (let change of changes) {
-            var key = change.key;
+            const key = change.key;
             switch (change.reason) {
                 case 'add': {
-                    var value = valueSelector(change.current);
+                    const value = valueSelector(change.current);
                     addKeyAction(key, value);
                     addValueAction(value);
                     break;
                 }
                 case 'refresh':
                 case 'update': {
-                    var value = valueSelector(change.current);
-                    var previous = _itemCache.get(key)!;
+                    const value = valueSelector(change.current);
+                    const previous = _itemCache.get(key)!;
                     if (value === previous) {
                         continue;
                     }
@@ -106,7 +106,7 @@ export function distinctValues<TObject, TKey, TValue>(
                     break;
                 }
                 case 'remove': {
-                    var previous = _itemCache.get(key)!;
+                    const previous = _itemCache.get(key)!;
                     removeKeyAction(key);
                     removeValueAction(previous);
                     break;

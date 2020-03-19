@@ -14,8 +14,8 @@ const a = {
     first: 'david',
     last: 'driscoll',
 };
-var b = notifyPropertyChanged(a);
-var n = notificationsFor(b);
+const b = notifyPropertyChanged(a);
+const n = notificationsFor(b);
 b; //?
 n.subscribe; //?
 whenAnyPropertyChanged(b, 'first').subscribe(x => console.log(x));

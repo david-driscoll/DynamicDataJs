@@ -38,11 +38,11 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
     const _combinedCache = new ChangeAwareCache<TObject, TKey>();
 
     //subscribe
-    var disposable = new CompositeDisposable();
+    const disposable = new CompositeDisposable();
     const caches = ixToArray(ixRange(0, items.length).pipe(ixMap(_ => new Cache<TObject, TKey>())));
 
-    for (var [item, cache] of ixZip(items, caches)) {
-        var subscription = item.subscribe(updates => update(cache, updates));
+    for (const [item, cache] of ixZip(items, caches)) {
+        const subscription = item.subscribe(updates => update(cache, updates));
         disposable.add(subscription);
     }
 
@@ -65,16 +65,16 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
     function updateCombined(updates: IChangeSet<TObject, TKey>): IChangeSet<TObject, TKey> {
         //child caches have been updated before we reached this point.
 
-        for (var update of updates) {
+        for (let update of updates) {
             const key = update.key;
             switch (update.reason) {
                 case 'add':
                 case 'update': {
                     // get the current key.
-                    //check whether the item should belong to the cache
-                    var cached = _combinedCache.lookup(key);
-                    var contained = cached !== undefined;
-                    var match = matchesConstraint(key);
+                    // check whether the item should belong to the cache
+                    const cached = _combinedCache.lookup(key);
+                    const contained = cached !== undefined;
+                    const match = matchesConstraint(key);
 
                     if (match) {
                         if (contained) {
@@ -94,8 +94,8 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
                     break;
 
                 case 'remove': {
-                    var cached = _combinedCache.lookup(key);
-                    var contained = cached !== undefined;
+                    const cached = _combinedCache.lookup(key);
+                    const contained = cached !== undefined;
                     const shouldBeIncluded = matchesConstraint(key);
 
                     if (shouldBeIncluded) {
@@ -104,7 +104,7 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
                             ixFilter(z => z !== undefined),
                         ))!;
 
-                        if (cached !== undefined) {
+                        if (cached === undefined) {
                             _combinedCache.addOrUpdate(firstOne, key);
                         } else if (firstOne !== cached) {
                             _combinedCache.addOrUpdate(firstOne, key);

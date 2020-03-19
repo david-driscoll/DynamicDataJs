@@ -40,7 +40,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                     finalize(() => {
                         this._changes.complete();
                         this._changesPreview.complete();
-                    })
+                    }),
                 )
                 .subscribe(
                     changeset => {
@@ -51,7 +51,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                     ex => {
                         this._changesPreview.error(ex);
                         this._changes.error(ex);
-                    }
+                    },
                 );
 
             this._cleanUp = Disposable.create(() => {
@@ -106,7 +106,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
         this._editLevel--;
 
-        if (this._editLevel == 0) {
+        if (this._editLevel === 0) {
             this.invokeNext(changes!);
         }
     }
@@ -153,7 +153,9 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
             const initial = of(this.getInitialUpdates(predicate));
             const changes = concat(initial, this._changes.asObservable());
 
-            return (predicate ? changes.pipe(filter(x => predicate(x))) : changes).pipe(notEmpty());
+            return (predicate ? changes.pipe(filter(x => predicate(x))) : changes)
+                .pipe(notEmpty())
+                ;
         });
     }
 
@@ -195,5 +197,6 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     public getKey(item: TObject) {
         return this._keySelector?.(item)!;
     }
+
     readonly [Symbol.toStringTag] = 'ObservableCache' as const;
 }

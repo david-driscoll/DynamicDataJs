@@ -16,3 +16,7 @@ export interface ISourceCache<TObject, TKey> extends IObservableCache<TObject, T
      */
     edit(updateAction: (updater: ISourceUpdater<TObject, TKey>) => void): void;
 }
+
+export function isSourceCache(value: any): value is ISourceCache<any, any> {
+    return value && value[Symbol.toStringTag] === 'ObservableCache' && value.edit !== undefined;
+}

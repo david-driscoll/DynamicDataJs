@@ -1,23 +1,22 @@
-import { SourceCache, updatable } from '../../src/cache/SourceCache';
+import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
 import { IChangeSet } from '../../src/cache/IChangeSet';
-import faker from 'faker'
+import faker from 'faker';
 import { finalize } from 'rxjs/operators';
 import { using } from '../../src/util';
 import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { ISourceCache } from '../../src/cache/ISourceCache';
 
-export interface Person
-{
-    name: string;
-    age: number;
+class Person {
+    constructor(public readonly  name: string, public readonly age: number) {
+    }
 }
 
 describe('SourceCacheFixture', () => {
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
-    let _results: ChangeSetAggregator<IChangeSet<Person, string>>;
+    let _results: ChangeSetAggregator<Person, string>;
     beforeEach(() => {
-        _source= updatable(new SourceCache<Person, string>(p => p.name));
+        _source = updateable(new SourceCache<Person, string>(p => p.name));
         _results = asAggregator(_source.connect());
     });
     afterEach(() => {
@@ -26,14 +25,13 @@ describe('SourceCacheFixture', () => {
     });
 
     it('Can handle a batch of updates', () => {
-        _source.edit(updater =>
-        {
-            const torequery: Person = { name: 'Adult1', age: 44 };
+        _source.edit(updater => {
+            const torequery= new Person('Adult1', 44);
 
-            updater.addOrUpdate({ name: "Adult1", age: 40});
-            updater.addOrUpdate({ name: "Adult1", age: 41});
-            updater.addOrUpdate({ name: "Adult1", age: 42});
-            updater.addOrUpdate({ name: "Adult1", age: 43});
+            updater.addOrUpdate(new Person('Adult1', 40));
+            updater.addOrUpdate(new Person('Adult1', 41));
+            updater.addOrUpdate(new Person('Adult1', 42));
+            updater.addOrUpdate(new Person('Adult1', 43));
             updater.refresh(torequery);
             updater.remove(torequery);
             updater.refresh(torequery);
@@ -49,9 +47,9 @@ describe('SourceCacheFixture', () => {
         expect(_results.data.size).toBe(0);
     });
 
-    it ('Count changed should always invoke upon subscription', () => {
+    it('Count changed should always invoke upon subscription', () => {
 
-        let result: number | undefined ;
+        let result: number | undefined;
         const subscription = _source.countChanged.subscribe(count => result = count);
 
         expect(result).toBeDefined();
@@ -60,13 +58,16 @@ describe('SourceCacheFixture', () => {
         subscription.unsubscribe();
     });
 
-    it ('Count changed should reflect contents of cache invoke upon subscription', () => {
+    it('Count changed should reflect contents of cache invoke upon subscription', () => {
 
         let result: number | undefined;
         const subscription = _source.countChanged.subscribe(count => result = count);
 
         const data: Person[] = [];
-        for (let i = 0; i < 100; i++) data.push({ name: faker.random.alphaNumeric(20) , age: faker.random.number({ min: 1, max: 100 }) });
+        for (let i = 0; i < 100; i++) data.push({
+            name: faker.random.alphaNumeric(20),
+            age: faker.random.number({ min: 1, max: 100 }),
+        });
 
         _source.edit(updater => updater.addOrUpdateValues(data));
 
@@ -74,8 +75,8 @@ describe('SourceCacheFixture', () => {
         expect(result).toBe(100);
         subscription.unsubscribe();
     });
-    
-    it ('Subscribes disposes correctly', () => {
+
+    it('Subscribes disposes correctly', () => {
 
         let called = false;
         let errored = false;
@@ -84,8 +85,10 @@ describe('SourceCacheFixture', () => {
             .pipe(
                 finalize(() => completed = true),
             )
-            .subscribe(updates => { called = true; }, ex => errored = true, () => completed = true);
-        _source.edit(updater => updater.addOrUpdate({ name: "Adult1", age: 40}));
+            .subscribe(updates => {
+                called = true;
+            }, ex => errored = true, () => completed = true);
+        _source.edit(updater => updater.addOrUpdate(new Person('Adult1', 40)));
 
         subscription.unsubscribe();
         _source.dispose();
@@ -99,8 +102,7 @@ describe('SourceCacheFixture', () => {
 
         let count = 0;
         let invoked = 0;
-        using(_source.countChanged.subscribe(c =>
-        {
+        using(_source.countChanged.subscribe(c => {
             count = c;
             invoked++;
         }), () => {
@@ -109,7 +111,10 @@ describe('SourceCacheFixture', () => {
             expect(count).toBe(0);
 
             const data: Person[] = [];
-            for (let i = 0; i < 100; i++) data.push({ name: faker.random.alphaNumeric(20) , age: faker.random.number({ min: 1, max: 100 }) });
+            for (let i = 0; i < 100; i++) data.push({
+                name: faker.random.alphaNumeric(20),
+                age: faker.random.number({ min: 1, max: 100 }),
+            });
 
 
             _source.edit(updater => updater.addOrUpdateValues(data));

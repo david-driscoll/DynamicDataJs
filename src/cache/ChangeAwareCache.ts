@@ -129,7 +129,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     public clear() {
         this.ensureInitialised();
         this._data!.forEach((key, value) => {
-            this._changes!.delete(new Change<TObject, TKey>('remove', value, key));
+            this._changes!.add(new Change<TObject, TKey>('remove', value, key));
         });
         this._data!.clear();
     }
@@ -166,7 +166,8 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
      *  Create a changeset from recorded changes and clears known changes.
      */
     public captureChanges(): ChangeSet<TObject, TKey> {
-        if (this._changes == null || this._changes.size == 0) {
+        if (this._changes === undefined || this._changes.size == 0) {
+            this._changes = undefined;
             return ChangeSet.empty<TObject, TKey>();
         }
 

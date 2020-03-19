@@ -26,14 +26,12 @@ export function forExpiry<TObject, TKey>(
 ): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
     return function forExpiryOperator(source) {
         return new Observable<Iterable<readonly [TKey, TObject]>>(observer => {
-            let dateTime = Date.now();
 
             const autoRemover = asObservableCache(
                 source.pipe(
-                    tap(x => (dateTime = scheduler.now())),
                     transform((value, key, previous) => {
                         const removeAt = timeSelector(value);
-                        const expireAt = removeAt ? dateTime + removeAt : undefined;
+                        const expireAt = removeAt ? scheduler.now() + removeAt : undefined;
                         return <ExpirableItem<TObject, TKey>>{ expireAt, key, value };
                     }),
                 ),
@@ -55,18 +53,17 @@ export function forExpiry<TObject, TKey>(
             const removalSubscription = new SingleAssignmentDisposable();
             if (timerInterval) {
                 // use polling
-                removalSubscription.disposable = interval(timerInterval).subscribe();
+                removalSubscription.disposable = interval(timerInterval, scheduler).subscribe(removalAction);
             } else {
                 //create a timer for each distinct time
-                removalSubscription.disposable = autoRemover
-                    .connect()
+                removalSubscription.disposable = autoRemover.connect()
                     .pipe(
                         distinctValues(ei => ei.expireAt),
                         subscribeMany(datetime => {
                             const expireAt = datetime - scheduler.now();
                             return timer(expireAt, scheduler)
                                 .pipe(take(1))
-                                .subscribe(_ => removalAction());
+                                .subscribe(removalAction);
                         }),
                     )
                     .subscribe();

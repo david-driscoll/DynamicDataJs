@@ -10,3 +10,6 @@ export interface ISortedChangeSet<TObject, TKey> extends IChangeSet<TObject, TKe
 
 export type SortReason = 'initialLoad' | 'comparerChanged' | 'dataChanged' | 'reorder' | 'reset';
 
+export function isSortedChangeSet<TObject, TKey>(changeSet: IChangeSet<TObject, TKey>): changeSet is ISortedChangeSet<TObject, TKey> {
+    return !!(changeSet as any).sortedItems;
+}

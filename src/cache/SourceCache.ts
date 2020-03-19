@@ -79,7 +79,7 @@ export class SourceCache<TObject, TKey> implements ISourceCache<TObject, TKey> {
     }
 }
 
-export function updatable<TObject, TKey>(sourceCache: ISourceCache<TObject, TKey>): ISourceCache<TObject, TKey> & ISourceUpdater<TObject, TKey> {
+export function updateable<TObject, TKey>(sourceCache: ISourceCache<TObject, TKey>): ISourceCache<TObject, TKey> & ISourceUpdater<TObject, TKey> {
     return new SimpleSourceCache(sourceCache);
 }
 

@@ -14,6 +14,7 @@ export class CompositeDisposable extends Set<IDisposableOrSubscription> implemen
     }
 
     public dispose() {
+        if (this._isDisposed) return;
         this._isDisposed = true;
         if (this.size) {
             this.forEach(disposable => Disposable.of(disposable).dispose());
@@ -29,7 +30,7 @@ export class CompositeDisposable extends Set<IDisposableOrSubscription> implemen
         if (this.isDisposed) {
             disposables.forEach((item) => Disposable.of(item).dispose());
         } else {
-            disposables.forEach((item) => this.add(item));
+            disposables.forEach((item) => super.add(item));
         }
         return this;
     }

@@ -23,14 +23,19 @@ export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => vo
     return function disposeManyOperator(source) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const cache = new Cache<TObject, TKey>();
-            const subscriber = source.pipe(tap(changes => registerForRemoval(changes, cache), observer.error)).subscribe(observer);
+            const subscriber = source
+                .pipe(tap(
+                    changes => registerForRemoval(changes, cache),
+                    e => observer.error(e),
+                ))
+                .subscribe(observer);
 
-            return Disposable.create(() => {
+            return () => {
                 subscriber.unsubscribe();
 
                 ixFrom(cache.values()).forEach(t => removeAction!(t));
                 cache.clear();
-            });
+            };
         });
     };
 

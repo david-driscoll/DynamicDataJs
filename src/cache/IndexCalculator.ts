@@ -72,15 +72,15 @@ export class IndexCalculator<TObject, TKey> {
     }
 
     public calculate(changes: IChangeSet<TObject, TKey>): IChangeSet<TObject, TKey> {
-        var result: Change<TObject, TKey>[] = [];
-        var refreshes: Change<TObject, TKey>[] = [];
+        const result: Change<TObject, TKey>[] = [];
+        const refreshes: Change<TObject, TKey>[] = [];
 
         for (const u of changes) {
             const current: [TKey, TObject] = [u.key, u.current];
 
             switch (u.reason) {
                 case 'add': {
-                    var position = this.getInsertPositionBinary(current);
+                    const position = this.getInsertPositionBinary(current);
                     this._list.splice(position, 0, current);
 
                     result.push(new Change<TObject, TKey>('add', u.key, u.current, position));
@@ -89,10 +89,10 @@ export class IndexCalculator<TObject, TKey> {
                     break;
 
                 case 'update': {
-                    var old = this.getCurrentPosition([u.key, u.previous!]);
+                    const old = this.getCurrentPosition([u.key, u.previous!]);
                     this._list.splice(old, 1);
 
-                    var newposition = this.getInsertPositionBinary(current);
+                    const newposition = this.getInsertPositionBinary(current);
                     this._list.splice(newposition, 0, current);
 
                     result.push(new Change<TObject, TKey>('update',
@@ -103,7 +103,7 @@ export class IndexCalculator<TObject, TKey> {
                     break;
 
                 case 'remove': {
-                    var position = this.getCurrentPosition(current);
+                    const position = this.getCurrentPosition(current);
                     this._list.splice(position, 1);
                     result.push(new Change<TObject, TKey>('remove', u.key, u.current, position));
                 }
