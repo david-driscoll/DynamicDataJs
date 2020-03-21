@@ -1,2 +1,2 @@
-import { notifyPropertyChanged, notificationsFor, toRaw } from './notifyPropertyChangedSymbol';
-export { notifyPropertyChanged, notificationsFor, toRaw };
+import { observePropertyChanges, notificationsFor, toRaw } from './notifyPropertyChangedSymbol';
+export { observePropertyChanges, notificationsFor, toRaw };

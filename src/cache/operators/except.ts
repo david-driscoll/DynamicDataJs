@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { combineCache } from './combineCache';
+import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 
 /**
  * Dynamically apply a logical Except operator between the collections
@@ -9,6 +10,6 @@ import { combineCache } from './combineCache';
  * @typeparam TKey The type of the key.
  * @param items The items
  */
-export function except<TObject, TKey>(...items: Observable<IChangeSet<TObject, TKey>>[]) {
-    return combineCache('except', ...items);
+export function except<TObject, TKey>(items: ArrayOrIterable<Observable<IChangeSet<TObject, TKey>>>) {
+    return combineCache('except', items);
 }

@@ -142,11 +142,11 @@ export function transformPromise<TSource, TKey, TDestination>(
                     break;
 
                 case 'remove':
-                    cache.remove(key);
+                    cache.removeKey(key);
                     break;
 
                 case 'refresh':
-                    cache.refresh(key);
+                    cache.refreshKey(key);
                     break;
             }
         }

@@ -60,9 +60,7 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
         this._data.set(key, item);
     }
 
-    public removeKeys(keys: ArrayOrIterable<TKey>): void;
-    public removeKeys(...keys: TKey[]): void;
-    public removeKeys(keys: TKey | ArrayOrIterable<TKey>, ...rest: TKey[]) {
+    public removeKeys(keys: ArrayOrIterable<TKey>) {
         if (Array.isArray(keys)) {
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
@@ -76,21 +74,13 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
                     this._data.delete(key);
                 }
             }
-        } else {
-            if (this._data.has(keys)) {
-                this._data.delete(keys);
-            }
-            for (let i = 0; i < rest.length; i++) {
-                const key = rest[i];
-                if (this._data.has(key)) {
-                    this._data.delete(key);
-                }
-            }
         }
     }
 
     public removeKey(key: TKey) {
-        return this.removeKeys(key);
+        if (this._data.has(key)) {
+            this._data.delete(key);
+        }
     }
 
     public clear() {
@@ -100,9 +90,7 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     public refresh() {
     }
 
-    public refreshKeys(keys: ArrayOrIterable<TKey>): void;
-    public refreshKeys(...keys: TKey[]): void;
-    public refreshKeys(...keys: any[]) {
+    public refreshKeys(keys: ArrayOrIterable<TKey>) {
 
     }
 

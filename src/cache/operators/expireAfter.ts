@@ -6,7 +6,7 @@ import { forExpiry } from './forExpiry';
 import { from as ixFrom, count } from 'ix/iterable';
 import { map as ixMap } from 'ix/iterable/operators';
 import { Disposable } from '../../util';
-import { NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
+import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { ISourceCache, isSourceCache } from '../ISourceCache';
 import { isObservableCache } from '../IObservableCache';
 import { isScheduler } from 'rxjs/internal-compatibility';

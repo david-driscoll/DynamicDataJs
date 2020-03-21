@@ -20,13 +20,13 @@ export function filterChanges<TObject, TKey>(cache: ChangeAwareCache<TObject, TK
                 if (predicate(current)) {
                     cache.addOrUpdate(current, key);
                 } else {
-                    cache.remove(key);
+                    cache.removeKey(key);
                 }
             }
 
                 break;
             case 'remove':
-                cache.remove(key);
+                cache.removeKey(key);
                 break;
             case 'refresh': {
                 const exisiting = cache.lookup(key);
@@ -34,11 +34,11 @@ export function filterChanges<TObject, TKey>(cache: ChangeAwareCache<TObject, TK
                     if (!exisiting) {
                         cache.addOrUpdate(change.current, key);
                     } else {
-                        cache.refresh(key);
+                        cache.refreshKey(key);
                     }
                 } else {
                     if (exisiting) {
-                        cache.remove(key);
+                        cache.removeKey(key);
                     }
                 }
             }

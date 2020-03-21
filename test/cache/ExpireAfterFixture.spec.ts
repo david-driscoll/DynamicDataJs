@@ -8,6 +8,7 @@ import { map, filter } from 'ix/iterable/operators';
 import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { expireAfter } from '../../src/cache/operators/expireAfter';
 import { noop } from 'rxjs';
+import { Person } from '../domain/Person';
 
 describe('ExpireAfterFixture', () => {
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -98,8 +99,3 @@ describe('ExpireAfterFixture', () => {
         });
     });
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

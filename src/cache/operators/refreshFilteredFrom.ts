@@ -21,7 +21,7 @@ export function refreshFilteredFrom<TObject, TKey>(
             }
         } else {
             if (exisiting) {
-                filtered.remove(key);
+                filtered.removeKey(key);
             }
         }
     }

@@ -6,6 +6,7 @@ import { toArray, from, first, range } from 'ix/iterable';
 import { map, filter as ixFilter, orderBy } from 'ix/iterable/operators';
 import { merge } from 'rxjs';
 import { filter } from '../../src/cache/operators/filter';
+import { Person } from '../domain/Person';
 
 
 
@@ -170,8 +171,3 @@ describe('FilterFixture', () => {
     });
 
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { Change } from './Change';
 import { IChangeSet } from './IChangeSet';
 import { ObservableCache } from './ObservableCache';
-import { IEqualityComparer } from '../util/isEqualityComparer';
+import { EqualityComparer } from '../util/isEqualityComparer';
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
 
 /**
@@ -138,9 +138,9 @@ class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, I
     }
 
     addOrUpdate(item: TObject): void;
-    addOrUpdate(item: TObject, comparer: IEqualityComparer<TObject>): void;
+    addOrUpdate(item: TObject, comparer: EqualityComparer<TObject>): void;
     addOrUpdate(item: TObject, key: TKey): void;
-    addOrUpdate(item: TObject, comparer?: IEqualityComparer<TObject> | TKey): void {
+    addOrUpdate(item: TObject, comparer?: EqualityComparer<TObject> | TKey): void {
         return this._sourceCache.edit(updater => updater.addOrUpdate(item, comparer as any));
     }
 
@@ -148,10 +148,8 @@ class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, I
         return this._sourceCache.edit(updater => updater.addOrUpdatePairs(entries));
     }
 
-    addOrUpdateValues(entries: Array<TObject> | Iterable<TObject>): void;
-    addOrUpdateValues(...entries: TObject[]): void;
-    addOrUpdateValues(...entries: (ArrayOrIterable<TObject> | TObject)[]): void {
-        return this._sourceCache.edit(updater => updater.addOrUpdateValues(...entries as any));
+    addOrUpdateValues(entries: ArrayOrIterable<TObject>): void {
+        return this._sourceCache.edit(updater => updater.addOrUpdateValues(entries));
     }
 
     clear(): void {
@@ -166,10 +164,8 @@ class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, I
         return this._sourceCache.getKey(item);
     }
 
-    load(entries: Array<TObject> | Iterable<TObject>): void;
-    load(...entries: TObject[]): void;
-    load(...entries: (ArrayOrIterable<TObject> | TObject)[]): void {
-        return this._sourceCache.edit(updater => updater.load(...entries as any));
+    load(entries: ArrayOrIterable<TObject>): void {
+        return this._sourceCache.edit(updater => updater.load(entries));
     }
 
     refresh(): void;
@@ -182,16 +178,12 @@ class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, I
         return this._sourceCache.edit(updater => updater.refreshKey(key));
     }
 
-    refreshKeys(keys: Array<TKey> | Iterable<TKey>): void;
-    refreshKeys(...keys: TKey[]): void;
-    refreshKeys(...keys: (ArrayOrIterable<TKey> | TKey)[]): void {
-        return this._sourceCache.edit(updater => updater.refreshKeys(...keys as any));
+    refreshKeys(keys: ArrayOrIterable<TKey>): void {
+        return this._sourceCache.edit(updater => updater.refreshKeys(keys));
     }
 
-    refreshValues(entries: Array<TObject> | Iterable<TObject>): void;
-    refreshValues(...entries: TObject[]): void;
-    refreshValues(...entries: (ArrayOrIterable<TObject> | TObject)[]): void {
-        return this._sourceCache.edit(updater => updater.refreshValues(...entries as any));
+    refreshValues(entries: ArrayOrIterable<TObject>): void {
+        return this._sourceCache.edit(updater => updater.refreshValues(entries));
     }
 
     remove(item: TObject): void {
@@ -202,19 +194,15 @@ class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, I
         return this._sourceCache.edit(updater => updater.removeKey(key));
     }
 
-    removeKeys(key: Array<TKey> | Iterable<TKey>): void;
-    removeKeys(...keys: TKey[]): void;
-    removeKeys(...key: (ArrayOrIterable<TKey> | TKey)[]): void {
-        return this._sourceCache.edit(updater => updater.removeKeys(...key as any));
+    removeKeys(key: ArrayOrIterable<TKey>): void {
+        return this._sourceCache.edit(updater => updater.removeKeys(key));
     }
 
     removePairs(entries: Array<[TKey, TObject]> | Iterable<[TKey, TObject]>): void {
         return this._sourceCache.edit(updater => updater.removePairs(entries));
     }
 
-    removeValues(entries: Array<TObject> | Iterable<TObject>): void;
-    removeValues(...entries: TObject[]): void;
-    removeValues(...entries: (ArrayOrIterable<TObject> | TObject)[]): void {
-        return this._sourceCache.edit(updater => updater.removeValues(...entries as any));
+    removeValues(entries: ArrayOrIterable<TObject>): void {
+        return this._sourceCache.edit(updater => updater.removeValues(entries));
     }
 }

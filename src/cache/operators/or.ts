@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { combineCache } from './combineCache';
+import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 
 /**
  * Apply a logical Or operator between the collections i.e items which are in any of the sources are included
@@ -8,6 +9,6 @@ import { combineCache } from './combineCache';
  * @typeparam TKey The type of the key.
  * @param items The items
  */
-export function or<TObject, TKey>(...items: Observable<IChangeSet<TObject, TKey>>[]) {
-    return combineCache('or', ...items);
+export function or<TObject, TKey>(items: ArrayOrIterable<Observable<IChangeSet<TObject, TKey>>>) {
+    return combineCache('or', items);
 }

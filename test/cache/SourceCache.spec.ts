@@ -1,16 +1,12 @@
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
 import { IChangeSet } from '../../src/cache/IChangeSet';
-import faker from 'faker';
 import { finalize } from 'rxjs/operators';
 import { using } from '../../src/util';
 import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { ISourceCache } from '../../src/cache/ISourceCache';
-
-class Person {
-    constructor(public readonly  name: string, public readonly age: number) {
-    }
-}
+import { randomPersonGenerator } from '../domain/RandomPersonGenerator';
+import { Person } from '../domain/Person';
 
 describe('SourceCacheFixture', () => {
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -63,13 +59,7 @@ describe('SourceCacheFixture', () => {
         let result: number | undefined;
         const subscription = _source.countChanged.subscribe(count => result = count);
 
-        const data: Person[] = [];
-        for (let i = 0; i < 100; i++) data.push({
-            name: faker.random.alphaNumeric(20),
-            age: faker.random.number({ min: 1, max: 100 }),
-        });
-
-        _source.edit(updater => updater.addOrUpdateValues(data));
+        _source.edit(updater => updater.addOrUpdateValues(randomPersonGenerator(100)));
 
         expect(result).toBeDefined();
         expect(result).toBe(100);
@@ -110,14 +100,7 @@ describe('SourceCacheFixture', () => {
             expect(invoked).toBe(1);
             expect(count).toBe(0);
 
-            const data: Person[] = [];
-            for (let i = 0; i < 100; i++) data.push({
-                name: faker.random.alphaNumeric(20),
-                age: faker.random.number({ min: 1, max: 100 }),
-            });
-
-
-            _source.edit(updater => updater.addOrUpdateValues(data));
+            _source.edit(updater => updater.addOrUpdateValues(randomPersonGenerator(100)));
             expect(invoked).toBe(2);
             expect(count).toBe(100);
 

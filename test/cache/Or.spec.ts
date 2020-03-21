@@ -5,6 +5,7 @@ import { IChangeSet } from '../../src/cache/IChangeSet';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { or } from '../../src/cache/operators/or';
 import { first } from 'ix/iterable'
+import { Person } from '../domain/Person';
 
 describe('OrFixture', () => {
     let _source1: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -13,7 +14,7 @@ describe('OrFixture', () => {
     beforeEach(() => {
         _source1 = updateable(new SourceCache<Person, string>(p => p.name));
         _source2 = updateable(new SourceCache<Person, string>(p => p.name));
-        _results = asAggregator(or(_source1.connect(), _source2.connect()));
+        _results = asAggregator(or([_source1.connect(), _source2.connect()]));
     });
     afterEach(() => {
         _source1.dispose();
@@ -60,8 +61,3 @@ describe('OrFixture', () => {
         expect( first(_results.data.values())).toBe(personUpdated);
     });
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

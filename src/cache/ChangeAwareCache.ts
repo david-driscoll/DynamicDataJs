@@ -63,67 +63,17 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     }
 
     /**
-     *  Removes the item matching the specified keys.
-     * @param keys The keys.
-     */
-    public remove(keys: ArrayOrIterable<TKey> | TKey) {
-        if (this._data == null) {
-            return;
-        }
-
-        if (Array.isArray(keys) && typeof keys !== 'string') {
-            this.ensureInitialised();
-            for (let i = 0; i < keys.length; i++) {
-                this.remove(keys[i]);
-            }
-        } else if (isIterable(keys) && typeof keys !== 'string') {
-            this.ensureInitialised();
-            for (const key of keys) {
-                this.remove(key);
-            }
-        } else {
-            this.ensureInitialised();
-            const data = tryGetValue<TKey, TObject>(this._data!, keys);
-            if (data.found) {
-                this._changes!.add(new Change<TObject, TKey>('remove', keys, data.value!));
-                this._data!.delete(keys);
-            }
-        }
-    }
-
-    /**
      *  Raises an evaluate change for the specified keys
      */
-    public refresh(keys?: ArrayOrIterable<TKey> | TKey) {
+    public refresh() {
         if (this._data == null) {
             return;
         }
 
-        if (!keys) {
-            this.ensureInitialised();
-            this._data!.forEach((key, value) => {
-                this._changes!.add(new Change<TObject, TKey>('refresh', value, key));
-            });
-            return;
-        }
-
-        if (Array.isArray(keys)) {
-            this.ensureInitialised();
-            for (let i = 0; i < keys.length; i++) {
-                this.refresh(keys[i]);
-            }
-        } else if (isIterable(keys)) {
-            this.ensureInitialised();
-            for (const key of keys) {
-                this.refresh(key);
-            }
-        } else {
-            this.ensureInitialised();
-            const data = tryGetValue<TKey, TObject>(this._data!, keys);
-            if (data.found) {
-                this._changes!.add(new Change<TObject, TKey>('refresh', keys, data.value));
-            }
-        }
+        this.ensureInitialised();
+        this._data!.forEach((key, value) => {
+            this._changes!.add(new Change<TObject, TKey>('refresh', value, key));
+        });
     }
 
     public clear() {
@@ -143,10 +93,10 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
                     this.addOrUpdate(change.current, change.key);
                     break;
                 case 'remove':
-                    this.remove(change.key);
+                    this.removeKey(change.key);
                     break;
                 case 'refresh':
-                    this.refresh(change.key);
+                    this.refreshKey(change.key);
                     break;
             }
         }
@@ -183,51 +133,45 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     }
 
     refreshKey(key: TKey): void {
-        this.refresh(key);
+        this.ensureInitialised();
+        const data = tryGetValue<TKey, TObject>(this._data!, key);
+        if (data.found) {
+            this._changes!.add(new Change<TObject, TKey>('refresh', key, data.value));
+        }
     }
 
-    refreshKeys(keys: ArrayOrIterable<TKey>): void;
-    refreshKeys(...keys: TKey[]): void;
-    refreshKeys(keys?: TKey | ArrayOrIterable<TKey>, ...rest: TKey[]): void {
+    refreshKeys(keys: ArrayOrIterable<TKey>): void {
+        this.ensureInitialised();
         if (Array.isArray(keys)) {
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
-                this.refresh(key);
+                this.refreshKey(key);
             }
         } else if (isIterable(keys)) {
             for (const key of keys) {
-                this.refresh(key);
-            }
-        } else if (keys) {
-            this.refresh(keys);
-            for (let i = 0; i < rest.length; i++) {
-                const entry = rest[i];
-                this.refresh(entry);
+                this.refreshKey(key);
             }
         }
     }
 
     removeKey(key: TKey): void {
-        this.remove(key);
+        this.ensureInitialised();
+        const data = tryGetValue<TKey, TObject>(this._data!, key);
+        if (data.found) {
+            this._changes!.add(new Change<TObject, TKey>('remove', key, data.value!));
+            this._data!.delete(key);
+        }
     }
 
-    removeKeys(keys: ArrayOrIterable<TKey>): void;
-    removeKeys(...keys: TKey[]): void;
-    removeKeys(keys?: TKey | ArrayOrIterable<TKey>, ...rest: TKey[]): void {
+    removeKeys(keys: ArrayOrIterable<TKey>): void {
         if (Array.isArray(keys)) {
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
-                this.remove(key);
+                this.removeKey(key);
             }
         } else if (isIterable(keys)) {
             for (const key of keys) {
-                this.remove(key);
-            }
-        } else if (keys) {
-            this.remove(keys);
-            for (let i = 0; i < rest.length; i++) {
-                const entry = rest[i];
-                this.remove(entry);
+                this.removeKey(key);
             }
         }
     }

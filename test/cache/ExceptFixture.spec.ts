@@ -3,6 +3,7 @@ import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { except } from '../../src/cache/operators/except';
+import { Person } from '../domain/Person';
 
 describe('ExceptFixture', () => {
     let _targetSource: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -13,7 +14,7 @@ describe('ExceptFixture', () => {
     beforeEach(() => {
         _targetSource = updateable(new SourceCache<Person, string>(p => p.name));
         _exceptSource = updateable(new SourceCache<Person, string>(p => p.name));
-        _results = asAggregator(except(_targetSource.connect(), _exceptSource.connect()));
+        _results = asAggregator(except([_targetSource.connect(), _exceptSource.connect()]));
     });
 
     afterEach(() => {
@@ -47,8 +48,3 @@ describe('ExceptFixture', () => {
         expect(_results.data.size).toBe(1);
     });
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

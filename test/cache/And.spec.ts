@@ -6,12 +6,7 @@ import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { and } from '../../src/cache/operators/and';
 import { first } from 'ix/iterable';
 import {} from 'ix/iterable/operators';
-
-
-class Person {
-    constructor(public readonly  name: string, public readonly age: number) {
-    }
-}
+import { Person } from '../domain/Person';
 
 describe('AndFixture', () => {
     let _source1: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -20,7 +15,7 @@ describe('AndFixture', () => {
     beforeEach(() => {
         _source1 = updateable(new SourceCache<Person, string>(p => p.name));
         _source2 = updateable(new SourceCache<Person, string>(p => p.name));
-        _results = asAggregator(and(_source1.connect(), _source2.connect()));
+        _results = asAggregator(and([_source1.connect(), _source2.connect()]));
     });
     afterEach(() => {
         _source1.dispose();
@@ -83,7 +78,7 @@ describe('AndFixture', () => {
         const person= new Person('Adult1', 50);
         _source1.addOrUpdate(person);
 
-        const result = asAggregator(and(_source1.connect(), _source2.connect()));
+        const result = asAggregator(and([_source1.connect(), _source2.connect()]));
 
         expect(_results.messages.length).toBe(0);
         expect(result.data.size).toBe(0);

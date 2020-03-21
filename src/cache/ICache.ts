@@ -36,12 +36,6 @@ export interface ICache<TObject, TKey> extends IQuery<TObject, TKey> {
     removeKeys(keys: ArrayOrIterable<TKey>): void;
 
     /**
-     *  Removes all items matching the specified keys
-     * @param keys The keys.
-     */
-    removeKeys(...keys: TKey[]): void;
-
-    /**
      *  Clears all items
      */
     clear(): void;
@@ -56,12 +50,6 @@ export interface ICache<TObject, TKey> extends IQuery<TObject, TKey> {
      * @param keys The keys.
      */
     refreshKeys(keys: ArrayOrIterable<TKey>): void;
-
-    /**
-     *  Refreshes the items matching the specified keys
-     * @param keys The keys.
-     */
-    refreshKeys(...keys: TKey[]): void;
 
     /**
      *  Refreshes the item matching the specified key

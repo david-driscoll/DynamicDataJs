@@ -1,4 +1,4 @@
-import { NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
+import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { ConnectableObservable, merge, MonoTypeOperatorFunction, Observable, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { bufferTime, filter, map, publish } from 'rxjs/operators';
@@ -14,32 +14,32 @@ import { CompositeDisposable } from '../../util';
  * @param scheduler The scheduler
  */
 export function autoRefreshOnObservable<TObject, TKey>(
-    reevaluator: (value: NotifyPropertyChanged<TObject>, key: TKey) => Observable<unknown>,
+    reevaluator: (value: NotifyPropertyChangedType<TObject>, key: TKey) => Observable<unknown>,
     changeSetBuffer?: number,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>> {
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> {
     return function autoRefreshOnObservableOperator(source) {
-        return new Observable<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>(observer => {
-            const shared: ConnectableObservable<IChangeSet<NotifyPropertyChanged<TObject>, TKey>> = source.pipe(publish()) as any;
+        return new Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>(observer => {
+            const shared: ConnectableObservable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> = source.pipe(publish()) as any;
 
             //monitor each item observable and create change
             let changes = shared
                 .pipe(mergeMany((t, k) =>
                     reevaluator(t, k)
-                        .pipe(map(_ => new Change<NotifyPropertyChanged<TObject>, TKey>('refresh', k, t))),
+                        .pipe(map(_ => new Change<NotifyPropertyChangedType<TObject>, TKey>('refresh', k, t))),
                 ));
 
             //create a changeset, either buffered or one item at the time
-            let refreshChanges: Observable<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>;
+            let refreshChanges: Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>;
             if (changeSetBuffer === undefined) {
-                refreshChanges = changes.pipe(map(c => new ChangeSet<NotifyPropertyChanged<TObject>, TKey>([c])));
+                refreshChanges = changes.pipe(map(c => new ChangeSet<NotifyPropertyChangedType<TObject>, TKey>([c])));
             } else {
                 refreshChanges = changes
                     .pipe(
                         // TODO: There has be to be better way to buffer / window these changes in such a way where we don't always have a buffer opening and closing
                         bufferTime(changeSetBuffer, scheduler),
                         filter(z => z.some(x => true)),
-                        map(items => new ChangeSet<NotifyPropertyChanged<TObject>, TKey>(items)),
+                        map(items => new ChangeSet<NotifyPropertyChangedType<TObject>, TKey>(items)),
                     );
             }
 

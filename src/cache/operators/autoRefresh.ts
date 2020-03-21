@@ -1,4 +1,4 @@
-import { NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
+import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { MonoTypeOperatorFunction, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { autoRefreshOnObservable } from './autoRefreshOnObservable';
@@ -15,7 +15,7 @@ export function autoRefresh<TObject, TKey>(
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>;
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>;
 /**
  * Automatically refresh downstream operators when any properties change.
  * @param key the property to watch
@@ -28,13 +28,13 @@ export function autoRefresh<TObject, TKey>(
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>>;
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>;
 export function autoRefresh<TObject, TKey>(
     key?: number | keyof TObject,
     changeSetBuffer?: number,
     propertyChangeThrottle?: number | SchedulerLike,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>> {
+): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> {
     let props: string[] = [];
     if (typeof key === 'string' || typeof key === 'symbol') {
         props.push(key as any);

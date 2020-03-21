@@ -6,6 +6,7 @@ import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { first, from, toArray } from 'ix/iterable';
 import { skip } from 'ix/iterable/operators';
 import { merge } from 'rxjs';
+import { Person } from '../domain/Person';
 
 describe('DistinctFixture', () => {
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -110,8 +111,3 @@ describe('DistinctFixture', () => {
         expect(toArray(results.data.values()).length).toBe(0);
     });
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

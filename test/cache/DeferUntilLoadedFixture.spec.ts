@@ -3,6 +3,7 @@ import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { deferUntilLoaded } from '../../src/cache/operators/deferUntilLoaded';
 import { first } from 'ix/iterable';
 import { skipInitial } from '../../src/cache/operators/skipInitial';
+import { Person } from '../domain/Person';
 
 describe('DeferAndSkipFixture', () => {
     it('DeferUntilLoadedDoesNothingUntilDataHasBeenReceived', () => {
@@ -48,9 +49,3 @@ describe('DeferAndSkipFixture', () => {
         deferStream.unsubscribe();
     });
 });
-
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

@@ -9,10 +9,10 @@ export const notifyPropertyChangedSymbol = Symbol.for('NotifyPropertyChanged');
 export const notifyCollectionChangedSymbol = Symbol.for('NotifyCollectionChanged');
 
 export type ObjectType<T> = T extends CollectionTypes ? never : T extends PrimitiveTypes ? never : T extends any[] ? never : T;
-export type NotifyPropertyChanged<T = any> = T extends { [notifyPropertyChangedSymbol]: Observable<string> } ? T : T extends ObjectType<T> ? T & { [notifyPropertyChangedSymbol]: Observable<string> } : never;
+export type NotifyPropertyChangedType<T = any> = T extends { [notifyPropertyChangedSymbol]: Observable<string> } ? T : T extends ObjectType<T> ? T & { [notifyPropertyChangedSymbol]: Observable<string> } : never;
 
 export type CollectionType<T> = T extends CollectionTypes ? never : T extends any[] ? never : T;
-export type NotifyCollectionChanged<T = any> = T extends { [notifyCollectionChangedSymbol]: Observable<string> } ? T : T extends CollectionType<T> ? T & { [notifyCollectionChangedSymbol]: Observable<unknown> } : never;
+export type NotifyCollectionChangedType<T = any> = T extends { [notifyCollectionChangedSymbol]: Observable<string> } ? T : T extends CollectionType<T> ? T & { [notifyCollectionChangedSymbol]: Observable<unknown> } : never;
 
 export const objectToString = Object.prototype.toString;
 export const toTypeString = (value: unknown): string => objectToString.call(value);
@@ -21,8 +21,8 @@ export const toRawType = (value: unknown): string => {
     return toTypeString(value).slice(8, -1);
 };
 
-const rawToNpc = new WeakMap<any, NotifyPropertyChanged<any>>();
-const npcToRaw = new WeakMap<NotifyPropertyChanged<any>, any>();
+const rawToNpc = new WeakMap<any, NotifyPropertyChangedType<any>>();
+const npcToRaw = new WeakMap<NotifyPropertyChangedType<any>, any>();
 const npcObservers = new WeakMap<any, Subject<any>>();
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet]);
 const isObservableType = (() => {
@@ -40,12 +40,12 @@ export function toRaw<T>(observed: T): T {
     return npcToRaw.get(observed) ?? observed;
 }
 
-export function isNotifyPropertyChanged<T>(target: T): target is NotifyPropertyChanged<T> {
+export function isNotifyPropertyChanged<T>(target: T): target is NotifyPropertyChangedType<T> {
     const data = npcToRaw.get(target);
     return data && !!data[notifyPropertyChangedSymbol];
 }
 
-export function isNotifyCollectionChanged<T>(target: T): target is NotifyCollectionChanged<T> {
+export function isNotifyCollectionChanged<T>(target: T): target is NotifyCollectionChangedType<T> {
     const data = npcToRaw.get(target);
     return data && !!data[notifyCollectionChangedSymbol];
 }
@@ -55,16 +55,16 @@ const canObserve = (value: any): boolean => {
     // && !nonReactiveValues.has(value);
 };
 
-export function notifyPropertyChanged<T>(target: ObjectType<T>): NotifyPropertyChanged<T> {
+export function observePropertyChanges<T>(target: ObjectType<T>): NotifyPropertyChangedType<T> {
     return createNotifyPropertyChanged(target, rawToNpc, npcToRaw, npcObservers, objectHandlers, collectionHandlers) as any;
 }
-export function notifyCollectionChanged<T>(target: CollectionType<T>): NotifyCollectionChanged<T> {
+export function observeCollectionChanges<T>(target: CollectionType<T>): NotifyCollectionChangedType<T> {
     return createNotifyPropertyChanged(target, rawToNpc, npcToRaw, npcObservers, objectHandlers, collectionHandlers) as any;
 }
 
-export function notificationsFor<T>(target: NotifyPropertyChanged<T>): Observable<keyof T>;
-export function notificationsFor<T>(target: NotifyCollectionChanged<T>): Observable<unknown>;
-export function notificationsFor<T>(target: NotifyPropertyChanged<T> | NotifyCollectionChanged<T>): Observable<any> {
+export function notificationsFor<T>(target: NotifyPropertyChangedType<T>): Observable<keyof T>;
+export function notificationsFor<T>(target: NotifyCollectionChangedType<T>): Observable<unknown>;
+export function notificationsFor<T>(target: NotifyPropertyChangedType<T> | NotifyCollectionChangedType<T>): Observable<any> {
     if (isNotifyPropertyChanged(target)) {
         return target[notifyPropertyChangedSymbol];
     }
@@ -111,7 +111,7 @@ const collectionHandlers = (() => {
     type SetTypes = Set<any> | WeakSet<any>;
 
     // eslint-disable-next-line unicorn/consistent-function-scoping
-    const toReactive = <T extends unknown>(value: any): any => (isObject(value) ? notifyPropertyChanged(value) : value);
+    const toReactive = <T extends unknown>(value: any): any => (isObject(value) ? observePropertyChanges(value) : value);
 
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const getProto = <T extends CollectionTypes>(v: T): any => Reflect.getPrototypeOf(v);
@@ -255,12 +255,12 @@ const collectionHandlers = (() => {
 
 function createNotifyPropertyChanged<TObject extends new (...args: any) => any>(
     target: InstanceType<TObject>,
-    toProxy: WeakMap<any, NotifyPropertyChanged<any>>,
-    toRaw: WeakMap<NotifyPropertyChanged<any>, any>,
+    toProxy: WeakMap<any, NotifyPropertyChangedType<any>>,
+    toRaw: WeakMap<NotifyPropertyChangedType<any>, any>,
     toObserver: WeakMap<any, Subject<any>>,
     objectHandlers: (observer: Observer<string | symbol>) => ProxyHandler<any>,
     collectionHandlers: (observer: Observer<unknown>) => ProxyHandler<any>,
-): NotifyPropertyChanged<TObject> {
+): NotifyPropertyChangedType<TObject> {
     if (!isObject(target)) {
         return target as any;
     }

@@ -2,15 +2,16 @@ import { Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { CompositeDisposable, Disposable, IDisposable } from '../../util';
 import { ChangeAwareCache } from '../ChangeAwareCache';
-import { toArray as ixToArray } from 'ix/iterable/toarray';
+import { toArray, toArray as ixToArray } from 'ix/iterable/toarray';
 import { range as ixRange } from 'ix/iterable/range';
 import { map as ixMap } from 'ix/iterable/operators/map';
 import { Cache } from '../Cache';
 import { count, every, first, some, zip as ixZip } from 'ix/iterable';
 import { from as ixFrom } from 'ix/iterable/from';
 import { filter as ixFilter, skip, take } from 'ix/iterable/operators';
+import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 
-export function combineCache<TObject, TKey>(operator: CombineOperator, ...items: Observable<IChangeSet<TObject, TKey>>[]): Observable<IChangeSet<TObject, TKey>> {
+export function combineCache<TObject, TKey>(operator: CombineOperator, items: ArrayOrIterable<Observable<IChangeSet<TObject, TKey>>>): Observable<IChangeSet<TObject, TKey>> {
     return new Observable<IChangeSet<TObject, TKey>>(observer => {
         function updateAction(updates: IChangeSet<TObject, TKey>) {
             try {
@@ -23,7 +24,7 @@ export function combineCache<TObject, TKey>(operator: CombineOperator, ...items:
 
         let subscriber: IDisposable = Disposable.empty;
         try {
-            subscriber = combiner(operator, updateAction, items);
+            subscriber = combiner(operator, updateAction, toArray(items));
         } catch (ex) {
             observer.error(ex);
             observer.complete();
@@ -86,7 +87,7 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
                         }
                     } else {
                         if (contained) {
-                            _combinedCache.remove(key);
+                            _combinedCache.removeKey(key);
                         }
                     }
                 }
@@ -111,7 +112,7 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
                         }
                     } else {
                         if (contained) {
-                            _combinedCache.remove(key);
+                            _combinedCache.removeKey(key);
                         }
                     }
                 }
@@ -119,7 +120,7 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
                     break;
 
                 case 'refresh': {
-                    _combinedCache.refresh(key);
+                    _combinedCache.refreshKey(key);
                 }
 
                     break;

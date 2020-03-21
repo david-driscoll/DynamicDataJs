@@ -2,9 +2,9 @@
 /* eslint-disable */
 // import { reactive, effect, enableTracking } from '@vue/reactivity';
 
-import { notifyPropertyChanged, notificationsFor, NotifyPropertyChanged } from './src/notify/notifyPropertyChangedSymbol';
+import { observePropertyChanges, notificationsFor, NotifyPropertyChangedType } from './src/notify/notifyPropertyChangedSymbol';
 import { filter, map } from 'rxjs/operators';
-function whenAnyPropertyChanged<TObject>(value: NotifyPropertyChanged<TObject>, ...keys: (keyof TObject)[]) {
+function whenAnyPropertyChanged<TObject>(value: NotifyPropertyChangedType<TObject>, ...keys: (keyof TObject)[]) {
     return (keys.length > 0 ? notificationsFor(value).pipe(filter(property => keys.includes(property))) : notificationsFor(value)).pipe(
         map(z => value)
     );
@@ -14,7 +14,7 @@ const a = {
     first: 'david',
     last: 'driscoll',
 };
-const b = notifyPropertyChanged(a);
+const b = observePropertyChanges(a);
 const n = notificationsFor(b);
 b; //?
 n.subscribe; //?

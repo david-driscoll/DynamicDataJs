@@ -4,6 +4,7 @@ import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { or } from '../../src/cache/operators/or';
 import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { xor } from '../../src/cache/operators/xor';
+import { Person } from '../domain/Person';
 
 describe('XOrFixture', () => {
     let _source1: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
@@ -13,7 +14,7 @@ describe('XOrFixture', () => {
     beforeEach(() => {
         _source1 = updateable(new SourceCache<Person, string>(p => p.name));
         _source2 = updateable(new SourceCache<Person, string>(p => p.name));
-        _results = asAggregator(xor(_source1.connect(), _source2.connect()));
+        _results = asAggregator(xor([_source1.connect(), _source2.connect()]));
     });
 
     afterEach(() => {
@@ -55,8 +56,3 @@ describe('XOrFixture', () => {
         expect(_results.data.size).toBe(0);
     });
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}

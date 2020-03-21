@@ -36,12 +36,6 @@ export interface ICacheUpdater<TObject, TKey> extends IQuery<TObject, TKey> {
     refreshKeys(keys: ArrayOrIterable<TKey>): void;
 
      /**
-     *  Refreshes the items matching the specified keys
-      * @param keys The keys.
-     */
-    refreshKeys(...keys: TKey[]): void;
-
-     /**
      *  Refreshes the item matching the specified key
       * @param key The key.
      */
@@ -52,12 +46,6 @@ export interface ICacheUpdater<TObject, TKey> extends IQuery<TObject, TKey> {
       * @param key The key.
      */
     removeKeys(key: ArrayOrIterable<TKey>): void;
-
-     /**
-     *  RRemoves the specified keys
-      * @param keys The keys.
-     */
-    removeKeys(...keys: TKey[]): void;
 
      /**
      * Remove the specified key
@@ -91,11 +79,5 @@ export interface ICacheUpdater<TObject, TKey> extends IQuery<TObject, TKey> {
      *  Gets the key values for the specified items
       * @param values The values.
      */
-    entries(values: ArrayOrIterable<TObject>): IterableIterator<[TKey, TObject]>;
-
-     /**
-     *  Gets the key values for the specified items
-      * @param values The values.
-     */
-    entries(...values: TObject[]): IterableIterator<[TKey, TObject]>;
+    entries(values?: ArrayOrIterable<TObject>): IterableIterator<[TKey, TObject]>;
 }

@@ -1,5 +1,5 @@
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
-import { IEqualityComparer } from '../util/isEqualityComparer';
+import { EqualityComparer } from '../util/isEqualityComparer';
 import { ICacheUpdater } from './ICacheUpdater';
 
 /**
@@ -23,22 +23,10 @@ export interface ISourceUpdater<TObject, TKey> extends ICacheUpdater<TObject, TK
     load(entries: ArrayOrIterable<TObject>): void;
 
     /**
-     *  Clears existing values and loads the specified items
-     * @param entries The entries.
-     */
-    load(...entries: TObject[]): void;
-
-    /**
      *  Adds or changes the specified items.
      * @param entries The entries.
      */
     addOrUpdateValues(entries: ArrayOrIterable<TObject>): void;
-
-    /**
-     *  Adds or changes the specified items.
-     * @param entries The entries.
-     */
-    addOrUpdateValues(...entries: TObject[]): void;
 
     /**
      *  Adds or update the item,
@@ -51,19 +39,13 @@ export interface ISourceUpdater<TObject, TKey> extends ICacheUpdater<TObject, TK
      * @param item The item.
      * @param comparer The comparer
      */
-    addOrUpdate(item: TObject, comparer: IEqualityComparer<TObject>): void;
+    addOrUpdate(item: TObject, comparer: EqualityComparer<TObject>): void;
 
     /**
      *  Refreshes the specified items.
      * @param entries The entries.
      */
     refreshValues(entries: ArrayOrIterable<TObject>): void;
-
-    /**
-     *  Refreshes the specified items.
-     * @param entries The entries.
-     */
-    refreshValues(...entries: TObject[]): void;
 
     /**
      * Refreshes the specified item
@@ -82,12 +64,6 @@ export interface ISourceUpdater<TObject, TKey> extends ICacheUpdater<TObject, TK
      * @param entries The entries.
      */
     removeValues(entries: ArrayOrIterable<TObject>): void;
-
-    /**
-     * Removes the specified items
-     * @param entries The entries.
-     */
-    removeValues(...entries: TObject[]): void;
 
     /**
      *  Removes the specified item.

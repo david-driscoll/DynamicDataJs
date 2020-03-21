@@ -1,6 +1,6 @@
 import { OperatorFunction, queueScheduler, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
-import { NotifyPropertyChanged } from '../../notify/notifyPropertyChangedSymbol';
+import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { IGroupChangeSet } from '../IGroupChangeSet';
 import { publish, throttleTime } from 'rxjs/operators';
 import { whenValueChanged } from './whenValueChanged';
@@ -16,11 +16,11 @@ import { groupOn } from './groupOn';
  * @param propertyChangedThrottle
  * @param scheduler The scheduler.
  */
-export function groupOnKey<TObject, TKey, TGroupKey, TProperty extends keyof TObject>(
+export function groupOnProperty<TObject, TKey, TGroupKey, TProperty extends keyof TObject>(
     key: TProperty,
     propertyChangedThrottle?: number,
     scheduler: SchedulerLike = queueScheduler,
-): OperatorFunction<IChangeSet<NotifyPropertyChanged<TObject>, TKey>, IGroupChangeSet<NotifyPropertyChanged<TObject>, TKey, TObject[TProperty]>> {
+): OperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>, IGroupChangeSet<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>> {
     return function groupOnKeyOperator(source) {
         return source
             .pipe(publish(shared => {

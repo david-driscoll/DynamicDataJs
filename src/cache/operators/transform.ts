@@ -42,14 +42,14 @@ export function transform<TSource, TKey, TDestination>(
                         }
                             break;
                         case 'remove':
-                            cache.remove(change.key);
+                            cache.removeKey(change.key);
                             break;
                         case 'refresh': {
                             if (transformOnRefresh) {
                                 const transformed = transformFactory(change.current, change.key, change.previous);
                                 cache.addOrUpdate(transformed, change.key);
                             } else {
-                                cache.refresh(change.key);
+                                cache.refreshKey(change.key);
                             }
                         }
 

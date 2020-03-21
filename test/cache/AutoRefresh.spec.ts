@@ -5,20 +5,21 @@ import { map as ixMap } from 'ix/iterable/operators';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { autoRefresh } from '../../src/cache/operators/autoRefresh';
 import { asAggregator } from '../util/aggregator';
-import { notifyPropertyChanged, NotifyPropertyChanged } from '../../src/notify/notifyPropertyChangedSymbol';
+import { observePropertyChanges, NotifyPropertyChangedType } from '../../src/notify/notifyPropertyChangedSymbol';
 import { autoRefreshOnObservable } from '../../src/cache/operators/autoRefreshOnObservable';
 import { whenAnyPropertyChanged } from '../../src/cache/operators/whenAnyPropertyChanged';
 import { transform } from '../../src/cache/operators/transform';
 import { bind } from '../../src/cache/operators/bind';
+import { Person } from '../domain/Person';
 
 describe('AutoRefreshFixture', () => {
     it('AutoRefresh', () => {
         const items = ixToArray(range(1, 100)
-            .pipe(ixMap(i => notifyPropertyChanged(new Person('Person' + i, 1)))),
+            .pipe(ixMap(i => observePropertyChanges(new Person('Person' + i, 1)))),
         );
 
         //result should only be true when all items are set to true
-        const cache = updateable(new SourceCache<NotifyPropertyChanged<Person>, string>(m => m.name));
+        const cache = updateable(new SourceCache<NotifyPropertyChangedType<Person>, string>(m => m.name));
         const results = asAggregator(
             cache.connect()
                 .pipe(autoRefresh('age')),
@@ -56,11 +57,11 @@ describe('AutoRefreshFixture', () => {
     });
     it('AutoRefreshFromObservable', () => {
         const items = ixToArray(range(1, 100)
-            .pipe(ixMap(i => notifyPropertyChanged(new Person('Person' + i, 1)))),
+            .pipe(ixMap(i => observePropertyChanges(new Person('Person' + i, 1)))),
         );
 
         //result should only be true when all items are set to true
-        const cache = updateable(new SourceCache<NotifyPropertyChanged<Person>, string>(m => m.name));
+        const cache = updateable(new SourceCache<NotifyPropertyChangedType<Person>, string>(m => m.name));
         const results = asAggregator(
             cache.connect()
                 .pipe(
@@ -100,8 +101,8 @@ describe('AutoRefreshFixture', () => {
     });
 
     it('MakeSelectMagicWorkWithObservable', () => {
-        const initialItem = notifyPropertyChanged(new IntHolder(1, 'Initial Description'));
-        const cache = updateable(new SourceCache<NotifyPropertyChanged<IntHolder>, string>(m => m.description));
+        const initialItem = observePropertyChanges(new IntHolder(1, 'Initial Description'));
+        const cache = updateable(new SourceCache<NotifyPropertyChangedType<IntHolder>, string>(m => m.description));
         cache.addOrUpdate(initialItem);
 
         const values: string [] = [];
@@ -121,11 +122,6 @@ describe('AutoRefreshFixture', () => {
     });
 
 });
-
-class Person {
-    constructor(public  name: string, public age: number) {
-    }
-}
 
 class IntHolder {
     constructor(public value: number, public  description: string) {
