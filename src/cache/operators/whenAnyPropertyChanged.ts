@@ -14,7 +14,7 @@ import { mergeMany } from './mergeMany';
  * @param value The object to observe
  * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
  */
-export function whenAnyPropertyChanged<TObject>(value: NotifyPropertyChangedType<TObject>, ...propertiesToMonitor: (keyof TObject)[]): Observable<NotifyPropertyChangedType<TObject>>;
+export function whenAnyPropertyChanged<TObject>(value: TObject, ...propertiesToMonitor: (keyof TObject)[]): Observable<NotifyPropertyChangedType<TObject>>;
 /**
  * Watches each item in the collection and notifies when any of them has changed
  * @typeparam TObject The type of the object.
@@ -22,8 +22,11 @@ export function whenAnyPropertyChanged<TObject>(value: NotifyPropertyChangedType
  * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
  */
 export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>(...propertiesToMonitor: (keyof TObject)[]): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TProperty>>;
-export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>(...value: (NotifyPropertyChangedType<TObject> | keyof TObject)[]) {
-    if (value.length > 0 && isNotifyPropertyChanged(value[0])) {
+export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>(...value: (TObject | keyof TObject)[]) {
+    if (value.length > 0 && typeof value[0] !== 'string' && typeof value[0] !== 'symbol') {
+        if (!isNotifyPropertyChanged(value[0])) {
+            throw new Error("Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges");
+        }
         const propertiesToMonitor = value.slice(1) as (keyof TObject)[];
         return (propertiesToMonitor.length > 0 ?
             notificationsFor(value[0] as any)
@@ -31,7 +34,7 @@ export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>
             notificationsFor(value[0] as any)).pipe(map(z => value),
         );
     }
-    return function whenAnyPropertyChangedOperator(source: Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TProperty>>) {
+    return function whenAnyPropertyChangedOperator(source: Observable<IChangeSet<TObject, TProperty>>) {
         const propertiesToMonitor = value as (keyof TObject)[];
         return source.pipe(mergeMany(value => whenAnyPropertyChanged(value, ...propertiesToMonitor)));
     };

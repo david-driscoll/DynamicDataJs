@@ -102,7 +102,7 @@ describe('GroupImmutableFixture', () => {
             .pipe(groupBy(z => z.age))
             .forEach(group => {
                 const cache = _results.data.lookup(group.key)!;
-                expect(toArray(cache)).toEqual(group);
+                expect(toArray(cache)).toEqual(toArray(group));
             });
 
         const changedPeople = range(1, 100)
@@ -114,7 +114,7 @@ describe('GroupImmutableFixture', () => {
             .pipe(groupBy(z => z.age))
             .forEach(group => {
                 const cache = _results.data.lookup(group.key)!;
-                expect(toArray(cache)).toEqual(group);
+                expect(toArray(cache)).toEqual(toArray(group));
             });
 
         expect(_results.messages.length).toBe(2);
@@ -133,14 +133,15 @@ describe('GroupImmutableFixture', () => {
         //do an inline update
         for (const person of initialPeople) {
             person.age = person.age + 1;
-        }            //signal operators to evaluate again
+        }
+        //signal operators to evaluate again
         _source.refresh();
 
         initialPeople
             .pipe(groupBy(z => z.age))
             .forEach(group => {
                 const cache = _results.data.lookup(group.key)!;
-                expect(toArray(cache)).toEqual(group);
+                expect(toArray(cache)).toEqual(toArray(group));
             });
 
         expect(_results.data.size).toBe(2);

@@ -1,4 +1,4 @@
-import { OperatorFunction, queueScheduler, SchedulerLike } from 'rxjs';
+import { Observable, OperatorFunction, queueScheduler, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { IGroupChangeSet } from '../IGroupChangeSet';
@@ -20,7 +20,7 @@ export function groupOnProperty<TObject, TKey, TGroupKey, TProperty extends keyo
     key: TProperty,
     propertyChangedThrottle?: number,
     scheduler: SchedulerLike = queueScheduler,
-): OperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>, IGroupChangeSet<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>> {
+): OperatorFunction<IChangeSet<TObject, TKey>, IGroupChangeSet<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>> {
     return function groupOnKeyOperator(source) {
         return source
             .pipe(publish(shared => {
@@ -34,7 +34,7 @@ export function groupOnProperty<TObject, TKey, TGroupKey, TProperty extends keyo
                 }
 
                 // Use property changes as a trigger to re-evaluate Grouping
-                return shared.pipe(groupOn(x => x[key], regrouper));
+                return shared.pipe(groupOn(x => x[key], regrouper)) as any as Observable<IGroupChangeSet<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>>;
             }));
     };
 }

@@ -108,7 +108,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                 }
 
                 groupCache.update(groupUpdater => {
-                    for (let current of group) {
+                    for (const current of group) {
                         switch (current.reason) {
                             case 'add': {
                                 groupUpdater.addOrUpdate(current.item, current.key);
@@ -124,7 +124,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                                 if (previous === undefined)
                                     throw new Error(`${current.key} is missing from previous value on update.`);
 
-                                if (previous.groupKey === current.groupKey) {
+                                if (previous.groupKey !== current.groupKey) {
                                     const g = _groupCache.get(previous.groupKey);
                                     if (g !== undefined) {
                                         g.update(u => u.removeKey(current.key));

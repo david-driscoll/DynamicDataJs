@@ -1,4 +1,5 @@
 ﻿import { NotifyChanged, NotifyPropertyChanged } from '../../src/binding/NotifyPropertyChanged';
+import { notifyPropertyChangedSymbol } from '../../src/notify/notifyPropertyChangedSymbol';
 
 @NotifyPropertyChanged
 export class Person {
@@ -38,3 +39,6 @@ export class Person {
         return `${this.name}. ${this.age}`;
     }
 }
+
+const person = new Person('ad', 123);
+person[notifyPropertyChangedSymbol];

@@ -14,7 +14,7 @@ import { whenChanged } from './whenChanged';
  *           For an object like Parent.Child.Sibling, sibling is an object so if Child == null, the value null and obtainable and is returned as null.
  */
 export function whenValueChanged<TObject, TProperty extends keyof TObject>(
-    value: NotifyPropertyChangedType<TObject>,
+    value: TObject,
     key: TProperty,
     notifyInitial?: boolean,
     fallbackValue?: () => TObject[TProperty]): Observable<TObject[TProperty]>;
@@ -26,12 +26,15 @@ export function whenValueChanged<TObject, TProperty extends keyof TObject>(
  * @param key The key to watch
  * @param notifyInitial if set to <c>true</c> [notify on initial value].
  */
-export function whenValueChanged<TObject, TKey, TProperty extends keyof TObject>(key: TProperty, notifyInitial?: boolean): OperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>, TObject[TProperty]>;
+export function whenValueChanged<TObject, TKey, TProperty extends keyof TObject>(key: TProperty, notifyInitial?: boolean): OperatorFunction<IChangeSet<TObject, TKey>, TObject[TProperty]>;
 export function whenValueChanged<TObject, TProperty extends keyof TObject>(value: NotifyPropertyChangedType<TObject> | TProperty, key: TProperty | boolean, notifyInitial?: boolean, fallbackValue?: () => TObject[TProperty]) {
-    if (isNotifyPropertyChanged(value)) {
+    if (typeof value !== 'string' && typeof value !== 'symbol') {
+        if (!isNotifyPropertyChanged(value)) {
+            throw new Error("Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges");
+        }
         return whenChanged(value as any, key as TProperty, notifyInitial, fallbackValue);
     } else {
-        return function whenValueChangedOperator(source: Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TProperty>>) {
+        return function whenValueChangedOperator(source: Observable<IChangeSet<TObject, TProperty>>) {
             return source.pipe(mergeMany(v => whenChanged(v, value as TProperty, key as boolean | undefined)));
         };
     }

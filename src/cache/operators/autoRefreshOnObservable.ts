@@ -1,5 +1,12 @@
-import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
-import { ConnectableObservable, merge, MonoTypeOperatorFunction, Observable, SchedulerLike } from 'rxjs';
+import { isNotifyPropertyChanged, NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
+import {
+    ConnectableObservable,
+    merge,
+    MonoTypeOperatorFunction,
+    Observable,
+    OperatorFunction,
+    SchedulerLike,
+} from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { bufferTime, filter, map, publish } from 'rxjs/operators';
 import { mergeMany } from './mergeMany';
@@ -14,10 +21,10 @@ import { CompositeDisposable } from '../../util';
  * @param scheduler The scheduler
  */
 export function autoRefreshOnObservable<TObject, TKey>(
-    reevaluator: (value: NotifyPropertyChangedType<TObject>, key: TKey) => Observable<unknown>,
+    reevaluator: (value: TObject, key: TKey) => Observable<unknown>,
     changeSetBuffer?: number,
     scheduler?: SchedulerLike,
-): MonoTypeOperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> {
+): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> {
     return function autoRefreshOnObservableOperator(source) {
         return new Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>(observer => {
             const shared: ConnectableObservable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> = source.pipe(publish()) as any;
@@ -26,7 +33,12 @@ export function autoRefreshOnObservable<TObject, TKey>(
             let changes = shared
                 .pipe(mergeMany((t, k) =>
                     reevaluator(t, k)
-                        .pipe(map(_ => new Change<NotifyPropertyChangedType<TObject>, TKey>('refresh', k, t))),
+                        .pipe(map(_ => {
+                            if (!isNotifyPropertyChanged(t)) {
+                                throw new Error("Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges");
+                            }
+                            return new Change<NotifyPropertyChangedType<TObject>, TKey>('refresh', k, t);
+                        })),
                 ));
 
             //create a changeset, either buffered or one item at the time

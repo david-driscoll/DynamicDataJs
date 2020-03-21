@@ -5,6 +5,7 @@ import { Cache } from '../Cache';
 import { ISortedChangeSet, isSortedChangeSet } from '../ISortedChangeSet';
 import { from, toArray } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
+import { stringify } from 'querystring';
 
 export function bind<TObject, TKey>(
     values: TObject[],
@@ -47,6 +48,7 @@ function createAdapter<TObject, TKey>(values: TObject[], refreshThreshold: numbe
 
         if (changes.size - changes.refreshes > refreshThreshold || !_loaded) {
             values.splice(0, values.length, ...toArray(_cache.values()));
+            _loaded = true;
         } else {
             doUpdate(changes, values);
         }

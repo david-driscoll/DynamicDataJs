@@ -5,7 +5,11 @@ import { map as ixMap } from 'ix/iterable/operators';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { autoRefresh } from '../../src/cache/operators/autoRefresh';
 import { asAggregator } from '../util/aggregator';
-import { observePropertyChanges, NotifyPropertyChangedType } from '../../src/notify/notifyPropertyChangedSymbol';
+import {
+    observePropertyChanges,
+    NotifyPropertyChangedType,
+    notifyPropertyChangedSymbol,
+} from '../../src/notify/notifyPropertyChangedSymbol';
 import { autoRefreshOnObservable } from '../../src/cache/operators/autoRefreshOnObservable';
 import { whenAnyPropertyChanged } from '../../src/cache/operators/whenAnyPropertyChanged';
 import { transform } from '../../src/cache/operators/transform';
@@ -57,11 +61,11 @@ describe('AutoRefreshFixture', () => {
     });
     it('AutoRefreshFromObservable', () => {
         const items = ixToArray(range(1, 100)
-            .pipe(ixMap(i => observePropertyChanges(new Person('Person' + i, 1)))),
+            .pipe(ixMap(i => new Person('Person' + i, 1))),
         );
 
         //result should only be true when all items are set to true
-        const cache = updateable(new SourceCache<NotifyPropertyChangedType<Person>, string>(m => m.name));
+        const cache = updateable(new SourceCache<Person, string>(m => m.name));
         const results = asAggregator(
             cache.connect()
                 .pipe(
