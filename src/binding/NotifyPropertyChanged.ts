@@ -1,6 +1,7 @@
 import { notifyPropertyChangedSymbol } from '../notify/notifyPropertyChangedSymbol';
 import { Observable, Subject } from 'rxjs';
 import { EqualityComparer } from '../util/isEqualityComparer';
+import { isWeakMap } from '../util/isWeakMap';
 
 function defaultComparer<T>(a: T, b: T) {
     return a === b;
@@ -17,7 +18,9 @@ function setAndRaise<THIS extends { [notifyPropertyChangedSymbol]: Observable<ke
     if (target[notifyPropertyChangedSymbol] === undefined) throw new Error('object is not setup to notify on property changes');
 
     setter(newValue);
-    (target as any)[NotifyPropertyChangedBaseSubject].next(property);
+    if ((target as any)[NotifyPropertyChangedBaseSubject].observers.length > 0) {
+        (target as any)[NotifyPropertyChangedBaseSubject].next(property);
+    }
 }
 
 function creator(object: any) {

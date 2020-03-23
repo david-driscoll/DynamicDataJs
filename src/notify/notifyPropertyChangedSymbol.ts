@@ -41,13 +41,21 @@ export function toRaw<T>(observed: T): T {
 }
 
 export function isNotifyPropertyChanged<T>(target: T): target is NotifyPropertyChangedType<T> {
+    if (target && (target as any)[notifyPropertyChangedSymbol] !== undefined) {
+        return true;
+    }
+
     const data = npcToRaw.get(target);
-    return data && !!data[notifyPropertyChangedSymbol];
+    return data && data[notifyPropertyChangedSymbol] !== undefined;
 }
 
 export function isNotifyCollectionChanged<T>(target: T): target is NotifyCollectionChangedType<T> {
+    if (target && (target as any)[notifyCollectionChangedSymbol] !== undefined) {
+        return true;
+    }
+
     const data = npcToRaw.get(target);
-    return data && !!data[notifyCollectionChangedSymbol];
+    return data && data[notifyCollectionChangedSymbol] !== undefined;
 }
 
 const canObserve = (value: any): boolean => {

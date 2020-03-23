@@ -1,60 +1,63 @@
 ﻿import { ISourceCache } from '../../src/cache/ISourceCache';
-import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
-import { TestScheduler } from 'rxjs/testing';
-import { timer, VirtualTimeScheduler } from 'rxjs';
-import { SourceCache, updateable } from '../../src/cache/SourceCache';
-import { range, from, toArray } from 'ix/iterable';
-import { map, filter } from 'ix/iterable/operators';
-import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
-import { expireAfter } from '../../src/cache/operators/expireAfter';
-import { noop } from 'rxjs';
+import { IDisposable } from '../../src/util';
 import { Person } from '../domain/Person';
+import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
+import { ChangeSetAggregator } from '../util/aggregator';
+import { TestScheduler } from 'rxjs/testing';
+import { SourceCache, updateable } from '../../src/cache/SourceCache';
+import { expireAfter } from '../../src/cache/operators/expireAfter';
+import { Subscription } from 'rxjs';
+import { range } from 'ix/iterable';
+import { map } from 'ix/iterable/operators';
 
-describe('ExpireAfterFixture', () => {
-    let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
+describe('TimeExpiryFixture', () => {
+
+    let _cache: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
+    let _remover: Subscription;
     let _results: ChangeSetAggregator<Person, string>;
     let _scheduler: TestScheduler;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<Person, string>(p => p.name));
-        _results = asAggregator(_source.connect());
-        _scheduler = new TestScheduler((a, b) => expect(a).toEqual(b));
+        _scheduler = new TestScheduler((actual, expected) => expect(actual).toEqual(expected));
+        _cache = updateable(new SourceCache<Person, string>(p => p.key));
+        _results = new ChangeSetAggregator<Person, string>(_cache.connect());
+        _remover = expireAfter(_cache, p => 100, _scheduler).subscribe();
     });
 
     afterEach(() => {
         _results.dispose();
-        _source.dispose();
+        _remover.unsubscribe();
+        _cache.dispose();
     });
 
-    it('ComplexRemove', () => {
+    it('AutoRemove', () => {
         _scheduler.run(({ flush }) => {
-            function RemoveFunc(t: Person) {
-                if (t.age <= 40) {
-                    return 500;
+            function removeFunc(t: Person): number | undefined {
+                if (t.age < 40) {
+                    return 4000;
                 }
-                if (t.age <= 80) {
-                    return 700;
+                if (t.age < 80) {
+                    return 7000;
                 }
 
                 return undefined;
             }
 
             const size = 100;
-            const items = range(1, size).pipe(map(i => new Person(`Name.${i}`, i)));
-            _source.addOrUpdateValues(items);
+            const items = range(1, size).pipe(map(i => new Person(`Name${i}`, i)));
+            _cache.addOrUpdateValues(items);
 
-            _scheduler.schedule(() => expect(_source.size).toBe(60), 501);
-            _scheduler.schedule(() => expect(_source.size).toBe(20), 1000);
+            const xxx = expireAfter(_cache, removeFunc, _scheduler).subscribe();
+            flush();
 
-            expireAfter(_source, RemoveFunc, _scheduler).subscribe();
+            xxx.unsubscribe();
         });
     });
 
     it('ItemAddedIsExpired', () => {
         _scheduler.run(({ flush }) => {
-            _source.addOrUpdate(new Person('Name1', 10));
+            _cache.addOrUpdate(new Person('Name1', 10));
 
-            expireAfter(_source, p => 1).subscribe();
             flush();
 
             expect(_results.messages.length).toBe(2);
@@ -65,12 +68,11 @@ describe('ExpireAfterFixture', () => {
 
     it('ExpireIsCancelledWhenUpdated', () => {
         _scheduler.run(({ flush }) => {
-            _source.edit(updater => {
+            _cache.edit(updater => {
                 updater.addOrUpdate(new Person('Name1', 20));
                 updater.addOrUpdate(new Person('Name1', 21));
             });
 
-            expireAfter(_source, p => 100, _scheduler).subscribe();
             flush();
 
             expect(_results.data.size).toBe(0);
@@ -84,11 +86,9 @@ describe('ExpireAfterFixture', () => {
     it('CanHandleABatchOfUpdates', () => {
         _scheduler.run(({ flush }) => {
             const size = 100;
-            const items = range(1, size).pipe(map(i => new Person(`Name.${i}`, i)));
+            const items = range(1, size).pipe(map(i => new Person(`Name${i}`, i)));
 
-            _source.addOrUpdateValues(items);
-
-            expireAfter(_source, p => 100, _scheduler).subscribe();
+            _cache.addOrUpdateValues(items);
             flush();
 
             expect(_results.data.size).toBe(0);

@@ -20,7 +20,7 @@ export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
             }
 
             function completion() {
-                if (status == 'errored') {
+                if (status === 'errored') {
                     return;
                 }
 
@@ -29,7 +29,7 @@ export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
             }
 
             function updated() {
-                if (status != 'pending') {
+                if (status !== 'pending') {
                     return;
                 }
 
@@ -39,7 +39,9 @@ export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
 
             const monitor = source.subscribe(updated, error, completion);
 
-            const subscriber = statusSubject.pipe(startWith(status), distinctUntilChanged()).subscribe(observer);
+            const subscriber = statusSubject
+                .pipe(startWith(status), distinctUntilChanged())
+                .subscribe(observer);
 
             return () => {
                 statusSubject.complete();

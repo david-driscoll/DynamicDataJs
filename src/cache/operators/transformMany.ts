@@ -5,7 +5,7 @@ import { ChangeAwareCache } from '../ChangeAwareCache';
 import { notEmpty } from './notEmpty';
 import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 import { transform } from './transform';
-import { from as ixFrom, first } from 'ix/iterable';
+import { from as ixFrom, first, toArray } from 'ix/iterable';
 import { filter as ixFilter, map as ixMap, except, intersect } from 'ix/iterable/operators';
 import { ChangeSet } from '../ChangeSet';
 import { Change } from '../Change';
@@ -27,14 +27,28 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
     keySelector: (destination: TDestination) => TDestinationKey,
     // Func<TSource, IObservable<IChangeSet<TDestination, TDestinationKey>>> childChanges = null
 ): ChangeSetOperatorFunction<TSource, TSourceKey, TDestination, TDestinationKey> {
+    class ManyContainer {
+        private readonly _initial: () => ArrayOrIterable<DestinationContainer>;
+        public changes: Observable<IChangeSet<TDestination, TDestinationKey>> | undefined;
+
+        public get destination() {
+            return this._initial();
+        }
+
+        public constructor(initial: () => Array<DestinationContainer>, changes?: Observable<IChangeSet<TDestination, TDestinationKey>>) {
+            this._initial = initial;
+            this.changes = changes;
+        }
+    }
+
     return function transformManyOperator(source) {
         return source
             .pipe(
                 transform((t, key) => {
-                    const destination = ixFrom(manySelector(t))
+                    const destination = toArray(ixFrom(manySelector(t))
                         .pipe(
                             ixMap(m => ({ item: m, key: keySelector(m) })),
-                        );
+                        ));
                     return new ManyContainer(() => destination);
                 }, true),
                 map(
@@ -44,20 +58,6 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
     };
 
     type DestinationContainer = { item: TDestination; key: TDestinationKey };
-
-    class ManyContainer {
-        private readonly _initial: () => ArrayOrIterable<DestinationContainer>;
-        public changes: Observable<IChangeSet<TDestination, TDestinationKey>> | undefined;
-
-        public get destination() {
-            return this._initial();
-        }
-
-        public constructor(initial: () => ArrayOrIterable<DestinationContainer>, changes?: Observable<IChangeSet<TDestination, TDestinationKey>>) {
-            this._initial = initial;
-            this.changes = changes;
-        }
-    }
 
     function* enumerateDestination(changes: IChangeSet<ManyContainer, TSourceKey>) {
         for (const change of changes) {

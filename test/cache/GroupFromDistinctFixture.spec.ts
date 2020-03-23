@@ -29,7 +29,7 @@ describe('GroupFromDistinctFixture', () => {
         _employmentCache?.dispose();
     });
 
-    fit('GroupFromDistinct', async () => {
+    it('GroupFromDistinct', async () => {
         const numberOfPeople = 5;
         const companies = ['Company A', 'Company B', 'Company C'];
         //create 100 people

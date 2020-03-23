@@ -2,7 +2,7 @@ import { IKey } from '../../src/cache/IKey';
 import { Pet } from './Pet';
 
 export class PersonWithRelations implements IKey<string> {
-    public constructor(name: string, age: number, relations: PersonWithRelations[]) {
+    public constructor(name: string, age: number, relations: PersonWithRelations[] = []) {
         this.name = name;
         this.age = age;
         this.keyValue = name;
