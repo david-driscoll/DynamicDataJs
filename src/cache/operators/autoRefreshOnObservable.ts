@@ -13,6 +13,7 @@ import { mergeMany } from './mergeMany';
 import { Change } from '../Change';
 import { ChangeSet } from '../ChangeSet';
 import { CompositeDisposable } from '../../util';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Automatically refresh downstream operator. The refresh is triggered when the observable receives a notification
@@ -24,7 +25,7 @@ export function autoRefreshOnObservable<TObject, TKey>(
     reevaluator: (value: TObject, key: TKey) => Observable<unknown>,
     changeSetBuffer?: number,
     scheduler?: SchedulerLike,
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> {
+): ChangeSetOperatorFunction<TObject, TKey, NotifyPropertyChangedType<TObject>> {
     return function autoRefreshOnObservableOperator(source) {
         return new Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>(observer => {
             const shared: ConnectableObservable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> = source.pipe(publish()) as any;

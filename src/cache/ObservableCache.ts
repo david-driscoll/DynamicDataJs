@@ -1,8 +1,8 @@
-import { concat, defer, Observable, of, Subject } from 'rxjs';
+import { concat, defer, isObservable, Observable, of, Subject } from 'rxjs';
 import { IChangeSet } from './IChangeSet';
-import { Disposable, IDisposable, Lazy } from '../util';
+import { CompositeDisposable, Disposable, IDisposable, Lazy } from '../util';
 import { ReaderWriter } from './ReaderWriter';
-import { distinctUntilChanged, finalize, startWith } from 'rxjs/operators';
+import { distinctUntilChanged, finalize, startWith, tap } from 'rxjs/operators';
 import { ICacheUpdater } from './ICacheUpdater';
 import { ChangeSet } from './ChangeSet';
 import { ISourceUpdater } from './ISourceUpdater';
@@ -16,23 +16,12 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     private readonly _changesPreview = new Subject<IChangeSet<TObject, TKey>>();
     private readonly _countChanged = new Lazy<Subject<number>>(() => new Subject<number>());
     private readonly _readerWriter: ReaderWriter<TObject, TKey>;
-    private readonly _cleanUp: IDisposable;
+    private readonly _cleanUp = new CompositeDisposable();
     private _editLevel = 0; // The level of recursion in editing.
     private _keySelector?: (obj: TObject) => TKey;
 
     constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((obj: TObject) => TKey)) {
-        if (!sourceOrKeySelector || typeof sourceOrKeySelector == 'function') {
-            this._keySelector = sourceOrKeySelector;
-            this._readerWriter = new ReaderWriter<TObject, TKey>(sourceOrKeySelector);
-
-            this._cleanUp = Disposable.create(() => {
-                this._changes.complete();
-                this._changesPreview.complete();
-                if (this._countChanged.isValueCreated) {
-                    this._countChanged.value!.complete();
-                }
-            });
-        } else {
+        if (isObservable(sourceOrKeySelector)) {
             this._readerWriter = new ReaderWriter<TObject, TKey>();
 
             const loader = sourceOrKeySelector
@@ -45,7 +34,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                 .subscribe(
                     changeset => {
                         const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
-                        const changes = this._readerWriter.write(changeset, previewHandler, !!this._changesPreview.observers.length);
+                        const changes = this._readerWriter.write(changeset, previewHandler, !!this._changes.observers.length);
                         this.invokeNext(changes);
                     },
                     ex => {
@@ -54,15 +43,19 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                     },
                 );
 
-            this._cleanUp = Disposable.create(() => {
-                loader.unsubscribe();
-                this._changes.complete();
-                this._changesPreview.complete();
-                if (this._countChanged.isValueCreated) {
-                    this._countChanged.value!.complete();
-                }
-            });
+            this._cleanUp.add(loader);
+        } else {
+            this._keySelector = sourceOrKeySelector;
+            this._readerWriter = new ReaderWriter<TObject, TKey>(sourceOrKeySelector);
         }
+
+        this._cleanUp.add(Disposable.create(() => {
+            this._changes.complete();
+            this._changesPreview.complete();
+            if (this._countChanged.isValueCreated) {
+                this._countChanged.value!.complete();
+            }
+        }));
     }
 
     [Symbol.iterator](): IterableIterator<[TKey, TObject]> {
@@ -76,7 +69,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         let changes: ChangeSet<TObject, TKey> | null = null;
 
         this._editLevel++;
-        if (this._editLevel == 1) {
+        if (this._editLevel === 1) {
             const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
             changes = this._readerWriter.write(updateAction, previewHandler, !!this._changes.observers.length);
         } else {
@@ -85,7 +78,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
         this._editLevel--;
 
-        if (this._editLevel == 0) {
+        if (this._editLevel === 0) {
             this.invokeNext(changes!);
         }
     }
@@ -97,7 +90,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         let changes: ChangeSet<TObject, TKey> | null = null;
 
         this._editLevel++;
-        if (this._editLevel == 1) {
+        if (this._editLevel === 1) {
             const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
             changes = this._readerWriter.write(updateAction, previewHandler, !!this._changes.observers.length);
         } else {
@@ -138,7 +131,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                 observer.next(new Change<TObject, TKey>('add', key, initial));
             }
 
-            return this._changes.pipe(finalize(observer.complete)).subscribe(changes => {
+            return this._changes.pipe(finalize(() => observer.complete())).subscribe(changes => {
                 for (let change of changes) {
                     if (change.key === key) {
                         observer.next(change);
@@ -153,7 +146,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
             const initial = of(this.getInitialUpdates(predicate));
             const changes = concat(initial, this._changes.asObservable());
 
-            return (predicate ? changes.pipe(filter(x => predicate(x))) : changes)
+            return (predicate ? changes.pipe(filter(predicate)) : changes)
                 .pipe(notEmpty())
                 ;
         });

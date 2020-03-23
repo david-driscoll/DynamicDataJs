@@ -111,7 +111,7 @@ export function NotifyChanged<T>(equalityComparer: EqualityComparer<T> = default
                 });
             }
         } else {
-            const sym = Symbol('private_field_' + (typeof propertyKey === 'string' ? propertyKey : propertyKey.description));
+            const sym = Symbol('private_field_' + (typeof propertyKey === 'string' ? propertyKey : (propertyKey as any).description));
             const privateDescriptor: PropertyDescriptor = {
                 writable: true,
                 configurable: false,

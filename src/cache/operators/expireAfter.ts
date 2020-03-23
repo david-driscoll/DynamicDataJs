@@ -10,6 +10,7 @@ import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSym
 import { ISourceCache, isSourceCache } from '../ISourceCache';
 import { isObservableCache } from '../IObservableCache';
 import { isScheduler } from 'rxjs/internal-compatibility';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Automatically removes items from the cache after the time specified by
@@ -40,7 +41,7 @@ export function expireAfter<TObject, TKey>(
 export function expireAfter<TObject, TKey>(
     timeSelector: (value: TObject) => number | undefined,
     scheduler?: SchedulerLike
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Automatically removes items from the cache after the time specified by
  * the time selector elapses.
@@ -70,7 +71,7 @@ export function expireAfter<TObject, TKey>(
     timeSelector: (value: TObject) => number | undefined,
     interval?: number,
     scheduler?: SchedulerLike
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 export function expireAfter<TObject, TKey>(
     cache: ISourceCache<TObject, TKey> | ((value: TObject) => number | undefined),
     timeSelector?: ((value: TObject) => number | undefined) | number | SchedulerLike,

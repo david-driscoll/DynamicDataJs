@@ -8,6 +8,7 @@ import { from } from 'rxjs';
 import { from as ixFrom } from 'ix/iterable';
 import { filter as ixFilter, map as ixMap } from 'ix/iterable/operators';
 import { concatMapTo, map, mergeAll, toArray } from 'rxjs/operators';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Projects each update item to a new form using the specified transform function
@@ -26,7 +27,7 @@ export function transformPromise<TSource, TKey, TDestination>(
     maximumConcurrency: number = 1,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
     forceTransform?: Observable<(source: TSource, key: TKey) => boolean>,
-): OperatorFunction<IChangeSet<TSource, TKey>, IChangeSet<TDestination, TKey>> {
+): ChangeSetOperatorFunction<TSource, TKey, TDestination, TKey> {
     type TransformResult = {
         change: Change<TSource, TKey>;
         container: TransformedItemContainer;

@@ -1,6 +1,6 @@
-import { ConnectableObservable, merge, NEVER, Observable, OperatorFunction } from 'rxjs';
+import { ConnectableObservable, merge, NEVER, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
-import { Group, GroupChangeSet, IGroupChangeSet, ManagedGroup } from '../IGroupChangeSet';
+import { Group, GroupChangeSet, ManagedGroup } from '../IGroupChangeSet';
 import { filter, finalize, map, publish } from 'rxjs/operators';
 import { disposeMany } from './disposeMany';
 import { ChangeReason } from '../ChangeReason';
@@ -10,6 +10,7 @@ import { map as ixMap } from 'ix/Ix.dom.iterable.operators';
 import { ChangeSet } from '../ChangeSet';
 import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 import { groupBy as ixGroupBy } from 'ix/iterable/operators';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  *  Groups the source on the value returned by group selector factory.
@@ -21,14 +22,14 @@ import { groupBy as ixGroupBy } from 'ix/iterable/operators';
  */
 export function groupOn<TObject, TKey, TGroupKey>(
     groupSelectorKey: (value: TObject) => TGroupKey,
-    regrouper: Observable<unknown> = NEVER): OperatorFunction<IChangeSet<TObject, TKey>, IGroupChangeSet<TObject, TKey, TGroupKey>> {
+    regrouper: Observable<unknown> = NEVER): ChangeSetOperatorFunction<TObject, TKey, Group<TObject, TKey, TGroupKey>, TGroupKey> {
 
     return function groupOnOperator(source) {
 
         const _groupCache = new Map<TGroupKey, ManagedGroup<TObject, TKey, TGroupKey>>();
         const _itemCache = new Map<TKey, ChangeWithGroup>();
 
-        return new Observable<IGroupChangeSet<TObject, TKey, TGroupKey>>(observer => {
+        return new Observable<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>>(observer => {
             const groups = source
                 .pipe(
                     finalize(() => observer.complete()),
@@ -42,7 +43,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                     filter(z => z.size !== 0),
                 );
 
-            const published: ConnectableObservable<IGroupChangeSet<TObject, TKey, TGroupKey>> = merge(groups, regroup$).pipe(publish()) as any;
+            const published: ConnectableObservable<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>> = merge(groups, regroup$).pipe(publish()) as any;
             const subscriber = published.subscribe(observer);
             const disposer = published.pipe(disposeMany()).subscribe();
 
@@ -55,10 +56,9 @@ export function groupOn<TObject, TKey, TGroupKey>(
             };
         });
 
-        function update(updates: IChangeSet<TObject, TKey>): IGroupChangeSet<TObject, TKey, TGroupKey> {
+        function update(updates: IChangeSet<TObject, TKey>): IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey> {
             return handleUpdates(updates);
         }
-
 
         type ChangeWithGroup = { item: TObject; key: TKey; groupKey: TGroupKey; reason: ChangeReason; };
 
@@ -177,20 +177,17 @@ export function groupOn<TObject, TKey, TGroupKey>(
                                         if (!isRegrouping) {
                                             groupUpdater.refreshKey(current.key);
                                         }
-
-                                        return;
-                                    }
-
-                                    const g = _groupCache.get(p.groupKey);
-                                    if (g !== undefined) {
-                                        g.update(u => u.removeKey(current.key));
-                                        if (g.size === 0) {
-                                            _groupCache.delete(g.key);
-                                            result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', g.key, g));
+                                    } else {
+                                        const g = _groupCache.get(p.groupKey);
+                                        if (g !== undefined) {
+                                            g.update(u => u.removeKey(current.key));
+                                            if (g.size === 0) {
+                                                _groupCache.delete(g.key);
+                                                result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', g.key, g));
+                                            }
                                         }
+                                        groupUpdater.addOrUpdate(current.item, current.key);
                                     }
-
-                                    groupUpdater.addOrUpdate(current.item, current.key);
                                 } else {
                                     //must be created due to addition
                                     groupUpdater.addOrUpdate(current.item, current.key);
@@ -215,3 +212,4 @@ export function groupOn<TObject, TKey, TGroupKey>(
         }
     };
 }
+

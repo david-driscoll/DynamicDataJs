@@ -6,6 +6,7 @@ import { map, scan } from 'rxjs/operators';
 import { notEmpty } from './notEmpty';
 import { filterChanges } from './filterChanges';
 import { refreshFilteredFrom } from './refreshFilteredFrom';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  *  Creates a filtered stream which can be dynamically filtered
@@ -17,9 +18,8 @@ import { refreshFilteredFrom } from './refreshFilteredFrom';
 export function filterDynamic<TObject, TKey>(
     predicateChanged: Observable<(value: TObject) => boolean>,
     reapplyFilter?: Observable<never>,
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function filterOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-
+): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
+    return function filterOperator(source) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const allData = new Cache<TObject, TKey>();
             const filteredData = new ChangeAwareCache<TObject, TKey>();
@@ -82,7 +82,7 @@ export function filterDynamic<TObject, TKey>(
  * @typeparam TKey The type of the key.
  * @param predicate The filter.
  */
-export function filter<TObject, TKey>(predicate: (value: TObject) => boolean): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function filter<TObject, TKey>(predicate: (value: TObject) => boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function filterOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return source
             .pipe(scan((cache, changes) => {

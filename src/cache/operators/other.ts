@@ -4,7 +4,7 @@
 // * @typeparam TObject The type of  object.
 // * @typeparam TKey The type of  key.
 // */
-// export function removeKey<TObject, TKey>(): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+// export function removeKey<TObject, TKey>(): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
 //     return function removeKeyOperator(source) {
 //         return source.pipe(
 //             map(changes => {

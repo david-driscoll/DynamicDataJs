@@ -4,6 +4,10 @@ import { IChangeSet } from '../IChangeSet';
 import { publish } from 'rxjs/operators';
 import { transform } from './transform';
 import { disposeMany } from './disposeMany';
+import { IPagedChangeSet } from '../IPagedChangeSet';
+import { ISortedChangeSet } from '../ISortedChangeSet';
+import { DistinctChangeSet } from '../DistinctChangeSet';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Subscribes to each item when it is added to the stream and unsubcribes when it is removed.  All items will be unsubscribed when the stream is disposed
@@ -11,15 +15,13 @@ import { disposeMany } from './disposeMany';
  * @typeparam TKey The type of the key.
  * @param subscriptionFactory The subsription function
  */
-export function subscribeMany<TObject, TKey>(
-    subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription,
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    return function subscribeManyOperator(source) {
+export function subscribeMany<TObject, TKey>(subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
+    return function subscribeManyOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
             const subscriptions = published
                 .pipe(
-                    transform((c, k, p) => subscriptionFactory(c, k)),
+                    transform(subscriptionFactory),
                     disposeMany(),
                 )
                 .subscribe();

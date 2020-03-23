@@ -5,6 +5,7 @@ import { ChangeSet } from '../ChangeSet';
 import { notEmpty } from './notEmpty';
 import { IChangeSet } from '../IChangeSet';
 import { statusMonitor } from './statusMonitor';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Defer the subscription until the stream has been inflated with data
@@ -17,7 +18,7 @@ export function deferUntilLoaded<TObject, TKey>(source: IObservableCache<TObject
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */
-export function deferUntilLoaded<TObject, TKey>(): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+export function deferUntilLoaded<TObject, TKey>(): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 export function deferUntilLoaded<TObject, TKey>(source?: IObservableCache<TObject, TKey>) {
     if (source !== undefined) {
         return concat(

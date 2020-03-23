@@ -9,6 +9,7 @@ import { from as ixFrom, first } from 'ix/iterable';
 import { filter as ixFilter, map as ixMap, except, intersect } from 'ix/iterable/operators';
 import { ChangeSet } from '../ChangeSet';
 import { Change } from '../Change';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
 
@@ -25,7 +26,7 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
     manySelector: (source: TSource) => ArrayOrIterable<TDestination>,
     keySelector: (destination: TDestination) => TDestinationKey,
     // Func<TSource, IObservable<IChangeSet<TDestination, TDestinationKey>>> childChanges = null
-): OperatorFunction<IChangeSet<TSource, TSourceKey>, IChangeSet<TDestination, TDestinationKey>> {
+): ChangeSetOperatorFunction<TSource, TSourceKey, TDestination, TDestinationKey> {
     return function transformManyOperator(source) {
         return source
             .pipe(

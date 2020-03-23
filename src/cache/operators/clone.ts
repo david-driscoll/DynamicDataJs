@@ -1,6 +1,11 @@
-import { MonoTypeOperatorFunction } from 'rxjs';
+import { MonoTypeOperatorFunction, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { tap } from 'rxjs/operators';
+import { isMap } from '../../util/isMap';
+import { isWeakSet } from '../../util/isWeakSet';
+import { isSet } from '../../util/isSet';
+import { isWeakMap } from '../../util/isWeakMap';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Clones the changes  into the specified collection
@@ -8,36 +13,36 @@ import { tap } from 'rxjs/operators';
  * @typeparam TKey The type of the key.
  * @param target The target.
  */
-export function clone<TObject, TKey>(target: Map<TKey, TObject>): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+export function clone<TObject, TKey>(target: Map<TKey, TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
  */
-export function clone<TObject, TKey extends object>(target: WeakMap<TKey, TObject>): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+export function clone<TObject, TKey extends object>(target: WeakMap<TKey, TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
  */
-export function clone<TObject, TKey>(target: Set<TObject>): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+export function clone<TObject, TKey>(target: Set<TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
  */
-export function clone<TObject extends object, TKey>(target: WeakSet<TObject>): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>;
+export function clone<TObject extends object, TKey>(target: WeakSet<TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
  */
-export function clone<TObject, TKey>(target: TObject[]): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>>
-export function clone<TObject, TKey>(collection: Map<TKey, TObject> | WeakMap<any, TObject> | Set<TObject> | WeakSet<any> | TObject[]): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function clone<TObject, TKey>(target: TObject[]): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
+export function clone<TObject, TKey>(collection: Map<TKey, TObject> | WeakMap<any, TObject> | Set<TObject> | WeakSet<any> | TObject[]): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
 
     type collectionWrapper = { add(value: TObject, key: TKey): void; remove(value: TObject, key: TKey): void; };
     let cw: collectionWrapper;
@@ -50,45 +55,22 @@ export function clone<TObject, TKey>(collection: Map<TKey, TObject> | WeakMap<an
                 collection.splice(collection.indexOf(value));
             },
         };
-    } else if (collection[Symbol.toStringTag] === 'WeakMap') {
-        const map: WeakMap<any, TObject> = collection as any;
+    } else if (isWeakMap(collection) || isMap(collection)) {
         cw = {
             add(value: TObject, key: TKey): void {
-                map.set(key, value);
+                collection.set(key, value);
             },
             remove(value: TObject, key: TKey): void {
-                map.delete(key);
+                collection.delete(key);
             },
         };
-    } else if (collection[Symbol.toStringTag] === 'Map') {
-        const map: Map<TKey, TObject> = collection as any;
+    } else if (isWeakSet(collection) || isSet(collection)) {
         cw = {
             add(value: TObject, key: TKey): void {
-                map.set(key, value);
+                collection.add(value);
             },
             remove(value: TObject, key: TKey): void {
-                map.delete(key);
-            },
-        };
-    } else if (collection[Symbol.toStringTag] === 'WeakSet') {
-        const set: WeakSet<any> = collection as any;
-        cw = {
-            add(value: TObject, key: TKey): void {
-                set.add(value);
-            },
-            remove(value: TObject, key: TKey): void {
-                set.delete(value);
-            },
-        };
-
-    } else if (collection[Symbol.toStringTag] === 'Set') {
-        const set: Set<any> = collection as any;
-        cw = {
-            add(value: TObject, key: TKey): void {
-                set.add(value);
-            },
-            remove(value: TObject, key: TKey): void {
-                set.delete(value);
+                collection.delete(value);
             },
         };
     } else {

@@ -10,8 +10,7 @@ export type Group<TObject, TKey, TGroupKey> =
     Iterable<TObject>
     & { key: TGroupKey; cache: IObservableCache<TObject, TKey>; };
 
-export interface IGroupChangeSet<TObject, TKey, TGroupKey> extends IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey> {
-}
+// export interface IGroupChangeSet<TObject, TKey, TGroupKey> extends IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey> {}
 
 export class ManagedGroup<TObject, TKey, TGroupKey> implements Group<TObject, TKey, TGroupKey> {
     private readonly _cache = new IntermediateCache<TObject, TKey>();
@@ -46,7 +45,7 @@ export class ManagedGroup<TObject, TKey, TGroupKey> implements Group<TObject, TK
     }
 }
 
-export class GroupChangeSet<TObject, TKey, TGroupKey> extends ChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey> implements IGroupChangeSet<TObject, TKey, TGroupKey> {
+export class GroupChangeSet<TObject, TKey, TGroupKey> extends ChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey> implements IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey> {
     constructor(collection?: ArrayOrIterable<Change<Group<TObject, TKey, TGroupKey>, TGroupKey>>) {
         super(collection);
     }

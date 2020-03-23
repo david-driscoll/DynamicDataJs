@@ -39,6 +39,3 @@ export class Person {
         return `${this.name}. ${this.age}`;
     }
 }
-
-const person = new Person('ad', 123);
-person[notifyPropertyChangedSymbol];

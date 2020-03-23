@@ -6,19 +6,26 @@ import { ISortedChangeSet, isSortedChangeSet } from '../ISortedChangeSet';
 import { from, toArray } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
 import { stringify } from 'querystring';
+import { isMap } from '../../util/isMap';
+import { isWeakMap } from '../../util/isWeakMap';
+import { isSet } from '../../util/isSet';
+import { isWeakSet } from '../../util/isWeakSet';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 export function bind<TObject, TKey>(
     values: TObject[],
     refreshThreshold?: number,
     adapter?: (changes: IChangeSet<TObject, TKey>) => void,
-): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
-    adapter = adapter ?? createAdapter(values, refreshThreshold ?? 25);
+): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
+    if (!adapter && Array.isArray(values)) {
+        adapter = createArrayAdapter(values, refreshThreshold ?? 25);
+    }
     return function bindOperator(source) {
         return source.pipe(tap(adapter!));
     };
 }
 
-function createAdapter<TObject, TKey>(values: TObject[], refreshThreshold: number) {
+function createArrayAdapter<TObject, TKey>(values: TObject[], refreshThreshold: number) {
     const _cache = new Cache<TObject, TKey>();
     let _loaded = false;
     return function defaultAdapter(changes: IChangeSet<TObject, TKey>) {

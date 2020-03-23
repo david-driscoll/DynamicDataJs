@@ -24,7 +24,9 @@ export class ReaderWriter<TObject, TKey> {
         if (typeof changes === 'function') {
             return this.doUpdate(changes, previewHandler, collectChanges);
         }
-        return this.doUpdate((updater: ICacheUpdater<TObject, TKey>) => updater.clone(changes), previewHandler, collectChanges);
+        return this.doUpdate((updater: ICacheUpdater<TObject, TKey>) => {
+            updater.clone(changes);
+        }, previewHandler, collectChanges);
     }
 
     private doUpdate(
@@ -87,7 +89,7 @@ export class ReaderWriter<TObject, TKey> {
     public getInitialUpdates(filter?: (value: TObject) => boolean): ChangeSet<TObject, TKey> {
         const dictionary = this._data;
 
-        if (dictionary.size == 0) {
+        if (dictionary.size === 0) {
             return ChangeSet.empty<TObject, TKey>();
         }
 

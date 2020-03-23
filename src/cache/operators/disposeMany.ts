@@ -1,9 +1,10 @@
-import { MonoTypeOperatorFunction, Observable } from 'rxjs';
+import { MonoTypeOperatorFunction, Observable, OperatorFunction } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
-import { Disposable, isDisposable, isSubscription } from '../../util';
+import { Disposable, IDisposableOrSubscription, isDisposable, isSubscription } from '../../util';
 import { Cache } from '../Cache';
 import { tap } from 'rxjs/operators';
 import { from as ixFrom } from 'ix/Ix.dom.iterable';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Disposes each item when no longer required.
@@ -12,20 +13,20 @@ import { from as ixFrom } from 'ix/Ix.dom.iterable';
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */
-export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     if (!removeAction) {
-        removeAction = function(value: TObject) {
+        removeAction = function(value: any) {
             if (isDisposable(value)) value.dispose();
             if (isSubscription(value)) value.unsubscribe();
         };
     }
 
-    return function disposeManyOperator(source) {
+    return function disposeManyOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const cache = new Cache<TObject, TKey>();
             const subscriber = source
                 .pipe(tap(
-                    changes => registerForRemoval(changes, cache),
+                    changes => registerForRemoval(changes as any, cache),
                     e => observer.error(e),
                 ))
                 .subscribe(observer);

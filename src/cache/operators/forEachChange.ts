@@ -2,6 +2,7 @@ import { Change } from '../Change';
 import { MonoTypeOperatorFunction } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { tap } from 'rxjs/operators';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Provides a call back for each change
@@ -9,7 +10,7 @@ import { tap } from 'rxjs/operators';
  * @typeparam TKey The type of the key.
  * @param action The action.
  */
-export function forEachChange<TObject, TKey>(action: (change: Change<TObject, TKey>) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function forEachChange<TObject, TKey>(action: (change: Change<TObject, TKey>) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function forEachChangeOperator(source) {
         return source.pipe(tap(changes => changes.forEach(action)));
     };

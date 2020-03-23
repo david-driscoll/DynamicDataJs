@@ -11,6 +11,8 @@ export function filterChanges<TObject, TKey>(cache: ChangeAwareCache<TObject, TK
                 const current = change.current;
                 if (predicate(current)) {
                     cache.addOrUpdate(current, key);
+                } else {
+                    cache.removeKey(key);
                 }
             }
 

@@ -5,6 +5,7 @@ import { from as ixFrom } from 'ix/Ix.dom.iterable';
 import { filter as ixFilter } from 'ix/iterable/operators';
 import { ChangeSet } from '../ChangeSet';
 import { notEmpty } from './notEmpty';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Ignores the update when the condition is met.
@@ -13,7 +14,7 @@ import { notEmpty } from './notEmpty';
  * @typeparam TKey The type of the key.
  * @param ignoreFunction The ignore function (current,previous)=>{ return true to ignore }.
  */
-export function ignoreUpdateWhen<TObject, TKey>(ignoreFunction: (current: TObject, previous: TObject) => boolean): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function ignoreUpdateWhen<TObject, TKey>(ignoreFunction: (current: TObject, previous: TObject) => boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function ignoreUpdateWhenOperator(source) {
         return source.pipe(
             map(updates => {

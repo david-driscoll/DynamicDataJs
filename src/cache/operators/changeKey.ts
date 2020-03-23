@@ -5,6 +5,7 @@ import { from as ixFrom } from 'ix/Ix.dom.iterable';
 import { map as ixMap } from 'ix/Ix.dom.iterable.operators';
 import { Change } from '../Change';
 import { ChangeSet } from '../ChangeSet';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Changes the primary key.
@@ -13,7 +14,7 @@ import { ChangeSet } from '../ChangeSet';
  * @typeparam TDestinationKey The type of the destination key.
  * @param selector The key selector eg. (item) => newKey;
  */
-export function changeKey<TObject, TSourceKey, TDestinationKey>(selector: (value: TObject, sourceKey: TSourceKey) => TDestinationKey): OperatorFunction<IChangeSet<TObject, TSourceKey>, IChangeSet<TObject, TDestinationKey>> {
+export function changeKey<TObject, TSourceKey, TDestinationKey>(selector: (value: TObject, sourceKey: TSourceKey) => TDestinationKey): ChangeSetOperatorFunction<TObject, TSourceKey, TObject, TDestinationKey> {
     return function changeKeyOperator(source) {
         return source.pipe(map(
             updates => {

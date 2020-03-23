@@ -14,6 +14,7 @@ import { Change } from '../Change';
 import { some } from 'ix/iterable';
 import { ChangeSet } from '../ChangeSet';
 import { toArray as ixToArray } from 'ix/iterable/toarray';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Applies a size limiter to the number of records which can be included in the
@@ -22,7 +23,7 @@ import { toArray as ixToArray } from 'ix/iterable/toarray';
  * @typeparam TKey The type of the key.
  * @param size The size.
  */
-export function limitSizeTo<TObject, TKey>(size: number): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function limitSizeTo<TObject, TKey>(size: number): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function limitSizeToOperaor(source) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const sizeLimiter = new SizeLimiter<TObject, TKey>(size);

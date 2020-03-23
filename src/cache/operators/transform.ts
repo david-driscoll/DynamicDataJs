@@ -1,8 +1,11 @@
-import { OperatorFunction } from 'rxjs';
+import { Observable, OperatorFunction } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { map, scan } from 'rxjs/operators';
 import { ChangeAwareCache } from '../ChangeAwareCache';
 import { notEmpty } from './notEmpty';
+import { Group } from '../IGroupChangeSet';
+import { DistinctChangeSet } from '../DistinctChangeSet';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
 
@@ -19,7 +22,7 @@ export function transform<TSource, TKey, TDestination>(
     transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
     transformOnRefresh?: boolean,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
-): OperatorFunction<IChangeSet<TSource, TKey>, IChangeSet<TDestination, TKey>> {
+): ChangeSetOperatorFunction<TSource, TKey, TDestination> {
     return function transformOperator(source) {
         return source.pipe(
             scan((cache, changes) => {
@@ -52,7 +55,6 @@ export function transform<TSource, TKey, TDestination>(
                                 cache.refreshKey(change.key);
                             }
                         }
-
                             break;
                         case 'moved':
                             //Do nothing !
@@ -66,5 +68,4 @@ export function transform<TSource, TKey, TDestination>(
         );
     };
 }
-
 

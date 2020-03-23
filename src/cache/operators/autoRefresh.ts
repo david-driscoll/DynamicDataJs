@@ -4,6 +4,7 @@ import { IChangeSet } from '../IChangeSet';
 import { autoRefreshOnObservable } from './autoRefreshOnObservable';
 import { whenAnyPropertyChanged } from './whenAnyPropertyChanged';
 import { throttleTime } from 'rxjs/operators';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Automatically refresh downstream operators when any properties change.
@@ -15,7 +16,7 @@ export function autoRefresh<TObject, TKey>(
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>;
+): ChangeSetOperatorFunction<TObject, TKey, NotifyPropertyChangedType<TObject>>;
 /**
  * Automatically refresh downstream operators when any properties change.
  * @param key the property to watch
@@ -28,13 +29,13 @@ export function autoRefresh<TObject, TKey>(
     changeSetBuffer?: number,
     propertyChangeThrottle?: number,
     scheduler?: SchedulerLike,
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>;
+): ChangeSetOperatorFunction<TObject, TKey, NotifyPropertyChangedType<TObject>>;
 export function autoRefresh<TObject, TKey>(
     key?: number | keyof TObject,
     changeSetBuffer?: number,
     propertyChangeThrottle?: number | SchedulerLike,
     scheduler?: SchedulerLike,
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> {
+): ChangeSetOperatorFunction<TObject, TKey, NotifyPropertyChangedType<TObject>> {
     let props: string[] = [];
     if (typeof key === 'string' || typeof key === 'symbol') {
         props.push(key as any);

@@ -9,6 +9,7 @@ import { groupBy as ixGroupBy } from 'ix/iterable/operators';
 import { disposeMany } from './disposeMany';
 import { filterDynamic } from './filter';
 import { Node } from '../Node';
+import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Transforms the object to a fully recursive tree, create a hiearchy based on the pivot function
@@ -20,7 +21,7 @@ import { Node } from '../Node';
 export function transformToTree<TObject, TKey>(
     pivotOn: (value: TObject) => TKey,
     predicateChanged?: Observable<(node: Node<TObject, TKey>) => boolean>,
-): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<Node<TObject, TKey>, TKey>> {
+): ChangeSetOperatorFunction<TObject, TKey, Node<TObject, TKey>, TKey> {
     return function transformToTreeOperator(source) {
         return new Observable<IChangeSet<Node<TObject, TKey>, TKey>>(observer => {
             const refilterObservable = new BehaviorSubject<any>(null);

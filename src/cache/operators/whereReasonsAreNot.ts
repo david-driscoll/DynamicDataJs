@@ -6,6 +6,7 @@ import { ChangeSet } from '../ChangeSet';
 import { from as ixFrom } from 'ix/Ix.dom.iterable';
 import { filter as ixFilter } from 'ix/iterable/operators';
 import { notEmpty } from './notEmpty';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Excludes updates for the specified reasons
@@ -13,7 +14,7 @@ import { notEmpty } from './notEmpty';
  * @typeparam TKey The type of the key.
  * @param reasons The reasons.
  */
-export function whereReasonsAreNot<TObject, TKey>(...reasons: ChangeReason[]): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function whereReasonsAreNot<TObject, TKey>(...reasons: ChangeReason[]): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function onItemUpdatedOperator(source) {
         return source
             .pipe(

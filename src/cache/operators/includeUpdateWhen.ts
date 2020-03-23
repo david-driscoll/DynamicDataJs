@@ -5,6 +5,7 @@ import { from as ixFrom } from 'ix/Ix.dom.iterable';
 import { filter as ixFilter } from 'ix/iterable/operators';
 import { ChangeSet } from '../ChangeSet';
 import { notEmpty } from './notEmpty';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Only includes the update when the condition is met.
@@ -13,7 +14,7 @@ import { notEmpty } from './notEmpty';
  * @typeparam TKey The type of the key.
  * @param includeFunction The include function (current,previous)=>{ return true to include }.
  */
-export function includeUpdateWhen<TObject, TKey>(includeFunction: (current: TObject, previous: TObject) => boolean): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function includeUpdateWhen<TObject, TKey>(includeFunction: (current: TObject, previous: TObject) => boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function includeUpdateWhenOperator(source) {
         return source.pipe(
             map(updates => {

@@ -3,6 +3,7 @@ import { IChangeSet } from '../IChangeSet';
 import { tap } from 'rxjs/operators';
 import { from as ixFrom } from 'ix/Ix.dom.iterable';
 import { filter as ixFilter } from 'ix/iterable/operators';
+import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Callback when an item has been updated eg. (current, previous)=>{}
@@ -10,7 +11,7 @@ import { filter as ixFilter } from 'ix/iterable/operators';
  * @typeparam TKey The type of the key.
  * @param action The update action.
  */
-export function onItemUpdated<TObject, TKey>(action: (value: TObject) => void): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
+export function onItemUpdated<TObject, TKey>(action: (value: TObject) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function onItemUpdatedOperator(source) {
         return source
             .pipe(

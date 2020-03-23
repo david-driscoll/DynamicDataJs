@@ -43,7 +43,7 @@ export function distinctValues<TObject, TKey, TValue>(
         //decrement counter
         const newCount = counter - 1;
         _keyCounters.set(key, newCount);
-        if (newCount != 0) {
+        if (newCount !== 0) {
             return;
         }
 
@@ -74,7 +74,7 @@ export function distinctValues<TObject, TKey, TValue>(
             //decrement counter
             const newCount = counter - 1;
             _valueCounters.set(value, newCount);
-            if (newCount != 0) {
+            if (newCount !== 0) {
                 return;
             }
 

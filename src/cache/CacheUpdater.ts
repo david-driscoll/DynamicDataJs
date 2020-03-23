@@ -7,6 +7,7 @@ import { ICache } from './ICache';
 import { Cache } from './Cache';
 import { isIterable } from '../util/isIterable';
 import { iterator } from 'rxjs/internal-compatibility';
+import { isMap } from '../util/isMap';
 
 export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey> {
     private readonly _cache: ICache<TObject, TKey>;
@@ -23,13 +24,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
 
 
     public constructor(data: ICache<TObject, TKey> | Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey) {
-        if (data[Symbol.toStringTag] === 'Map') {
+        if (isMap(data)) {
             // map
-            const map = data as Map<TKey, TObject>;
-            this._cache = new Cache<TObject, TKey>(map);
+            this._cache = new Cache<TObject, TKey>(data);
         } else {
-            const cache = data as ICache<TObject, TKey>;
-            this._cache = cache;
+            this._cache = data;
         }
         this._keySelector = keySelector;
     }
