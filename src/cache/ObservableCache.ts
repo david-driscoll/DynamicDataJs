@@ -33,7 +33,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
                 )
                 .subscribe(
                     changeset => {
-                        const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
+                        const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview.bind(this) : undefined;
                         const changes = this._readerWriter.write(changeset, previewHandler, !!this._changes.observers.length);
                         this.invokeNext(changes);
                     },
@@ -70,7 +70,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
         this._editLevel++;
         if (this._editLevel === 1) {
-            const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
+            const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview.bind(this) : undefined;
             changes = this._readerWriter.write(updateAction, previewHandler, !!this._changes.observers.length);
         } else {
             this._readerWriter.writeNested(updateAction);
@@ -91,7 +91,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
 
         this._editLevel++;
         if (this._editLevel === 1) {
-            const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview : undefined;
+            const previewHandler = this._changesPreview.observers.length > 0 ? this.invokePreview.bind(this) : undefined;
             changes = this._readerWriter.write(updateAction, previewHandler, !!this._changes.observers.length);
         } else {
             this._readerWriter.writeNested(updateAction);

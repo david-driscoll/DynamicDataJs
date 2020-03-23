@@ -34,7 +34,7 @@ export function transformForced<TSource, TKey, TDestination>(
  */
 export function transformForced<TSource, TKey, TDestination>(
     transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
-    forceTransform: Observable<any>,
+    forceTransform: Observable<unknown>,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination>;
 /**
@@ -48,7 +48,7 @@ export function transformForced<TSource, TKey, TDestination>(
  */
 export function transformForced<TSource, TKey, TDestination>(
     transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
-    forceTransform: Observable<(value: TSource, key: TKey) => boolean>,
+    forceTransform: Observable<unknown | ((value: TSource, key: TKey) => boolean)>,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination> {
     return function forceTransformOperator(source) {
@@ -62,7 +62,7 @@ export function transformForced<TSource, TKey, TDestination>(
             //create change set of items where force refresh is applied
             const refresher: Observable<IChangeSet<TSource, TKey>> = forceTransform.pipe(
                 map(z => (typeof z === 'function' ? z : ((value: TSource, key: TKey) => true))),
-                map(selector => captureChanges(cache, selector)),
+                map(selector => captureChanges(cache, selector as any)),
                 map(changes => new ChangeSet(changes)),
                 notEmpty(),
             );
