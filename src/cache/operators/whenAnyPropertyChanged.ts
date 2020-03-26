@@ -25,7 +25,6 @@ export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>
 export function whenAnyPropertyChanged<TObject, TProperty extends keyof TObject>(...value: (TObject | keyof TObject)[]) {
     if (value.length > 0 && typeof value[0] !== 'string' && typeof value[0] !== 'symbol') {
         if (!isNotifyPropertyChanged(value[0])) {
-            //?
             throw new Error("Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges");
         }
         const propertiesToMonitor = value.slice(1) as (keyof TObject)[];

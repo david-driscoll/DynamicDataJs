@@ -34,7 +34,7 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     public clone(changes: IChangeSet<TObject, TKey>): void;
     public clone(changes?: IChangeSet<TObject, TKey>) {
         if (changes === undefined) {
-            return new Cache<TObject, TKey>(new Map<TKey, TObject>(this._data));
+            return;
         }
 
         for (const item of changes) {
