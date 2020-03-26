@@ -73,9 +73,9 @@ export function transformToTree<TObject, TKey>(
                                                     break;
                                                 case 'update': {
                                                     //copy children to the new node amd set parent
-                                                    const children = change.previous!.children.values();
+                                                    const children = toArray(change.previous!.children.values());
                                                     change.current.update(updater => updater.addOrUpdateValues(children));
-                                                    ixFrom(children).forEach(child => child.setParent(change.current));
+                                                    children.forEach(child => child.setParent(change.current));
 
                                                     //remove from old parent if different
                                                     const previous = change.previous!;
@@ -93,9 +93,9 @@ export function transformToTree<TObject, TKey>(
 
                                                 case 'remove': {
                                                     //remove children and null out parent
-                                                    const children = change.current.children.values();
+                                                    const children = toArray(change.current.children.values());
                                                     change.current.update(updater => updater.removeValues(children));
-                                                    ixFrom(children).forEach(child => child.setParent(undefined));
+                                                    children.forEach(child => child.setParent(undefined));
 
                                                     break;
                                                 }
@@ -135,9 +135,9 @@ export function transformToTree<TObject, TKey>(
 
                                                     case 'update': {
                                                         //copy children to the new node amd set parent
-                                                        const children = previous!.children.values();
+                                                        const children = toArray(previous!.children.values());
                                                         change.current.update(u => u.addOrUpdateValues(children));
-                                                        ixFrom(children).forEach(child => child.setParent(change.current));
+                                                        children.forEach(child => child.setParent(change.current));
 
                                                         //check whether the item has a new parent
                                                         const previousItem = previous!.item;

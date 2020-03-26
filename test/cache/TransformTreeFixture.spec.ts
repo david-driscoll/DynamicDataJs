@@ -78,7 +78,7 @@ describe('TransformTreeFixture', () => {
         expect(_result.size).toBe(4);
     });
 
-    fit('RemoveAChildNodeWillPushOrphansUpTheHierachy', () => {
+    it('RemoveAChildNodeWillPushOrphansUpTheHierachy', () => {
         _sourceCache.addOrUpdateValues(createEmployees());
         _sourceCache.removeKey(4);
 
@@ -192,10 +192,8 @@ describe('TransformTreeFixture', () => {
         public bossId: number;
         public name: string;
 
-
         public toString() {
             return `Name: ${this.name}, Id: ${this.id}, BossId: ${this.bossId}`;
         }
     }
-
 });

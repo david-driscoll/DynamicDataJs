@@ -20,7 +20,13 @@ export function trueForAny<TObject, TKey, TValue>(
 ): OperatorFunction<IChangeSet<TObject, TKey>, boolean> {
     return function trueForAllOperator(source) {
         return source.pipe(
-            trueFor(observableSelector, items => some(items, o => (o.latestValue && equalityCondition(o.item, o.latestValue)) ?? false)),
+            trueFor(observableSelector, items => {
+                items //?
+                return some(items, o => {
+                    o; //?
+                    return (o.latestValue !== undefined && equalityCondition(o.item, o.latestValue)) ?? false;
+                });
+            }),
         );
     };
 }

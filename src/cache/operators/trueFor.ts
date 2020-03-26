@@ -29,7 +29,7 @@ export function trueFor<TObject, TKey, TValue>(
                     map(([items, _]) => collectionMatcher(items)),
                     distinctUntilChanged(),
                 )
-                .subscribe();
+                .subscribe(observer);
 
             return new CompositeDisposable(publisher, transformed.connect());
         });
