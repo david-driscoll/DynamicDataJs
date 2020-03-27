@@ -1,0 +1,15 @@
+usings to dispose (with blocks)
+using \((.*)\)\s+{([\s|\S]+?)\}
+$1//dispose\n$2 // dispose $1
+
+usings to dispose (without blocks)
+using \((.*)\)
+$1//dispose $1
+
+facts to it
+\[Fact\]\s+public void (\w+)\(\)\s+\{([\s|\S]+?)\}\s
+it\('$1', \(\) => {$2}\);
+
+fluent assertions to jest
+(\w.*?)\.Should\(\).Be\((.*?)(,.*?)?\);
+expect\($1\).toBe\($2\);
