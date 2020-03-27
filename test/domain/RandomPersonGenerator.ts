@@ -3,7 +3,10 @@ import { map } from 'ix/iterable/operators';
 import faker from 'faker';
 import { Person } from './Person';
 
-export function randomPersonGenerator(number = 10000) {
+export function randomPersonGenerator(number = 10000, seed?: number) {
+    if (seed !== undefined) {
+        faker.seed(seed);
+    }
     return range(0, number)
         .pipe(
             map(() => {

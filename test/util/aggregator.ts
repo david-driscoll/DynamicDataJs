@@ -7,7 +7,7 @@ import { ChangeSummary } from '../../src/diagnostics/ChangeSummary';
 import { collectUpdateStats } from '../../src/diagnostics/operators/CollectUpdateStats';
 import { asObservableCache } from '../../src/cache/operators/asObservableCache';
 
-export class ChangeSetAggregator<TObject, TKey> implements IDisposable {
+export class ChangeSetAggregator<TObject, TKey, TChangeSet extends IChangeSet<TObject, TKey> = IChangeSet<TObject, TKey>> implements IDisposable {
     private readonly _disposer: IDisposable;
     private _summary: ChangeSummary = ChangeSummary.empty;
     private _error?: Error;
@@ -16,8 +16,8 @@ export class ChangeSetAggregator<TObject, TKey> implements IDisposable {
      * Initializes a new instance of the <see cref="DistinctChangeSetAggregator{TValue}"/> class.
      * @param source The source.
      */
-    public constructor(source: Observable<IChangeSet<TObject, TKey>>) {
-        const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
+    public constructor(source: Observable<TChangeSet>) {
+        const published: ConnectableObservable<TChangeSet> = source.pipe(publish()) as any;
 
         const error = published.subscribe(updates => {
         }, ex => this._error = ex);
@@ -45,7 +45,7 @@ export class ChangeSetAggregator<TObject, TKey> implements IDisposable {
     /**
      * Gets the messages.
      */
-    public readonly messages: IChangeSet<TObject, TKey>[] = [];
+    public readonly messages: TChangeSet[] = [];
 
     /**
      * Gets the summary.
@@ -69,6 +69,6 @@ export class ChangeSetAggregator<TObject, TKey> implements IDisposable {
     }
 }
 
-export function asAggregator<TObject, TKey>(source: Observable<IChangeSet<TObject, TKey>>) {
-    return new ChangeSetAggregator<TObject, TKey>(source);
+export function asAggregator<TObject, TKey, TChangeSet extends IChangeSet<TObject, TKey> = IChangeSet<TObject, TKey>>(source: Observable<TChangeSet>) {
+    return new ChangeSetAggregator<TObject, TKey, TChangeSet>(source);
 }

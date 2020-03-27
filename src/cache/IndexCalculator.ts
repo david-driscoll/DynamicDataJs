@@ -3,10 +3,11 @@ import { SortOptimizations } from './SortOptimizations';
 import { ChangeAwareCache } from './ChangeAwareCache';
 import { IChangeSet } from './IChangeSet';
 import { from, toArray } from 'ix/iterable';
-import { orderBy } from 'ix/iterable/operators';
+import { orderBy, orderByDescending } from 'ix/iterable/operators';
 import { Change } from './Change';
 import { ChangeSet } from './ChangeSet';
 import bs from 'binary-search';
+import { comparer } from 'ix/util/comparer';
 
 export class IndexCalculator<TObject, TKey> {
     private _comparer: KeyValueComparer<TObject, TKey>;
@@ -30,6 +31,8 @@ export class IndexCalculator<TObject, TKey> {
 
     public reset(cache: ChangeAwareCache<TObject, TKey>) {
         this._list = toArray(from(cache.entries()).pipe(orderBy(z => z, this._comparer)));
+        // cache.clone(this._list)
+        return this.reorder()
     }
 
     public changeComparer(comparer: KeyValueComparer<TObject, TKey>): IChangeSet<TObject, TKey> {
@@ -40,35 +43,33 @@ export class IndexCalculator<TObject, TKey> {
     public reorder(): IChangeSet<TObject, TKey> {
         // if (this._optimisations.HasFlag(SortOptimisations.IgnoreEvaluates))
         // {
-        //reorder entire sequence and do not calculate moves
+        // //reorder entire sequence and do not calculate moves
+        // this._list = toArray(from(this._list).pipe(orderBy(z => z, this._comparer)));
         // }
         // else
         // {
-        //     int index = -1;
-        //     var sorted = _list.OrderBy(t => t, _comparer).ToList();
-        //     foreach (var item in sorted)
-        //     {
-        //         KeyValuePair<TKey, TObject> current = item;
-        //         index++;
-        //
-        //         //Cannot use binary search as Resort is implicit of a mutable change
-        //         KeyValuePair<TKey, TObject> existing = _list[index];
-        //         var areequal = EqualityComparer<TKey>.Default.Equals(current.Key, existing.Key);
-        //         if (areequal)
-        //         {
-        //             continue;
-        //         }
-        //
-        //         var old = _list.IndexOf(current);
-        //         _list.RemoveAt(old);
-        //         _list.Insert(index, current);
-        //
-        //         result.Add(new Change<TObject, TKey>(current.Key, current.Value, index, old));
-        //     }
         // }
-        // TODO: Support optimizations properly
-        this._list = toArray(from(this._list).pipe(orderBy(z => z, this._comparer)));
-        return new ChangeSet<TObject, TKey>([]);
+        const changes: Change<TObject, TKey>[] = [];
+        let index = -1;
+        const sorted = toArray(from(this._list).pipe(orderBy(t => t, this._comparer)));
+        for (const current of sorted) {
+            const [currentKey, currentValue] = current;
+            index++;
+
+            //Cannot use binary search as Resort is implicit of a mutable change
+            const [existingKey, existingValue] = this._list[index];
+            const areequal = comparer(currentKey, existingKey);
+            if (areequal) {
+                continue;
+            }
+
+            var old = this._list.indexOf(current);
+            this._list.splice(old, 1);
+            this._list.splice(index, 0, current);
+
+            changes.push(new Change<TObject, TKey>('moved', currentKey, currentValue, index, old));
+        }
+        return new ChangeSet<TObject, TKey>(changes);
     }
 
     public calculate(changes: IChangeSet<TObject, TKey>): IChangeSet<TObject, TKey> {
@@ -119,12 +120,7 @@ export class IndexCalculator<TObject, TKey> {
             }
         }
 
-
-        // TODO: Support optimizations properly
-        this._list = toArray(from(this._list).pipe(orderBy(z => z, this._comparer)));
-
         //for evaluates, check whether the change forces a new position
-//    var evaluates = toArray(from(refreshes).pipe(orderByDescending(x => [x.key, x.current] as const , this._comparer)));
         // if (evaluates.Count != 0 && _optimisations.HasFlag(SortOptimisations.IgnoreEvaluates))
         // {
         //     //reorder entire sequence and do not calculate moves
@@ -132,34 +128,32 @@ export class IndexCalculator<TObject, TKey> {
         // }
         // else
         // {
-        //     //calculate moves.  Very expensive operation
-        //     //TODO: Try and make this better
-        //     foreach (var u in evaluates)
-        //     {
-        //         var current = new KeyValuePair<TKey, TObject>(u.Key, u.Current);
-        //         var old = _list.IndexOf(current);
-        //         if (old == -1)
-        //         {
-        //             continue;
-        //         }
-        //
-        //         int newposition = GetInsertPositionLinear(_list, current);
-        //
-        //         if (old < newposition)
-        //         {
-        //             newposition--;
-        //         }
-        //
-        //         if (old == newposition)
-        //         {
-        //             continue;
-        //         }
-        //
-        //         _list.RemoveAt(old);
-        //         _list.Insert(newposition, current);
-        //         result.Add(new Change<TObject, TKey>(u.Key, u.Current, newposition, old));
-        //     }
         // }
+
+        const evaluates = toArray(from(refreshes).pipe(orderByDescending(x => [x.key, x.current] as const, this._comparer)));
+        //calculate moves.  Very expensive operation
+        //TODO: Try and make this better
+        for (const current of evaluates) {
+            const currentTuple = [current.key, current.current] as const;
+            const old = this._list.findIndex(([k, v]) => k === current.key && v === current.current);
+            if (old == -1) {
+                continue;
+            }
+
+            let newposition = this.getInsertPositionLinear(this._list, currentTuple);
+
+            if (old < newposition) {
+                newposition--;
+            }
+
+            if (old == newposition) {
+                continue;
+            }
+
+            this._list.splice(old, 1);
+            this._list.splice(newposition, 0, currentTuple as [TKey, TObject]);
+            result.push(new Change<TObject, TKey>('moved', current.key, current.current, newposition, old));
+        }
 
         return new ChangeSet<TObject, TKey>(result);
     }

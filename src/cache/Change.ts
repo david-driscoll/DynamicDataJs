@@ -105,11 +105,11 @@ export class Change<TObject, TKey> {
         this.currentIndex = currentIndex;
         this.previousIndex = previousIndex;
 
-        if (reason == 'add' && previous) {
+        if (reason == 'add' && previous !== undefined && typeof previous !== 'number') {
             throw new Error('For ChangeReason add, a previous value cannot be specified');
         }
 
-        if (reason == 'update' && !previous) {
+        if (reason == 'update' && previous === undefined) {
             throw new Error('For ChangeReason change, must supply previous value');
         }
     }
