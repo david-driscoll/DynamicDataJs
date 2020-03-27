@@ -1,9 +1,7 @@
 import { ObservableCache } from '../ObservableCache';
 import { IObservableCache } from '../IObservableCache';
-import { isObservable, Observable, OperatorFunction } from 'rxjs';
+import { isObservable, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
-import { Change } from '../Change';
-import { Group } from '../IGroupChangeSet';
 
 /**
  * Converts the source to an read only observable cache
@@ -26,3 +24,4 @@ export function asObservableCache<TObject, TKey>(source: IObservableCache<TObjec
         return source;
     }
 }
+
