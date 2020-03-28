@@ -14,19 +14,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     private readonly _keySelector?: (obj: TObject) => TKey;
 
     public constructor(cache: ICache<TObject, TKey>, keySelector?: (obj: TObject) => TKey);
-    //  public constructor(data: { [key: TKey]: TObject }, keySelector?: (obj: TObject) => TKey);
-    public constructor(data: Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey);
-    // public constructor(cache: ICache<TObject, TKey>,  keySelector?: (obj: TObject) => TKey)
-    // {
-    //     _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-    //     _keySelector = keySelector;
-    // }
-
-
-    public constructor(data: ICache<TObject, TKey> | Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey) {
+    public constructor(data: Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey, deepEqual?: boolean);
+    public constructor(data: ICache<TObject, TKey> | Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey, deepEqual =false) {
         if (isMap(data)) {
             // map
-            this._cache = new Cache<TObject, TKey>(data);
+            this._cache = new Cache<TObject, TKey>(data, deepEqual);
         } else {
             this._cache = data;
         }

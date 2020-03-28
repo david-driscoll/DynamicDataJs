@@ -19,9 +19,10 @@ export class SourceCache<TObject, TKey> implements ISourceCache<TObject, TKey> {
     /**
      * Initializes a new instance of the <see cref="SourceCache{TObject, TKey}"/> class.
      * @param keySelector The key selector.
+     * @param deepEqual Use deep equal comparisons
      */
-    public constructor(keySelector: (value: TObject) => TKey) {
-        this._innerCache = new ObservableCache<TObject, TKey>(keySelector);
+    public constructor(keySelector: (value: TObject) => TKey, deepEqual = false) {
+        this._innerCache = new ObservableCache<TObject, TKey>(keySelector, deepEqual);
     }
 
     [Symbol.toStringTag]: "ObservableCache" = 'ObservableCache';

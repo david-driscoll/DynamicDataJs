@@ -1,31 +1,41 @@
 import { IChangeSet } from '../IChangeSet';
-import { MonoTypeOperatorFunction } from 'rxjs';
+import { MonoTypeOperatorFunction, Observable, OperatorFunction } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Cache } from '../Cache';
 import { ISortedChangeSet, isSortedChangeSet } from '../ISortedChangeSet';
 import { from, toArray } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
-import { stringify } from 'querystring';
-import { isMap } from '../../util/isMap';
-import { isWeakMap } from '../../util/isWeakMap';
-import { isSet } from '../../util/isSet';
-import { isWeakSet } from '../../util/isWeakSet';
-import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
+import equal from 'fast-deep-equal';
 
 export function bind<TObject, TKey>(
     values: TObject[],
-    refreshThreshold?: number,
     adapter?: (changes: IChangeSet<TObject, TKey>) => void,
-): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
+    refreshThreshold?: number,
+): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     if (!adapter && Array.isArray(values)) {
-        adapter = createArrayAdapter(values, refreshThreshold ?? 25);
+        adapter = createBindAdpater(values, (value: TObject, key: TKey) => values.indexOf(value), refreshThreshold ?? 25);
     }
-    return function bindOperator(source) {
+    return function bindOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return source.pipe(tap(adapter!));
     };
 }
+export function bindSort<TObject, TKey>(
+    values: TObject[],
+    adapter?: (changes: ISortedChangeSet<TObject, TKey>) => void,
+    refreshThreshold?: number,
+): MonoTypeOperatorFunction<ISortedChangeSet<TObject, TKey>> {
+    return bind(values, adapter as any, refreshThreshold) as any;
+}
 
-function createArrayAdapter<TObject, TKey>(values: TObject[], refreshThreshold: number) {
+bind.indexOfAdapter = function indexOfAdapter<TObject, TKey>(values: TObject[]) {
+    return createBindAdpater(values, (value: TObject, key: TKey) => values.indexOf(value));
+};
+
+bind.deepEqualAdapter = function findIndexOfAdapter<TObject, TKey>(values: TObject[]) {
+    return createBindAdpater(values, (value: TObject, key: TKey) => values.findIndex(v => equal(v, value)));
+};
+
+function createBindAdpater<TObject, TKey>(values: TObject[], indexOf: (value: TObject, key: TKey) => number, refreshThreshold = 25) {
     const _cache = new Cache<TObject, TKey>();
     let _loaded = false;
     return function defaultAdapter(changes: IChangeSet<TObject, TKey>) {
@@ -41,12 +51,12 @@ function createArrayAdapter<TObject, TKey>(values: TObject[], refreshThreshold: 
                     if (changes.size - changes.refreshes > refreshThreshold) {
                         values.splice(0, values.length, ...toArray(from(changes.sortedItems.values()).pipe(map(x => x[1]))));
                     } else {
-                        doSortedUpdate(changes, values);
+                        doSortedUpdate(changes);
                     }
                     break;
 
                 case 'reorder':
-                    doSortedUpdate(changes, values);
+                    doSortedUpdate(changes);
                     break;
             }
             return;
@@ -57,41 +67,49 @@ function createArrayAdapter<TObject, TKey>(values: TObject[], refreshThreshold: 
             values.splice(0, values.length, ...toArray(_cache.values()));
             _loaded = true;
         } else {
-            doUpdate(changes, values);
+            doUpdate(changes);
         }
     };
 
-    function doUpdate(changes: IChangeSet<TObject, TKey>, list: TObject[]) {
+    function doUpdate(changes: IChangeSet<TObject, TKey>) {
         for (const update of changes) {
             switch (update.reason) {
                 case 'add':
-                    list.push(update.current);
+                    values.push(update.current);
                     break;
-                case 'remove':
-                    list.splice(list.indexOf(update.current), 1);
+                case 'remove': {
+                    const index = indexOf(update.current, update.key);
+                    if (index > -1) {
+                        values.splice(index, 1);
+                    }
                     break;
-                case 'update':
-                    list.splice(list.indexOf(update.previous!), 1, update.current);
+                }
+                case 'update': {
+                    const index = indexOf(update.previous!, update.key);
+                    if (index > -1) {
+                        values.splice(index, 1, update.current);
+                    }
+                }
                     break;
             }
         }
     }
 
-    function doSortedUpdate(updates: ISortedChangeSet<TObject, TKey>, list: TObject[]) {
+    function doSortedUpdate(updates: ISortedChangeSet<TObject, TKey>) {
         for (const update of updates) {
             switch (update.reason) {
                 case 'add':
-                    list.splice(update.currentIndex, 0, update.current);
+                    values.splice(update.currentIndex, 0, update.current);
                     break;
                 case 'remove':
-                    list.splice(update.currentIndex, 1);
+                    values.splice(update.currentIndex, 1);
                     break;
                 case 'moved':
-                    list.splice(update.currentIndex, 0, ...list.splice(update.previousIndex!, 1));
+                    values.splice(update.currentIndex, 0, ...values.splice(update.previousIndex!, 1));
                     break;
                 case 'update':
-                    list.splice(update.previousIndex!, 1);
-                    list.splice(update.currentIndex, 0, update.current);
+                    values.splice(update.previousIndex!, 1);
+                    values.splice(update.currentIndex, 0, update.current);
                     break;
             }
         }

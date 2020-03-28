@@ -6,28 +6,26 @@ import { isWeakSet } from '../../util/isWeakSet';
 import { isSet } from '../../util/isSet';
 import { isWeakMap } from '../../util/isWeakMap';
 import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
+import equal from 'fast-deep-equal';
+import { bind } from './bind';
+import { find, from } from 'ix/iterable';
 
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
+ * @param deepEqual Use deep equality for finding values
  */
-export function clone<TObject, TKey>(target: Map<TKey, TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
+export function clone<TObject, TKey>(target: Map<TKey, TObject>, deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
+ * @param deepEqual Use deep equality for finding values
  */
-export function clone<TObject, TKey extends object>(target: WeakMap<TKey, TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
-/**
- * Clones the changes  into the specified collection
- * @typeparam TObject The type of the object.
- * @typeparam TKey The type of the key.
- * @param target The target.
- */
-export function clone<TObject, TKey>(target: Set<TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
+export function clone<TObject, TKey>(target: Set<TObject>, deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
  * @typeparam TObject The type of the object.
@@ -40,39 +38,27 @@ export function clone<TObject extends object, TKey>(target: WeakSet<TObject>): M
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
+ * @param deepEqual Use deep equality for finding values
  */
-export function clone<TObject, TKey>(target: TObject[]): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
-export function clone<TObject, TKey>(collection: Map<TKey, TObject> | WeakMap<any, TObject> | Set<TObject> | WeakSet<any> | TObject[]): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
+export function clone<TObject, TKey>(target: TObject[], deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
+export function clone<TObject, TKey>(collection: Map<TKey, TObject> | Set<TObject> | WeakSet<any> | TObject[], deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
 
     type collectionWrapper = { add(value: TObject, key: TKey): void; remove(value: TObject, key: TKey): void; };
     let cw: collectionWrapper;
     if (Array.isArray(collection)) {
-        cw = {
-            add(value: TObject, key: TKey): void {
-                collection.push(value);
-            },
-            remove(value: TObject, key: TKey): void {
-                collection.splice(collection.indexOf(value));
-            },
-        };
-    } else if (isWeakMap(collection) || isMap(collection)) {
-        cw = {
-            add(value: TObject, key: TKey): void {
-                collection.set(key, value);
-            },
-            remove(value: TObject, key: TKey): void {
-                collection.delete(key);
-            },
-        };
+        cw = deepEqual ?
+            arrayFindIndexAdapter(collection) :
+            arrayIndexOfAdapter(collection);
+    } else if (isMap(collection)) {
+        cw = deepEqual ?
+            mapFindAdapter(collection) :
+            mapDeleteAdapter(collection);
     } else if (isWeakSet(collection) || isSet(collection)) {
-        cw = {
-            add(value: TObject, key: TKey): void {
-                collection.add(value);
-            },
-            remove(value: TObject, key: TKey): void {
-                collection.delete(value);
-            },
-        };
+        if (isWeakSet(collection)) {
+            cw = setDeleteAdapter(collection as any);
+        } else {
+            cw = deepEqual ? setFindAdapter(collection) : setDeleteAdapter(collection);
+        }
     } else {
         throw new Error('Unsupported collection type');
     }
@@ -96,5 +82,90 @@ export function clone<TObject, TKey>(collection: Map<TKey, TObject> | WeakMap<an
                 }
             }),
         );
+    };
+}
+
+function arrayIndexOfAdapter<TObject, TKey>(collection: TObject[]) {
+    return {
+        add(value: TObject, key: TKey): void {
+            collection.push(value);
+        },
+        remove(value: TObject, key: TKey): void {
+            const index = collection.indexOf(value);
+            if (index > -1) {
+                collection.splice(index, 1);
+            }
+        },
+    };
+}
+
+function arrayFindIndexAdapter<TObject, TKey>(collection: TObject[]) {
+    return {
+        add(value: TObject, key: TKey): void {
+            collection.push(value);
+        },
+        remove(value: TObject, key: TKey): void {
+            const index = collection.findIndex(v => equal(v, value));
+            if (index > -1) {
+                collection.splice(index, 1);
+            }
+        },
+    };
+}
+
+function setDeleteAdapter<TObject, TKey>(collection: Set<TObject>) {
+    return {
+        add(value: TObject, key: TKey): void {
+            collection.add(value);
+        },
+        remove(value: TObject, key: TKey): void {
+            collection.delete(value);
+        },
+    };
+}
+
+function setFindAdapter<TObject, TKey>(collection: Set<TObject>) {
+    return {
+        add(value: TObject, key: TKey): void {
+            collection.add(value);
+        },
+        remove(value: TObject, key: TKey): void {
+            const found = find(collection, v => equal(v, value));
+            if (found !== undefined) {
+                collection.delete(found);
+            }
+        },
+    };
+}
+
+function mapDeleteAdapter<TObject, TKey>(collection: Map<TKey, TObject>) {
+    return {
+        add(value: TObject, key: TKey): void {
+            collection.set(key, value);
+        },
+        remove(value: TObject, key: TKey): void {
+            collection.delete(key);
+        },
+    };
+}
+
+function mapFindAdapter<TObject, TKey>(collection: Map<TKey, TObject>) {
+    return {
+        add(value: TObject, key: TKey): void {
+            const foundKey = find(collection, ([k]) => equal(k, key));
+            if (foundKey !== undefined) {
+                collection.set(foundKey[0], value);
+            } else {
+                collection.set(key, value);
+            }
+        },
+        remove(value: TObject, key: TKey): void {
+            const foundKey = find(collection, ([k]) => equal(k, key));
+            if (foundKey !== undefined) {
+                collection.delete(foundKey[0]);
+            } else {
+                collection.delete(key);
+            }
+        },
     };
 }

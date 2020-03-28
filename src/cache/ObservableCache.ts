@@ -20,11 +20,20 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     private _editLevel = 0; // The level of recursion in editing.
     private _keySelector?: (obj: TObject) => TKey;
 
-    constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((obj: TObject) => TKey)) {
-        if (isObservable(sourceOrKeySelector)) {
-            this._readerWriter = new ReaderWriter<TObject, TKey>();
+    constructor(keySelector: (obj: TObject) => TKey, deepEqual?: boolean) ;
+    constructor(source: Observable<IChangeSet<TObject, TKey>>, deepEqual?: boolean);
+    constructor(deepEqual: boolean);
+    constructor();
+    constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((obj: TObject) => TKey) | boolean, deepEqual = false) {
+        if (typeof sourceOrKeySelector === 'boolean') {
+            deepEqual = sourceOrKeySelector;
+            sourceOrKeySelector = undefined;
+        }
 
-            const loader = sourceOrKeySelector
+        if (isObservable(sourceOrKeySelector)) {
+            this._readerWriter = new ReaderWriter<TObject, TKey>(deepEqual);
+
+            const loader = sourceOrKeySelector!
                 .pipe(
                     finalize(() => {
                         this._changes.complete();
@@ -46,7 +55,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
             this._cleanUp.add(loader);
         } else {
             this._keySelector = sourceOrKeySelector;
-            this._readerWriter = new ReaderWriter<TObject, TKey>(sourceOrKeySelector);
+            this._readerWriter = new ReaderWriter<TObject, TKey>(sourceOrKeySelector, deepEqual);
         }
 
         this._cleanUp.add(Disposable.create(() => {

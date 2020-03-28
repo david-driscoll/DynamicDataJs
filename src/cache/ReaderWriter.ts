@@ -11,15 +11,23 @@ export class ReaderWriter<TObject, TKey> {
     private readonly _keySelector?: (obj: TObject) => TKey;
     private _data = new Map<TKey, TObject>(); //could do with priming this on first time load
     private _activeUpdater?: CacheUpdater<TObject, TKey>;
+    private readonly _deepEqual: boolean;
 
-    public constructor(keySelector?: (obj: TObject) => TKey) {
+    public constructor(deepEqual: boolean);
+    public constructor(keySelector?: ((obj: TObject) => TKey), deepEqual?: boolean);
+    public constructor(keySelector?: ((obj: TObject) => TKey) | boolean, deepEqual = false) {
+        if (typeof keySelector === 'boolean') {
+            deepEqual = keySelector;
+            keySelector = undefined;
+        }
         this._keySelector = keySelector;
+        this._deepEqual = deepEqual;
     }
 
     public write(
         changes: IChangeSet<TObject, TKey> | ((updater: ICacheUpdater<TObject, TKey>) => void) | ((updater: ISourceUpdater<TObject, TKey>) => void),
         previewHandler: ((changes: ChangeSet<TObject, TKey>) => void) | undefined,
-        collectChanges: boolean
+        collectChanges: boolean,
     ): ChangeSet<TObject, TKey> {
         if (typeof changes === 'function') {
             return this.doUpdate(changes, previewHandler, collectChanges);
@@ -32,12 +40,12 @@ export class ReaderWriter<TObject, TKey> {
     private doUpdate(
         updateAction: (updater: CacheUpdater<TObject, TKey>) => void,
         previewHandler: ((changes: ChangeSet<TObject, TKey>) => void) | undefined,
-        collectChanges: boolean
+        collectChanges: boolean,
     ): ChangeSet<TObject, TKey> {
         let changeAwareCache;
         if (previewHandler) {
             let copy = new Map<TKey, TObject>(this._data);
-            changeAwareCache = new ChangeAwareCache<TObject, TKey>(this._data);
+            changeAwareCache = new ChangeAwareCache<TObject, TKey>(this._data, this._deepEqual);
 
             this._activeUpdater = new CacheUpdater<TObject, TKey>(changeAwareCache, this._keySelector);
             updateAction(this._activeUpdater);
@@ -59,7 +67,7 @@ export class ReaderWriter<TObject, TKey> {
         }
 
         if (collectChanges) {
-            changeAwareCache = new ChangeAwareCache<TObject, TKey>(this._data);
+            changeAwareCache = new ChangeAwareCache<TObject, TKey>(this._data, this._deepEqual);
 
             this._activeUpdater = new CacheUpdater<TObject, TKey>(changeAwareCache, this._keySelector);
             updateAction(this._activeUpdater);

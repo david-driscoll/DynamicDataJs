@@ -2,9 +2,17 @@ import { ICache } from './ICache';
 import { IChangeSet } from './IChangeSet';
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
 import { isIterable } from '../util/isIterable';
+import { deepEqualMapAdapter } from './DeepEqualMapAdapter';
 
 export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     private readonly _data: Map<TKey, TObject>;
+    private readonly _deepEqual: boolean;
+    private readonly _mapAdapter: {
+        get: typeof Map.prototype.get,
+        set: typeof Map.prototype.set,
+        has: typeof Map.prototype.has,
+        delete: typeof Map.prototype.delete,
+    };
 
     public get size() {
         return this._data.size;
@@ -26,8 +34,17 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
         return new Cache<TObject, TKey>();
     }
 
-    public constructor(data?: Map<TKey, TObject>) {
-        this._data = data ?? new Map<TKey, TObject>();
+    public constructor(deepEqual: boolean);
+    public constructor(data?: Map<TKey, TObject>, deepEqual?: boolean);
+    public constructor(data?: Map<TKey, TObject> | boolean, deepEqual = false) {
+        if (typeof data === 'boolean') {
+            this._data = new Map<TKey, TObject>();
+            deepEqual = data;
+        } else {
+            this._data = data ?? new Map<TKey, TObject>();
+        }
+        this._deepEqual = deepEqual;
+        this._mapAdapter = deepEqual ? deepEqualMapAdapter(this._data) : this._data;
     }
 
     public clone(): void;
@@ -41,45 +58,45 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
             switch (item.reason) {
                 case 'update':
                 case 'add': {
-                    this._data.set(item.key, item.current);
+                    this._mapAdapter.set(item.key, item.current);
                 }
 
                     break;
                 case 'remove':
-                    this._data.delete(item.key);
+                    this._mapAdapter.delete(item.key);
                     break;
             }
         }
     }
 
     public lookup(key: TKey): TObject | undefined {
-        return this._data.get(key);
+        return this._mapAdapter.get(key);
     }
 
     public addOrUpdate(item: TObject, key: TKey) {
-        this._data.set(key, item);
+        this._mapAdapter.set(key, item);
     }
 
     public removeKeys(keys: ArrayOrIterable<TKey>) {
         if (Array.isArray(keys)) {
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
-                if (this._data.has(key)) {
-                    this._data.delete(key);
+                if (this._mapAdapter.has(key)) {
+                    this._mapAdapter.delete(key);
                 }
             }
         } else if (isIterable(keys)) {
             for (const key of keys) {
-                if (this._data.has(key)) {
-                    this._data.delete(key);
+                if (this._mapAdapter.has(key)) {
+                    this._mapAdapter.delete(key);
                 }
             }
         }
     }
 
     public removeKey(key: TKey) {
-        if (this._data.has(key)) {
-            this._data.delete(key);
+        if (this._mapAdapter.has(key)) {
+            this._mapAdapter.delete(key);
         }
     }
 
@@ -88,13 +105,15 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     }
 
     public refresh() {
+        //?
     }
 
     public refreshKeys(keys: ArrayOrIterable<TKey>) {
-
+        //?
     }
 
     public refreshKey(key: TKey) {
+        //?
     }
 
     readonly [Symbol.toStringTag] = 'Cache' as const;
@@ -103,3 +122,4 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
         return this.entries();
     }
 }
+

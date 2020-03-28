@@ -16,11 +16,12 @@ describe('ToSortedCollectionFixture', () => {
     let _cache: ISourceCache<Person, number> & ISourceUpdater<Person, number>;
     let _sortedCollection: Person[] = [];
     let _unsortedCollection: Person[] = [];
-    let _cleanup = new CompositeDisposable();
+    let _cleanup: CompositeDisposable;
 
     beforeEach(() => {
         _cache = updateable(new SourceCache<Person, number>(p => p.age));
         _cache.addOrUpdateValues(range(1, 10).pipe(map(i => new Person('Name' + i, i))));
+        _cleanup = new CompositeDisposable();
     });
 
     afterEach(() => {
@@ -29,8 +30,6 @@ describe('ToSortedCollectionFixture', () => {
     });
 
     it('SortAscending', () => {
-        // const testScheduler = new TestScheduler((a, b) => expect(a).toEqual(b));
-
         _cleanup.add(_cache.connect()
             .pipe(
                 // observeOn(testScheduler),
@@ -57,16 +56,12 @@ describe('ToSortedCollectionFixture', () => {
         // Insert an item with a lower sort order
         _cache.addOrUpdate(new Person('Name', 0));
 
-        // testScheduler.AdvanceBy(TimeSpan.FromSeconds(2).Ticks);
-
         expect(toArray(_cache.values())).toEqual(_unsortedCollection);
         expect(toArray(_cache.values())).not.toEqual(_sortedCollection);
         expect(toArray(from(_cache.values()).pipe(orderBy(z => z.age)))).toEqual(_sortedCollection);
     });
 
     it('SortDescending', () => {
-        // const testScheduler = new TestScheduler((a, b) => expect(a).toEqual(b));
-
         _cleanup.add(_cache.connect()
             .pipe(
                 // observeOn(testScheduler),
@@ -92,8 +87,6 @@ describe('ToSortedCollectionFixture', () => {
 
         // Insert an item with a lower sort order
         _cache.addOrUpdate(new Person('Name', 0));
-
-        // testScheduler.AdvanceBy(TimeSpan.FromSeconds(2).Ticks);
 
         expect(toArray(_cache.values())).toEqual(_unsortedCollection);
         expect(toArray(_cache.values())).not.toEqual(_sortedCollection);
