@@ -8,7 +8,7 @@ import { Subscription } from 'rxjs';
 import { first, toArray, count, find } from 'ix/iterable';
 import { randomPersonGenerator } from '../domain/RandomPersonGenerator';
 
-fdescribe('CloneFixture', () => {
+describe('CloneFixture', () => {
     describe('Array', () => {
         let _collection: Person[];
         let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;

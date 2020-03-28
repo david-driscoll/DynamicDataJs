@@ -5,7 +5,7 @@ import { ICache } from './ICache';
 import { ChangeSet } from './ChangeSet';
 import { isIterable } from '../util/isIterable';
 import { tryGetValue } from '../util/tryGetValue';
-import { deepEqualMapAdapter } from './DeepEqualMapAdapter';
+import { deepEqualMapAdapter } from '../util/deepEqualMapAdapter';
 
 /**
  *  A cache which captures all changes which are made to it. These changes are recorded until CaptureChanges() at which point thw changes are cleared.
@@ -127,7 +127,6 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
             this._data = new Map<TKey, TObject>();
         }
 
-        this._deepEqual //?
         if (this._mapAdapter == null) {
             this._mapAdapter = this._deepEqual ? deepEqualMapAdapter(this._data) : this._data;
         }

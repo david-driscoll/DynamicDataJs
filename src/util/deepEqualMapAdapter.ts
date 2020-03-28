@@ -14,7 +14,7 @@ export function deepEqualMapAdapter<TKey, TObject>(map: Map<TKey, TObject>): {
         set(key, value) {
             const foundKey = find(map, ([k]) => equal(k, key));
             if (foundKey !== undefined) {
-                map.delete(foundKey[0]);
+                return map.set(foundKey[0], value);
             }
             return map.set(key, value);
         },
