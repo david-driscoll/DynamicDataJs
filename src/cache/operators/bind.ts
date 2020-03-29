@@ -13,7 +13,7 @@ export function bind<TObject, TKey>(
     refreshThreshold?: number,
 ): MonoTypeOperatorFunction<IChangeSet<TObject, TKey>> {
     if (!adapter && Array.isArray(values)) {
-        adapter = createBindAdpater(values, (value: TObject, key: TKey) => values.indexOf(value), refreshThreshold ?? 25);
+        adapter = bind.create(values, (value: TObject, key: TKey) => values.indexOf(value), refreshThreshold ?? 25);
     }
     return function bindOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return source.pipe(tap(adapter!));
@@ -28,14 +28,14 @@ export function bindSort<TObject, TKey>(
 }
 
 bind.indexOfAdapter = function indexOfAdapter<TObject, TKey>(values: TObject[]) {
-    return createBindAdpater(values, (value: TObject, key: TKey) => values.indexOf(value));
+    return bind.create(values, (value: TObject, key: TKey) => values.indexOf(value));
 };
 
 bind.deepEqualAdapter = function findIndexOfAdapter<TObject, TKey>(values: TObject[]) {
-    return createBindAdpater(values, (value: TObject, key: TKey) => values.findIndex(v => equal(v, value)));
+    return bind.create(values, (value: TObject, key: TKey) => values.findIndex(v => equal(v, value)));
 };
 
-function createBindAdpater<TObject, TKey>(values: TObject[], indexOf: (value: TObject, key: TKey) => number, refreshThreshold = 25) {
+bind.create = function createBindAdpater<TObject, TKey>(values: TObject[], indexOf: (value: TObject, key: TKey) => number, refreshThreshold = 25) {
     const _cache = new Cache<TObject, TKey>();
     let _loaded = false;
     return function defaultAdapter(changes: IChangeSet<TObject, TKey>) {

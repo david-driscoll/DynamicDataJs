@@ -15,11 +15,12 @@ export function asObservableCache<TObject, TKey>(source: IObservableCache<TObjec
  * @typeparam TObject The type of the object
  * @typeparam TKey The type of the key
  * @param source The source
+ * @param deepEqual Use deep equality with the cache
  */
-export function asObservableCache<TObject, TKey>(source: Observable<IChangeSet<TObject, TKey>>): IObservableCache<TObject, TKey>;
-export function asObservableCache<TObject, TKey>(source: IObservableCache<TObject, TKey> | Observable<IChangeSet<TObject, TKey>>): IObservableCache<TObject, TKey> {
+export function asObservableCache<TObject, TKey>(source: Observable<IChangeSet<TObject, TKey>>, deepEqual?: boolean): IObservableCache<TObject, TKey>;
+export function asObservableCache<TObject, TKey>(source: IObservableCache<TObject, TKey> | Observable<IChangeSet<TObject, TKey>>, deepEqual = false): IObservableCache<TObject, TKey> {
     if (isObservable(source)) {
-        return new ObservableCache(source);
+        return new ObservableCache(source, deepEqual);
     } else {
         return source;
     }
