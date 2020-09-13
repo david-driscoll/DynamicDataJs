@@ -111,3 +111,6 @@ dist
 src/**/*.d.ts
 test/**/*.d.ts
 *.d.ts
+src/**/*.js.map
+test/**/*.js.map
+*.js.map
