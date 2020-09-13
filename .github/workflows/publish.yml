@@ -6,7 +6,7 @@ on:
     types: [created]
 
 jobs:
-  publish-npm:
+  publish:
     needs: build
     runs-on: ubuntu-latest
     steps:
