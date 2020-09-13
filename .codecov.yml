@@ -1,0 +1,15 @@
+codecov:
+    require_ci_to_pass: no
+    strict_yaml_branch: master
+
+coverage:
+    round: down
+    precision: 1
+
+    status:
+        project: yes
+        patch: yes
+        changes: no
+
+comment:
+    branch: master

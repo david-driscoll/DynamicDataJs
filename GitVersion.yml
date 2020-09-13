@@ -1,0 +1,17 @@
+assembly-versioning-scheme: MajorMinorPatch
+mode: ContinuousDeployment
+continuous-delivery-fallback-tag: beta
+next-version: 0.1.0
+branches:
+  next:
+    regex: ^next$
+    mode: ContinuousDeployment
+    tag: next
+    increment: Major
+    prevent-increment-of-merged-branch-version: false
+    track-merge-target: false
+    tracks-release-branches: false
+    is-release-branch: false
+    source-branches: ['master']
+ignore:
+  sha: []

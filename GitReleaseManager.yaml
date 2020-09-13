@@ -1,0 +1,30 @@
+# create:
+#   include-footer: false
+#   footer-heading: ''
+#   footer-content: ''
+#   footer-includes-milestone: true
+export:
+  include-created-date-in-title: true
+  created-date-string-format: MMMM dd, yyyy
+  perform-regex-removal: true
+  regex-text: '([a-f\d]{40}\s|:boom:|:rocket:|:fire:|:blue_book:|:beetle:|:squirrel:|:raised_hand:|:sparkles:|:package:|:old_key:|:wastebasket:|:construction:)'
+issue-labels-include:
+  - ':boom: breaking change'
+  - ':rocket: feature'
+  - ':fire: enhancement'
+  - ':old_key: security'
+  - ':blue_book: documentation'
+  - ':beetle: bug'
+  - ':hammer: chore'
+  - 'good first issue'
+  - 'help wanted'
+  - ':sparkles: mysterious'
+  - ':package: dependencies'
+  - ':construction: deprecated'
+  - ':wastebasket: removed'
+issue-labels-exclude:
+  - ':family: duplicate'
+  - ':grey_question: question'
+  - ':lock: wontfix'
+  - ':shipit: merge'
+  - ':x: invalid'
