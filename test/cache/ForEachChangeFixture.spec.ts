@@ -22,9 +22,7 @@ describe('ForEachChangeFixture', () => {
         const messages: Change<Person, string>[] = [];
         const messageWriter = _source
             .connect()
-            .pipe(
-                forEachChange(x => messages.push(x)),
-            )
+            .pipe(forEachChange(x => messages.push(x)))
             .subscribe();
 
         _source.addOrUpdateValues(randomPersonGenerator(100));

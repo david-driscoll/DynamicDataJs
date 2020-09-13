@@ -11,10 +11,7 @@ describe('IncludeUpdateFixture', () => {
 
     beforeEach(() => {
         _source = updateable(new SourceCache<Person, string>(p => p.key));
-        _results = new ChangeSetAggregator<Person, string>(
-            _source.connect()
-                .pipe(includeUpdateWhen((current, previous) => current !== previous)),
-        );
+        _results = new ChangeSetAggregator<Person, string>(_source.connect().pipe(includeUpdateWhen((current, previous) => current !== previous)));
     });
 
     afterEach(() => {
@@ -22,7 +19,7 @@ describe('IncludeUpdateFixture', () => {
     });
 
     it('IgnoreFunctionWillIgnoreSubsequentUpdatesOfAnItem', () => {
-        var person = new Person('Person', 10);
+        const person = new Person('Person', 10);
         _source.addOrUpdate(person);
         _source.addOrUpdate(person);
         _source.addOrUpdate(person);

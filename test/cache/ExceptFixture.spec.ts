@@ -10,7 +10,6 @@ describe('ExceptFixture', () => {
     let _exceptSource: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _results: ChangeSetAggregator<Person, string>;
 
-
     beforeEach(() => {
         _targetSource = updateable(new SourceCache<Person, string>(p => p.name));
         _exceptSource = updateable(new SourceCache<Person, string>(p => p.name));

@@ -7,7 +7,7 @@ export enum AnimalFamily {
     Reptile,
     Fish,
     Amphibian,
-    Bird
+    Bird,
 }
 
 @NotifyPropertyChanged
@@ -15,7 +15,7 @@ export class Animal {
     @NotifyChanged()
     public includeInResults: boolean;
 
-    public constructor(public readonly name: string, public readonly  type: string, public readonly family: AnimalFamily) {
+    public constructor(public readonly name: string, public readonly type: string, public readonly family: AnimalFamily) {
         this.includeInResults = false;
     }
 }

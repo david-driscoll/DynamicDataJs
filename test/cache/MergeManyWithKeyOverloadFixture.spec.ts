@@ -17,7 +17,8 @@ describe('MergeManyWithKeyOverloadFixture', () => {
 
     it('InvocationOnlyWhenChildIsInvoked', () => {
         let invoked = false;
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany((o, key) => o.observable))
             .subscribe(o => {
                 invoked = true;
@@ -35,7 +36,8 @@ describe('MergeManyWithKeyOverloadFixture', () => {
 
     it('RemovedItemWillNotCauseInvocation', () => {
         let invoked = false;
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany((o, key) => o.observable))
             .subscribe(o => {
                 invoked = true;
@@ -53,7 +55,8 @@ describe('MergeManyWithKeyOverloadFixture', () => {
 
     it('EverythingIsUnsubscribedWhenStreamIsDisposed', () => {
         let invoked = false;
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany((o, key) => o.observable))
             .subscribe(o => {
                 invoked = true;
@@ -69,13 +72,12 @@ describe('MergeManyWithKeyOverloadFixture', () => {
     });
 
     it('SingleItemCompleteWillNotMergedStream', () => {
-        let completed = false;
-        const stream = _source.connect()
+        const completed = false;
+        const stream = _source
+            .connect()
             .pipe(mergeMany((o, key) => o.observable))
             .subscribe({
-                complete() {
-
-                },
+                complete() {},
             });
 
         const item = new ObjectWithObservable(1);
@@ -91,7 +93,8 @@ describe('MergeManyWithKeyOverloadFixture', () => {
 
     xit('SingleItemFailWillNotFailMergedStream', () => {
         let failed = false;
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany((o, key) => o.observable))
             .subscribe({
                 error(ex) {
@@ -109,7 +112,6 @@ describe('MergeManyWithKeyOverloadFixture', () => {
 
         expect(failed).toBe(false);
     });
-
 
     class ObjectWithObservable {
         private readonly _changed = new Subject<boolean>();
@@ -134,7 +136,7 @@ describe('MergeManyWithKeyOverloadFixture', () => {
 
         public get observable() {
             return this._changed.asObservable();
-        };
+        }
 
         public readonly id: number;
     }

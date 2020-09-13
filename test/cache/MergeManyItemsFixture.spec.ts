@@ -5,8 +5,7 @@ import { Subject } from 'rxjs';
 import { mergeMany } from '../../src/cache/operators/mergeMany';
 import { mergeManyItems } from '../../src/cache/operators/mergeManyItems';
 
-describe('MergeManyItemsFixture', function() {
-
+describe('MergeManyItemsFixture', function () {
     let _source: ISourceCache<ObjectWithObservable, number> & ISourceUpdater<ObjectWithObservable, number>;
 
     beforeEach(() => {
@@ -37,7 +36,8 @@ describe('MergeManyItemsFixture', function() {
     it('InvocationOnlyWhenChildIsInvoked', () => {
         let invoked = false;
 
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeManyItems(x => x.observable))
             .subscribe(o => {
                 invoked = true;
@@ -53,11 +53,12 @@ describe('MergeManyItemsFixture', function() {
         expect(invoked).toBe(true);
         stream.unsubscribe();
     });
-    
+
     it('RemovedItemWillNotCauseInvocation', () => {
         let invoked = false;
 
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeManyItems(x => x.observable))
             .subscribe(o => {
                 invoked = true;
@@ -73,11 +74,12 @@ describe('MergeManyItemsFixture', function() {
         expect(invoked).toBe(false);
         stream.unsubscribe();
     });
-    
+
     it('EverythingIsUnsubscribedWhenStreamIsDisposed', () => {
         let invoked = false;
 
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeManyItems(x => x.observable))
             .subscribe(o => {
                 invoked = true;
@@ -92,5 +94,4 @@ describe('MergeManyItemsFixture', function() {
         item.invokeObservable(true);
         expect(invoked).toBe(false);
     });
-
 });

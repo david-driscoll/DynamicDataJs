@@ -13,11 +13,14 @@ describe('TransformManyRefreshFixture', () => {
     beforeEach(() => {
         _source = updateable(new SourceCache<PersonWithFriends, string>(p => p.key));
         _results = asAggregator(
-            _source.connect()
-                .pipe(
-                    autoRefresh(),
-                    transformMany(p => p.friends, p => p.name),
-                ));
+            _source.connect().pipe(
+                autoRefresh(),
+                transformMany(
+                    p => p.friends,
+                    p => p.name,
+                ),
+            ),
+        );
     });
 
     afterEach(() => {
@@ -29,10 +32,7 @@ describe('TransformManyRefreshFixture', () => {
         const person = new PersonWithFriends('Person', 50);
         _source.addOrUpdate(person);
 
-        person.friends = [
-            new PersonWithFriends('Friend1', 40),
-            new PersonWithFriends('Friend2', 45),
-        ];
+        person.friends = [new PersonWithFriends('Friend1', 40), new PersonWithFriends('Friend2', 45)];
         expect(_results.data.size).toBe(2);
         expect(_results.data.lookup('Friend1')).toBeDefined();
         expect(_results.data.lookup('Friend2')).toBeDefined();

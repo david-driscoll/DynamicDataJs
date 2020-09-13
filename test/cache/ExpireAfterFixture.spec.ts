@@ -28,6 +28,7 @@ describe('ExpireAfterFixture', () => {
 
     it('ComplexRemove', () => {
         _scheduler.run(({ flush }) => {
+            // eslint-disable-next-line unicorn/consistent-function-scoping
             function RemoveFunc(t: Person) {
                 if (t.age <= 40) {
                     return 500;

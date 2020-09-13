@@ -76,12 +76,14 @@ describe('ObservableCachePreviewFixture', () => {
         });
 
         expect(preview.messages).toMatchObject(connect.messages);
-        expect(toArray(from(_source.entries())
-            .pipe(
-                orderBy(([key, value]) => value.age),
-                map(([key, value]) => value.age)
-            )))
-            .toMatchObject([2, 3]);
+        expect(
+            toArray(
+                from(_source.entries()).pipe(
+                    orderBy(([key, value]) => value.age),
+                    map(([key, value]) => value.age),
+                ),
+            ),
+        ).toMatchObject([2, 3]);
     });
 
     it('ChangesAreNotYetAppliedDuringPreview', () => {
@@ -104,7 +106,7 @@ describe('ObservableCachePreviewFixture', () => {
         _source.clear();
 
         // Collect preview messages about even numbers only
-        const aggregator = asAggregator( _source.preview(i => i.age === 2));
+        const aggregator = asAggregator(_source.preview(i => i.age === 2));
 
         // Trigger changes
         _source.addOrUpdate(new Person('A', 1));

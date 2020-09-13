@@ -14,8 +14,8 @@ import { defaultComparer } from '../../src/cache/Comparer';
 
 describe('ToSortedCollectionFixture', () => {
     let _cache: ISourceCache<Person, number> & ISourceUpdater<Person, number>;
-    let _sortedCollection: Person[] = [];
-    let _unsortedCollection: Person[] = [];
+    const _sortedCollection: Person[] = [];
+    const _unsortedCollection: Person[] = [];
     let _cleanup: CompositeDisposable;
 
     beforeEach(() => {
@@ -30,27 +30,31 @@ describe('ToSortedCollectionFixture', () => {
     });
 
     it('SortAscending', () => {
-        _cleanup.add(_cache.connect()
-            .pipe(
-                // observeOn(testScheduler),
-                sort(),
-                toCollection(),
-                tap(persons => {
-                    _unsortedCollection.splice(0, _unsortedCollection.length, ...persons);
-                }),
-            )
-            .subscribe(),
+        _cleanup.add(
+            _cache
+                .connect()
+                .pipe(
+                    // observeOn(testScheduler),
+                    sort(),
+                    toCollection(),
+                    tap(persons => {
+                        _unsortedCollection.splice(0, _unsortedCollection.length, ...persons);
+                    }),
+                )
+                .subscribe(),
         );
 
-        _cleanup.add(_cache.connect()
-            .pipe(
-                // observeOn(testScheduler),
-                toSortedCollection(z => z.age),
-                tap(persons => {
-                    _sortedCollection.splice(0, _sortedCollection.length, ...persons);
-                }),
-            )
-            .subscribe(),
+        _cleanup.add(
+            _cache
+                .connect()
+                .pipe(
+                    // observeOn(testScheduler),
+                    toSortedCollection(z => z.age),
+                    tap(persons => {
+                        _sortedCollection.splice(0, _sortedCollection.length, ...persons);
+                    }),
+                )
+                .subscribe(),
         );
 
         // Insert an item with a lower sort order
@@ -62,27 +66,31 @@ describe('ToSortedCollectionFixture', () => {
     });
 
     it('SortDescending', () => {
-        _cleanup.add(_cache.connect()
-            .pipe(
-                // observeOn(testScheduler),
-                sort(),
-                toCollection(),
-                tap(persons => {
-                    _unsortedCollection.splice(0, _unsortedCollection.length, ...persons);
-                }),
-            )
-            .subscribe(),
+        _cleanup.add(
+            _cache
+                .connect()
+                .pipe(
+                    // observeOn(testScheduler),
+                    sort(),
+                    toCollection(),
+                    tap(persons => {
+                        _unsortedCollection.splice(0, _unsortedCollection.length, ...persons);
+                    }),
+                )
+                .subscribe(),
         );
 
-        _cleanup.add(_cache.connect()
-            .pipe(
-                // observeOn(testScheduler),
-                toSortedCollection(z => z.age, 'desc'),
-                tap(persons => {
-                    _sortedCollection.splice(0, _sortedCollection.length, ...persons);
-                }),
-            )
-            .subscribe(),
+        _cleanup.add(
+            _cache
+                .connect()
+                .pipe(
+                    // observeOn(testScheduler),
+                    toSortedCollection(z => z.age, 'desc'),
+                    tap(persons => {
+                        _sortedCollection.splice(0, _sortedCollection.length, ...persons);
+                    }),
+                )
+                .subscribe(),
         );
 
         // Insert an item with a lower sort order
@@ -92,5 +100,4 @@ describe('ToSortedCollectionFixture', () => {
         expect(toArray(_cache.values())).not.toEqual(_sortedCollection);
         expect(toArray(from(_cache.values()).pipe(orderByDescending(z => z.age)))).toEqual(_sortedCollection);
     });
-
 });

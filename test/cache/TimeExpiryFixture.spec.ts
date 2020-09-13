@@ -11,7 +11,6 @@ import { range } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
 
 describe('TimeExpiryFixture', () => {
-
     let _cache: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _remover: Subscription;
     let _results: ChangeSetAggregator<Person, string>;
@@ -32,6 +31,7 @@ describe('TimeExpiryFixture', () => {
 
     it('AutoRemove', () => {
         _scheduler.run(({ flush }) => {
+            // eslint-disable-next-line unicorn/consistent-function-scoping
             function removeFunc(t: Person): number | undefined {
                 if (t.age < 40) {
                     return 4000;

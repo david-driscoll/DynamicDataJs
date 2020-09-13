@@ -6,14 +6,12 @@ import { ChangeSet } from '../../src/cache/ChangeSet';
 import { Change } from '../../src/cache/Change';
 
 describe('BindEqualityTests', () => {
-
-
     it('should not remove person when given the same person as two different references when using reference equality', () => {
         const subject = new Subject<IChangeSet<Person, string>>();
         const values: Person[] = [];
         subject.pipe(bind(values, bind.indexOfAdapter(values))).subscribe();
 
-        let person = new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         subject.next(new ChangeSet([new Change<Person, string>('add', person.name, person)]));
 
         expect(values.length).toBe(1);
@@ -27,7 +25,7 @@ describe('BindEqualityTests', () => {
         const values: Person[] = [];
         subject.pipe(bind(values, bind.deepEqualAdapter(values))).subscribe();
 
-        let person = new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         subject.next(new ChangeSet([new Change<Person, string>('add', person.name, person)]));
 
         expect(values.length).toBe(1);

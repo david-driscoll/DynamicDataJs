@@ -19,14 +19,13 @@ export class ChangeSetAggregator<TObject, TKey, TChangeSet extends IChangeSet<TO
     public constructor(source: Observable<TChangeSet>) {
         const published: ConnectableObservable<TChangeSet> = source.pipe(publish()) as any;
 
-        const error = published.subscribe(updates => {
-        }, ex => this._error = ex);
-        const results = published
-            .subscribe(updates => this.messages.push(updates));
+        const error = published.subscribe(
+            updates => {},
+            ex => (this._error = ex),
+        );
+        const results = published.subscribe(updates => this.messages.push(updates));
         this.data = asObservableCache(published);
-        const summariser = published
-            .pipe(collectUpdateStats())
-            .subscribe(summary => this._summary = summary);
+        const summariser = published.pipe(collectUpdateStats()).subscribe(summary => (this._summary = summary));
 
         const connected = published.connect();
         this._disposer = Disposable.create(() => {

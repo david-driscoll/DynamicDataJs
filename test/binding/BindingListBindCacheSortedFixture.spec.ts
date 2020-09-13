@@ -13,22 +13,16 @@ import { autoRefresh } from '../../src/cache/operators/autoRefresh';
 import { treatMovesAsRemoveAdd } from '../../src/cache/operators/treatMovesAsRemoveAdd';
 import { map, orderBy } from 'ix/iterable/operators';
 
-
 describe('ArrayBindCacheSortedFixture', () => {
     let _collection: Person[];
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _binder: Subscription;
-    let _comparer = SortComparer.ascending<Person>('name');
+    const _comparer = SortComparer.ascending<Person>('name');
 
     beforeEach(() => {
         _collection = [];
         _source = updateable(new SourceCache<Person, string>(p => p.name));
-        _binder = _source.connect()
-            .pipe(
-                sort(_comparer, undefined, undefined, 25),
-                bindSort(_collection),
-            )
-            .subscribe();
+        _binder = _source.connect().pipe(sort(_comparer, undefined, undefined, 25), bindSort(_collection)).subscribe();
     });
 
     afterEach(() => {
@@ -86,9 +80,7 @@ describe('ArrayBindCacheSortedFixture', () => {
     it('TreatMovesAsRemoveAdd', () => {
         const cache = updateable(new SourceCache<Person, string>(p => p.name));
 
-        const people = toArray(range(0, 10)
-            .pipe(map(age => new Person('Person' + age, age))),
-        );
+        const people = toArray(range(0, 10).pipe(map(age => new Person('Person' + age, age))));
         const importantGuy = first(people)!;
         cache.addOrUpdateValues(people);
 
@@ -98,23 +90,15 @@ describe('ArrayBindCacheSortedFixture', () => {
         const boundList1: Person[] = [];
         const boundList2: Person[] = [];
 
-        const connection = cache.connect()
-            .pipe(
-                autoRefresh('age'),
-                sort(SortComparer.ascending<Person>('age')),
-                treatMovesAsRemoveAdd(),
-                bindSort(boundList1),
-            )
-            .subscribe(set => latestSetWithoutMoves = set);
+        const connection = cache
+            .connect()
+            .pipe(autoRefresh('age'), sort(SortComparer.ascending<Person>('age')), treatMovesAsRemoveAdd(), bindSort(boundList1))
+            .subscribe(set => (latestSetWithoutMoves = set));
 
-        const autoRefreshConnection = cache.connect()
-            .pipe(
-                autoRefresh('age'),
-                sort(SortComparer.ascending<Person>('age')),
-                bindSort(boundList2),
-            )
-            .subscribe(set => latestSetWithMoves = set);
-
+        const autoRefreshConnection = cache
+            .connect()
+            .pipe(autoRefresh('age'), sort(SortComparer.ascending<Person>('age')), bindSort(boundList2))
+            .subscribe(set => (latestSetWithMoves = set));
 
         importantGuy.age = importantGuy.age + 200;
 
@@ -127,6 +111,5 @@ describe('ArrayBindCacheSortedFixture', () => {
         expect(latestSetWithMoves.updates).toBe(0);
         expect(latestSetWithMoves.removes).toBe(0);
         expect(latestSetWithMoves.adds).toBe(0);
-
     });
 });

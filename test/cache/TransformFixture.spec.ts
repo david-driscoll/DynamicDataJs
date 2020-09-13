@@ -16,21 +16,15 @@ describe('TransformFixture', () => {
     const transformFactory = (p: Person) => PersonWithGender.create(p, p.age % 2 == 0 ? 'M' : 'F');
 
     function retransform() {
-        results = new ChangeSetAggregator<PersonWithGender, string>(source.connect()
-            .pipe(transform(transformFactory)),
-        );
+        results = new ChangeSetAggregator<PersonWithGender, string>(source.connect().pipe(transform(transformFactory)));
     }
 
     function retransformNext(retransformer: Observable<unknown>) {
-        results = new ChangeSetAggregator<PersonWithGender, string>(source.connect()
-            .pipe(transformForced(transformFactory, retransformer)),
-        );
+        results = new ChangeSetAggregator<PersonWithGender, string>(source.connect().pipe(transformForced(transformFactory, retransformer)));
     }
 
     function retransformDelegate(retransformer: Observable<(person: Person) => boolean>) {
-        results = new ChangeSetAggregator<PersonWithGender, string>(source.connect()
-            .pipe(transformForced(transformFactory, retransformer)),
-        );
+        results = new ChangeSetAggregator<PersonWithGender, string>(source.connect().pipe(transformForced(transformFactory, retransformer)));
     }
 
     beforeEach(() => {
@@ -43,8 +37,7 @@ describe('TransformFixture', () => {
     });
 
     it('ReTransformAll', () => {
-        const people = range(1, 10)
-            .pipe(map(i => new Person('Name' + i, i)));
+        const people = range(1, 10).pipe(map(i => new Person('Name' + i, i)));
         const forceTransform = new Subject<unknown>();
 
         retransformNext(forceTransform);
@@ -64,8 +57,7 @@ describe('TransformFixture', () => {
     });
 
     it('ReTransformSelected', () => {
-        const people = range(1, 10)
-            .pipe(map(i => new Person('Name' + i, i)));
+        const people = range(1, 10).pipe(map(i => new Person('Name' + i, i)));
         const forceTransform = new Subject<(person: Person) => boolean>();
 
         retransformDelegate(forceTransform);
@@ -131,8 +123,7 @@ describe('TransformFixture', () => {
     });
 
     it('BatchOfUniqueUpdates', () => {
-        const people = range(1, 100)
-            .pipe(map(i => new Person('Name' + i, i)));
+        const people = range(1, 100).pipe(map(i => new Person('Name' + i, i)));
 
         retransform();
 
@@ -141,23 +132,19 @@ describe('TransformFixture', () => {
         expect(results.messages.length).toBe(1);
         expect(results.messages[0].adds).toBe(100);
 
-        const transformed = toArray(people
-            .pipe(
+        const transformed = toArray(
+            people.pipe(
                 map(transformFactory),
                 orderBy(z => z.age),
-            ));
-        expect(toArray(from(results.data.values())
-            .pipe(
-                orderBy(z => z.age),
-            ))).toMatchObject(transformed);
+            ),
+        );
+        expect(toArray(from(results.data.values()).pipe(orderBy(z => z.age)))).toMatchObject(transformed);
     });
 
     it('SameKeyChanges', () => {
-
         retransform();
 
-        const people = range(1, 10)
-            .pipe(map(i => new Person('Name', i)));
+        const people = range(1, 10).pipe(map(i => new Person('Name', i)));
 
         source.addOrUpdateValues(people);
 
@@ -174,11 +161,9 @@ describe('TransformFixture', () => {
     });
 
     it('Clear', () => {
-
         retransform();
 
-        const people = range(1, 100)
-            .pipe(map(i => new Person('Name' + i, i)));
+        const people = range(1, 100).pipe(map(i => new Person('Name' + i, i)));
 
         source.addOrUpdateValues(people);
         source.clear();
@@ -191,11 +176,7 @@ describe('TransformFixture', () => {
     });
 
     it('TransformToNull', () => {
-        const results = new ChangeSetAggregator<PersonWithGender, string>
-        (
-            source.connect()
-                .pipe(transform(p => null as any)),
-        );
+        const results = new ChangeSetAggregator<PersonWithGender, string>(source.connect().pipe(transform(p => null as any)));
 
         source.addOrUpdate(new Person('Adult1', 50));
 

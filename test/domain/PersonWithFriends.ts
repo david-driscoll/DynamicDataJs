@@ -3,7 +3,6 @@ import { IKey } from '../../src/cache/IKey';
 
 @NotifyPropertyChanged
 export class PersonWithFriends implements IKey<string> {
-
     public constructor(name: string, age: number, friends: PersonWithFriends[] = []) {
         this.name = name;
         this.age = age;

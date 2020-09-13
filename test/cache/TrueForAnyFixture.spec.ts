@@ -11,12 +11,13 @@ describe('TrueForAnyFixture', () => {
     let _observable: Observable<boolean>;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<ObjectWithObservable, number>((p => p.id)));
-        _observable = _source.connect()
-            .pipe(trueForAny(
+        _source = updateable(new SourceCache<ObjectWithObservable, number>(p => p.id));
+        _observable = _source.connect().pipe(
+            trueForAny(
                 o => o.observable.pipe(startWith(o.value)),
-                o => o.value === true),
-            );
+                o => o.value === true,
+            ),
+        );
     });
 
     afterEach(() => {

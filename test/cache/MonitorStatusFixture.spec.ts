@@ -6,12 +6,10 @@ describe('MonitorStatusFixture', () => {
     it('InitialiStatusIsLoadding', () => {
         let invoked = false;
         let status: ConnectionStatus = 'pending';
-        const subscription = new Subject<number>()
-            .pipe(statusMonitor())
-            .subscribe(s => {
-                invoked = true;
-                status = s;
-            });
+        const subscription = new Subject<number>().pipe(statusMonitor()).subscribe(s => {
+            invoked = true;
+            status = s;
+        });
         expect(invoked).toBe(true);
         expect(status).toBe('pending');
         subscription.unsubscribe();
@@ -21,12 +19,10 @@ describe('MonitorStatusFixture', () => {
         let invoked = false;
         let status: ConnectionStatus = 'pending';
         const subject = new Subject<number>();
-        const subscription = subject
-            .pipe(statusMonitor())
-            .subscribe(s => {
-                invoked = true;
-                status = s;
-            });
+        const subscription = subject.pipe(statusMonitor()).subscribe(s => {
+            invoked = true;
+            status = s;
+        });
 
         subject.next(1);
         expect(invoked).toBe(true);
@@ -40,14 +36,15 @@ describe('MonitorStatusFixture', () => {
         const subject = new Subject<number>();
         let exception: Error;
 
-        const subscription = subject
-            .pipe(statusMonitor())
-            .subscribe(s => {
+        const subscription = subject.pipe(statusMonitor()).subscribe(
+            s => {
                 invoked = true;
                 status = s;
-            }, ex => {
+            },
+            ex => {
                 exception = ex;
-            });
+            },
+        );
 
         subject.error(new Error('Test'));
         subscription.unsubscribe();
@@ -64,7 +61,7 @@ describe('MonitorStatusFixture', () => {
         const subscription = subject
             .pipe(
                 statusMonitor(),
-                filter(status => status === 'loaded')
+                filter(status => status === 'loaded'),
             )
             .subscribe(s => {
                 invoked = true;
@@ -76,7 +73,6 @@ describe('MonitorStatusFixture', () => {
         subject.next(1);
 
         expect(invoked).toBe(true);
-        ;
         expect(invocations).toBe(1);
         subscription.unsubscribe();
     });

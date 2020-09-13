@@ -10,8 +10,7 @@ import { count, from } from 'ix/iterable';
 import { map, filter, concatAll, flatMap } from 'ix/iterable/operators';
 import { Person } from '../domain/Person';
 
-describe('GroupControllerFixture', function() {
-
+describe('GroupControllerFixture', function () {
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _refresher: Subject<unknown>;
     let _grouped: IObservableCache<Group<Person, string, AgeBracket>, AgeBracket>;
@@ -19,18 +18,17 @@ describe('GroupControllerFixture', function() {
     beforeEach(() => {
         _source = updateable(new SourceCache<Person, string>(p => p.name));
         _refresher = new Subject<unknown>();
-        _grouped = asObservableCache(_source.connect()
-            .pipe(
+        _grouped = asObservableCache(
+            _source.connect().pipe(
                 groupOn(p => {
-                        if (p.age <= 19) {
-                            return AgeBracket.Under20;
-                        }
+                    if (p.age <= 19) {
+                        return AgeBracket.Under20;
+                    }
 
-                        return p.age <= 60 ? AgeBracket.Adult : AgeBracket.Pensioner;
-                    },
-                    _refresher,
-                ),
-            ));
+                    return p.age <= 60 ? AgeBracket.Adult : AgeBracket.Pensioner;
+                }, _refresher),
+            ),
+        );
     });
 
     afterEach(() => {
@@ -66,7 +64,6 @@ describe('GroupControllerFixture', function() {
         expect(IsContainedOnlyInOneGroup('P2')).toBe(true);
         expect(IsContainedOnlyInOneGroup('P3')).toBe(true);
         expect(IsContainedOnlyInOneGroup('P4')).toBe(true);
-
     });
     it('RegroupRecaluatesGroupings2', () => {
         const p1 = new Person('P1', 10);
@@ -96,7 +93,6 @@ describe('GroupControllerFixture', function() {
         expect(IsContainedOnlyInOneGroup('P2')).toBe(true);
         expect(IsContainedOnlyInOneGroup('P3')).toBe(true);
         expect(IsContainedOnlyInOneGroup('P4')).toBe(true);
-
     });
 
     function IsContainedIn(name: string, bracket: AgeBracket) {
@@ -109,20 +105,17 @@ describe('GroupControllerFixture', function() {
     }
 
     function IsContainedOnlyInOneGroup(name: string) {
-        const items = from(_grouped.values())
-            .pipe(
-                flatMap(g => from(g.cache.values())),
-                filter(z => z.name === name)
-            );
+        const items = from(_grouped.values()).pipe(
+            flatMap(g => from(g.cache.values())),
+            filter(z => z.name === name),
+        );
         const cnt = count(items);
         return cnt === 1;
     }
-
-
 });
 
 enum AgeBracket {
     Under20,
     Adult,
-    Pensioner
+    Pensioner,
 }

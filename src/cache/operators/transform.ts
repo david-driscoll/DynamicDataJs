@@ -1,10 +1,6 @@
-import { Observable, OperatorFunction } from 'rxjs';
-import { IChangeSet } from '../IChangeSet';
 import { map, scan } from 'rxjs/operators';
 import { ChangeAwareCache } from '../ChangeAwareCache';
 import { notEmpty } from './notEmpty';
-import { Group } from '../IGroupChangeSet';
-import { DistinctChangeSet } from '../DistinctChangeSet';
 import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 import { DynamicDataError } from '../DynamicDataError';
 

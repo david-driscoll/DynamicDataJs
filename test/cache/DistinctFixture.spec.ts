@@ -91,11 +91,7 @@ describe('DistinctFixture', () => {
 
         const person = new Person('Person2', 12);
 
-
-        const results = asAggregator(
-            merge(source1.connect(), source2.connect())
-                .pipe(distinctValues(z => z.age)),
-        );
+        const results = asAggregator(merge(source1.connect(), source2.connect()).pipe(distinctValues(z => z.age)));
 
         source1.addOrUpdate(person);
         source2.addOrUpdate(person);

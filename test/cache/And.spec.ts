@@ -24,7 +24,7 @@ describe('AndFixture', () => {
     });
 
     it('Updating one source only produces no results', () => {
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
 
         expect(_results.messages.length).toBe(0);
@@ -32,8 +32,7 @@ describe('AndFixture', () => {
     });
 
     it('Updating one source only produces no results', () => {
-
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
 
         expect(_results.messages.length).toBe(0);
@@ -41,18 +40,16 @@ describe('AndFixture', () => {
     });
 
     it('Updating both produces results', () => {
-
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
         expect(_results.messages.length).toBe(1);
         expect(_results.data.size).toBe(1);
-        expect( first(_results.data.values())).toBe(person);
+        expect(first(_results.data.values())).toBe(person);
     });
 
     it('Removing from one removes from result', () => {
-
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
 
@@ -62,12 +59,11 @@ describe('AndFixture', () => {
     });
 
     it('Updating one produces only one update', () => {
-
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
 
-        const personUpdated= new Person('Adult1', 51);
+        const personUpdated = new Person('Adult1', 51);
         _source2.addOrUpdate(personUpdated);
         expect(_results.messages.length).toBe(2);
         expect(_results.data.size).toBe(1);
@@ -75,7 +71,7 @@ describe('AndFixture', () => {
     });
 
     it('Starting with non empty source produces no result', () => {
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
 
         const result = asAggregator(and([_source1.connect(), _source2.connect()]));

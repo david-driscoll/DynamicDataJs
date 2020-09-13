@@ -5,8 +5,7 @@ import { Subject } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import { mergeMany } from '../../src/cache/operators/mergeMany';
 
-describe('MergeManyFixture', function() {
-
+describe('MergeManyFixture', function () {
     let _source: ISourceCache<ObjectWithObservable, number> & ISourceUpdater<ObjectWithObservable, number>;
 
     beforeEach(() => {
@@ -38,7 +37,8 @@ describe('MergeManyFixture', function() {
     it('InvocationOnlyWhenChildIsInvoked', () => {
         let invoked = false;
 
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany(x => x.observable))
             .subscribe(o => {
                 invoked = true;
@@ -57,7 +57,8 @@ describe('MergeManyFixture', function() {
     it('RemovedItemWillNotCauseInvocation', () => {
         let invoked = false;
 
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany(x => x.observable))
             .subscribe(o => {
                 invoked = true;
@@ -76,7 +77,8 @@ describe('MergeManyFixture', function() {
     it('EverythingIsUnsubscribedWhenStreamIsDisposed', () => {
         let invoked = false;
 
-        const stream = _source.connect()
+        const stream = _source
+            .connect()
             .pipe(mergeMany(x => x.observable))
             .subscribe(o => {
                 invoked = true;

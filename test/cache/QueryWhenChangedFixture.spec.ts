@@ -10,7 +10,7 @@ describe('QueryWhenChangedFixture', () => {
     let _results: ChangeSetAggregator<Person, string>;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<Person, string>((p => p.name)));
+        _source = updateable(new SourceCache<Person, string>(p => p.name));
         _results = new ChangeSetAggregator<Person, string>(_source.connect(p => p.age > 20));
     });
 
@@ -22,9 +22,10 @@ describe('QueryWhenChangedFixture', () => {
     it('ChangeInvokedOnSubscriptionIfItHasData', () => {
         let invoked = false;
         _source.addOrUpdate(new Person('A', 1));
-        const subscription = _source.connect()
+        const subscription = _source
+            .connect()
             .pipe(queryWhenChanged())
-            .subscribe(x => invoked = true);
+            .subscribe(x => (invoked = true));
         expect(invoked).toBe(true);
         subscription.unsubscribe();
     });
@@ -32,9 +33,10 @@ describe('QueryWhenChangedFixture', () => {
     it('ChangeInvokedOnNext', () => {
         let invoked = false;
 
-        const subscription = _source.connect()
+        const subscription = _source
+            .connect()
             .pipe(queryWhenChanged())
-            .subscribe(x => invoked = true);
+            .subscribe(x => (invoked = true));
 
         expect(invoked).toBe(false);
 
@@ -47,9 +49,10 @@ describe('QueryWhenChangedFixture', () => {
     it('ChangeInvokedOnSubscriptionIfItHasData_WithSelector', () => {
         let invoked = false;
         _source.addOrUpdate(new Person('A', 1));
-        const subscription = _source.connect()
+        const subscription = _source
+            .connect()
             .pipe(queryWhenChanged())
-            .subscribe(x => invoked = true);
+            .subscribe(x => (invoked = true));
         expect(invoked).toBe(true);
         subscription.unsubscribe();
     });
@@ -57,9 +60,10 @@ describe('QueryWhenChangedFixture', () => {
     it('ChangeInvokedOnNext_WithSelector', () => {
         let invoked = false;
 
-        const subscription = _source.connect()
+        const subscription = _source
+            .connect()
             .pipe(queryWhenChanged())
-            .subscribe(x => invoked = true);
+            .subscribe(x => (invoked = true));
 
         expect(invoked).toBe(false);
 

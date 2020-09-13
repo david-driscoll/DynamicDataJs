@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "incremental": false,
+        "target": "ES6",
+        "module": "ES2015",
+        "lib": [
+            "ESNext"
+        ],
+        "declaration": true,
+        "strict": true,
+        "sourceMap": true,
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true
+    }
+}

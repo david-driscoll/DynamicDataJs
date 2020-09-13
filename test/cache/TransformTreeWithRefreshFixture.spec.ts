@@ -14,12 +14,13 @@ describe('TransformTreeWithRefreshFixture', () => {
     let _result: IObservableCache<Node<NotifyPropertyChangedType<EmployeeDto>, number>, number>;
 
     beforeEach(() => {
-        _sourceCache = updateable(new SourceCache<EmployeeDto, number>(e => e.id));
-        _result = asObservableCache(_sourceCache.connect()
-            .pipe(
+        _sourceCache = updateable(new SourceCache<EmployeeDto, number>(employee => employee.id));
+        _result = asObservableCache(
+            _sourceCache.connect().pipe(
                 autoRefresh(),
-                transformToTree(e => e.bossId),
-            ));
+                transformToTree(employee => employee.bossId),
+            ),
+        );
         _sourceCache.addOrUpdateValues(createEmployees());
     });
 
@@ -79,13 +80,12 @@ describe('TransformTreeWithRefreshFixture', () => {
 
         const node1 = _result.lookup(1);
         expect(node1).toBeDefined();
-        expect((node1!.parent!)).not.toBeDefined();
+        expect(node1!.parent!).not.toBeDefined();
         const node2 = node1!.children.lookup(2);
         expect(node2).toBeDefined();
         expect(node2!.parent).toBeDefined();
         expect(node2!.parent!.key).toBe(1);
     });
-
 
     function* createEmployees() {
         yield new EmployeeDto(1, 0, 'Employee1');

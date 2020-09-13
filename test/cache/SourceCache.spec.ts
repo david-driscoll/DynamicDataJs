@@ -1,6 +1,5 @@
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
-import { IChangeSet } from '../../src/cache/IChangeSet';
 import { finalize } from 'rxjs/operators';
 import { using } from '../../src/util';
 import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
@@ -22,7 +21,7 @@ describe('SourceCacheFixture', () => {
 
     it('Can handle a batch of updates', () => {
         _source.edit(updater => {
-            const torequery= new Person('Adult1', 44);
+            const torequery = new Person('Adult1', 44);
 
             updater.addOrUpdate(new Person('Adult1', 40));
             updater.addOrUpdate(new Person('Adult1', 41));
@@ -44,9 +43,8 @@ describe('SourceCacheFixture', () => {
     });
 
     it('Count changed should always invoke upon subscription', () => {
-
         let result: number | undefined;
-        const subscription = _source.countChanged.subscribe(count => result = count);
+        const subscription = _source.countChanged.subscribe(count => (result = count));
 
         expect(result).toBeDefined();
         expect(result).toBe(0);
@@ -55,9 +53,8 @@ describe('SourceCacheFixture', () => {
     });
 
     it('Count changed should reflect contents of cache invoke upon subscription', () => {
-
         let result: number | undefined;
-        const subscription = _source.countChanged.subscribe(count => result = count);
+        const subscription = _source.countChanged.subscribe(count => (result = count));
 
         _source.edit(updater => updater.addOrUpdateValues(randomPersonGenerator(100)));
 
@@ -67,17 +64,19 @@ describe('SourceCacheFixture', () => {
     });
 
     it('Subscribes disposes correctly', () => {
-
         let called = false;
         let errored = false;
         let completed = false;
-        const subscription = _source.connect()
-            .pipe(
-                finalize(() => completed = true),
-            )
-            .subscribe(updates => {
-                called = true;
-            }, ex => errored = true, () => completed = true);
+        const subscription = _source
+            .connect()
+            .pipe(finalize(() => (completed = true)))
+            .subscribe(
+                updates => {
+                    called = true;
+                },
+                ex => (errored = true),
+                () => (completed = true),
+            );
         _source.edit(updater => updater.addOrUpdate(new Person('Adult1', 40)));
 
         subscription.unsubscribe();
@@ -89,24 +88,25 @@ describe('SourceCacheFixture', () => {
     });
 
     it('Count changed', () => {
-
         let count = 0;
         let invoked = 0;
-        using(_source.countChanged.subscribe(c => {
-            count = c;
-            invoked++;
-        }), () => {
+        using(
+            _source.countChanged.subscribe(c => {
+                count = c;
+                invoked++;
+            }),
+            () => {
+                expect(invoked).toBe(1);
+                expect(count).toBe(0);
 
-            expect(invoked).toBe(1);
-            expect(count).toBe(0);
+                _source.edit(updater => updater.addOrUpdateValues(randomPersonGenerator(100)));
+                expect(invoked).toBe(2);
+                expect(count).toBe(100);
 
-            _source.edit(updater => updater.addOrUpdateValues(randomPersonGenerator(100)));
-            expect(invoked).toBe(2);
-            expect(count).toBe(100);
-
-            _source.edit(updater => updater.clear());
-            expect(invoked).toBe(3);
-            expect(count).toBe(0);
-        });
+                _source.edit(updater => updater.clear());
+                expect(invoked).toBe(3);
+                expect(count).toBe(0);
+            },
+        );
     });
 });

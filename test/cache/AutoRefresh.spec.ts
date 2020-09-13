@@ -1,15 +1,9 @@
-﻿import {} from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { first, last, range, toArray as ixToArray } from 'ix/iterable';
+﻿import { first, last, range, toArray as ixToArray } from 'ix/iterable';
 import { map as ixMap } from 'ix/iterable/operators';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { autoRefresh } from '../../src/cache/operators/autoRefresh';
 import { asAggregator } from '../util/aggregator';
-import {
-    observePropertyChanges,
-    NotifyPropertyChangedType,
-    notifyPropertyChangedSymbol,
-} from '../../src/notify/notifyPropertyChangedSymbol';
+import { observePropertyChanges, NotifyPropertyChangedType } from '../../src/notify/notifyPropertyChangedSymbol';
 import { autoRefreshOnObservable } from '../../src/cache/operators/autoRefreshOnObservable';
 import { whenAnyPropertyChanged } from '../../src/cache/operators/whenAnyPropertyChanged';
 import { transform } from '../../src/cache/operators/transform';
@@ -18,16 +12,11 @@ import { Person } from '../domain/Person';
 
 describe('AutoRefreshFixture', () => {
     it('AutoRefresh', () => {
-        const items = ixToArray(range(1, 100)
-            .pipe(ixMap(i => observePropertyChanges(new Person('Person' + i, 1)))),
-        );
+        const items = ixToArray(range(1, 100).pipe(ixMap(i => observePropertyChanges(new Person('Person' + i, 1)))));
 
         //result should only be true when all items are set to true
         const cache = updateable(new SourceCache<NotifyPropertyChangedType<Person>, string>(m => m.name));
-        const results = asAggregator(
-            cache.connect()
-                .pipe(autoRefresh('age')),
-        );
+        const results = asAggregator(cache.connect().pipe(autoRefresh('age')));
 
         cache.addOrUpdateValues(items);
 
@@ -60,18 +49,11 @@ describe('AutoRefreshFixture', () => {
         results.dispose();
     });
     it('AutoRefreshFromObservable', () => {
-        const items = ixToArray(range(1, 100)
-            .pipe(ixMap(i => new Person('Person' + i, 1))),
-        );
+        const items = ixToArray(range(1, 100).pipe(ixMap(i => new Person('Person' + i, 1))));
 
         //result should only be true when all items are set to true
         const cache = updateable(new SourceCache<Person, string>(m => m.name));
-        const results = asAggregator(
-            cache.connect()
-                .pipe(
-                    autoRefreshOnObservable(z => whenAnyPropertyChanged(z)),
-                ),
-        );
+        const results = asAggregator(cache.connect().pipe(autoRefreshOnObservable(z => whenAnyPropertyChanged(z))));
 
         cache.addOrUpdateValues(items);
 
@@ -109,25 +91,22 @@ describe('AutoRefreshFixture', () => {
         const cache = updateable(new SourceCache<NotifyPropertyChangedType<IntHolder>, string>(m => m.description));
         cache.addOrUpdate(initialItem);
 
-        const values: string [] = [];
-        const descriptionStream = cache.connect()
-            .pipe(
-                autoRefresh('description'),
-                transform(z => z.description, true),
-                bind(values),
-            );
+        const values: string[] = [];
+        const descriptionStream = cache.connect().pipe(
+            autoRefresh('description'),
+            transform(z => z.description, true),
+            bind(values),
+        );
 
-        descriptionStream.subscribe();//dispose
+        descriptionStream.subscribe(); //dispose
 
         const newDescription = 'New Description';
         initialItem.description = newDescription;
 
         expect(newDescription).toBe('New Description');
     });
-
 });
 
 class IntHolder {
-    constructor(public value: number, public  description: string) {
-    }
+    constructor(public value: number, public description: string) {}
 }

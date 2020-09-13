@@ -4,7 +4,7 @@ import { asAggregator, ChangeSetAggregator } from '../util/aggregator';
 import { IChangeSet } from '../../src/cache/IChangeSet';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { or } from '../../src/cache/operators/or';
-import { first } from 'ix/iterable'
+import { first } from 'ix/iterable';
 import { Person } from '../domain/Person';
 
 describe('OrFixture', () => {
@@ -23,7 +23,7 @@ describe('OrFixture', () => {
     });
 
     it('UpdatingOneSourceOnlyProducesResult', () => {
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
 
         expect(_results.messages.length).toBe(1);
@@ -31,16 +31,16 @@ describe('OrFixture', () => {
     });
 
     it('UpdatingBothProducesResultsAndDoesNotDuplicateTheMessage', () => {
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
         expect(_results.messages.length).toBe(1);
         expect(_results.data.size).toBe(1);
-        expect( first(_results.data.values())).toBe(person);
+        expect(first(_results.data.values())).toBe(person);
     });
 
     it('RemovingFromOneDoesNotFromResult', () => {
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
 
@@ -50,14 +50,14 @@ describe('OrFixture', () => {
     });
 
     it('UpdatingOneProducesOnlyOneUpdate', () => {
-        const person= new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
 
-        const personUpdated= new Person('Adult1', 51);
+        const personUpdated = new Person('Adult1', 51);
         _source2.addOrUpdate(personUpdated);
         expect(_results.messages.length).toBe(2);
         expect(_results.data.size).toBe(1);
-        expect( first(_results.data.values())).toBe(personUpdated);
+        expect(first(_results.data.values())).toBe(personUpdated);
     });
 });

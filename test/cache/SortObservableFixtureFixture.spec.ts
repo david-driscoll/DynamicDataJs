@@ -37,7 +37,12 @@ describe('SortObservableFixture', () => {
 
         expect(_results.data.size).toBe(100);
 
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, _comparer), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, _comparer),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const actualResult = toArray(_results.messages[0].sortedItems);
 
         expect(actualResult).toEqual(expectedResult);
@@ -50,7 +55,12 @@ describe('SortObservableFixture', () => {
         const desc = SortComparer.descending<Person>('age').thenByAscending('name');
 
         _comparerObservable.next(desc);
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, desc), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, desc),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const items = last(_results.messages)!.sortedItems;
         const actualResult = toArray(items);
         const movesCount = _results.messages[0].moves;
@@ -65,7 +75,12 @@ describe('SortObservableFixture', () => {
         const desc = SortComparer.descending<Person>('age').thenByAscending('name');
 
         _comparerObservable.next(desc);
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, desc), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, desc),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const items = last(_results.messages)!.sortedItems;
         const actualResult = toArray(items);
         const sortReason = items.sortReason;
@@ -81,7 +96,12 @@ describe('SortObservableFixture', () => {
         const desc = SortComparer.descending<Person>('age').thenByAscending('name');
 
         _comparerObservable.next(desc);
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, desc), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, desc),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const items = last(_results.messages)!.sortedItems;
         const actualResult = toArray(items);
         const sortReason = items.sortReason;
@@ -90,12 +110,22 @@ describe('SortObservableFixture', () => {
     });
 
     it('Reset', () => {
-        const people = toArray(range(1, 100).pipe(map(i => new Person('P' + i, i)), orderBy(x => Math.random())));
+        const people = toArray(
+            range(1, 100).pipe(
+                map(i => new Person('P' + i, i)),
+                orderBy(x => Math.random()),
+            ),
+        );
         _cache.addOrUpdateValues(people);
         _comparerObservable.next(SortComparer.ascending<Person>('age'));
         _comparerObservable.next(_comparer);
 
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, _comparer), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, _comparer),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const actualResult = toArray(_results.messages[2].sortedItems);
         expect(actualResult).toEqual(expectedResult);
     });

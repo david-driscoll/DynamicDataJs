@@ -7,11 +7,10 @@ import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { groupOn } from '../../src/cache/operators/groupOn';
 import { asObservableCache } from '../../src/cache/operators/asObservableCache';
 import { count, from } from 'ix/iterable';
-import { map, filter, concatAll, flatMap } from 'ix/iterable/operators';
+import { filter, flatMap } from 'ix/iterable/operators';
 import { Person } from '../domain/Person';
 
-describe('GroupControllerForFilteredItemsFixture', function() {
-
+describe('GroupControllerForFilteredItemsFixture', function () {
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _refresher: Subject<unknown>;
     let _grouped: IObservableCache<Group<Person, string, AgeBracket>, AgeBracket>;
@@ -26,9 +25,7 @@ describe('GroupControllerForFilteredItemsFixture', function() {
     beforeEach(() => {
         _source = updateable(new SourceCache<Person, string>(p => p.name));
         _refresher = new Subject<unknown>();
-        _grouped = asObservableCache(_source.connect(p => _grouper(p) !== AgeBracket.Pensioner)
-            .pipe(groupOn(_grouper, _refresher)),
-        );
+        _grouped = asObservableCache(_source.connect(p => _grouper(p) !== AgeBracket.Pensioner).pipe(groupOn(_grouper, _refresher)));
     });
 
     afterEach(() => {
@@ -101,21 +98,19 @@ describe('GroupControllerForFilteredItemsFixture', function() {
     }
 
     function IsContainedOnlyInOneGroup(name: string) {
-        const items = from(_grouped.values())
-            .pipe(
-                flatMap(g => from(g.cache.values())),
-                filter(z => z.name === name),
-            );
+        const items = from(_grouped.values()).pipe(
+            flatMap(g => from(g.cache.values())),
+            filter(z => z.name === name),
+        );
         const cnt = count(items);
         return cnt === 1;
     }
 
     function IsNotContainedAnyWhere(name: string) {
-        const items = from(_grouped.values())
-            .pipe(
-                flatMap(g => from(g.cache.values())),
-                filter(z => z.name === name),
-            );
+        const items = from(_grouped.values()).pipe(
+            flatMap(g => from(g.cache.values())),
+            filter(z => z.name === name),
+        );
         const cnt = count(items);
         return cnt === 0;
     }
@@ -124,5 +119,5 @@ describe('GroupControllerForFilteredItemsFixture', function() {
 enum AgeBracket {
     Under20,
     Adult,
-    Pensioner
+    Pensioner,
 }

@@ -14,17 +14,15 @@ describe('TransformManyFixture', () => {
 
     beforeEach(() => {
         _source = updateable(new SourceCache<PersonWithRelations, string>(p => p.key));
-        _results =
-            asAggregator(
-                _source.connect()
-                    .pipe(
-                        transformMany(
-                            p => from(p.relations).pipe(expand(r => r.relations)),
-                            p => p.name,
-                        ),
-                        ignoreUpdateWhen((current, previous) => current.name == previous.name),
-                    ),
-            );
+        _results = asAggregator(
+            _source.connect().pipe(
+                transformMany(
+                    p => from(p.relations).pipe(expand(r => r.relations)),
+                    p => p.name,
+                ),
+                ignoreUpdateWhen((current, previous) => current.name == previous.name),
+            ),
+        );
     });
 
     afterEach(() => {

@@ -1,7 +1,6 @@
 import { Person } from './Person';
 
 export class PersonWithChildren {
-
     public constructor(name: string, age: number, relations: Person[] = []) {
         this.name = name;
         this.age = age;

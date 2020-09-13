@@ -12,15 +12,12 @@ describe('ToObservableChangeSetFixtureWithCompletion', () => {
     let _hasCompleted = false;
 
     beforeEach(() => {
-
         _observable = new Subject<Person>();
 
         _target = [];
 
         _disposable = toObservableChangeSet(_observable.pipe(map(z => [z])), p => p.key)
-            .pipe(
-                clone(_target),
-            )
+            .pipe(clone(_target))
             .subscribe({
                 complete() {
                     _hasCompleted = true;
@@ -43,6 +40,5 @@ describe('ToObservableChangeSetFixtureWithCompletion', () => {
 
         _observable.next(new Person('Three', 3));
         expect(_target.length).toBe(2);
-
     });
 });

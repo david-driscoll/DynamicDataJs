@@ -8,10 +8,7 @@ import { merge } from 'rxjs';
 import { filter } from '../../src/cache/operators/filter';
 import { Person } from '../domain/Person';
 
-
-
 describe('FilterFixture', () => {
-
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _results: ChangeSetAggregator<Person, string>;
 
@@ -90,7 +87,10 @@ describe('FilterFixture', () => {
         }
         expect(_results.messages.length).toBe(80);
         expect(_results.data.size).toBe(80);
-        const filtered = people.pipe(ixFilter(p => p.age > 20), orderBy(p => p.age));
+        const filtered = people.pipe(
+            ixFilter(p => p.age > 20),
+            orderBy(p => p.age),
+        );
         expect(toArray(from(_results.data.values()).pipe(orderBy(p => p.age)))).toEqual(toArray(filtered));
     });
 
@@ -158,10 +158,7 @@ describe('FilterFixture', () => {
         const key = 'Adult1';
         const newperson = new Person(key, 30);
 
-        const results = asAggregator(
-            merge(_source.connect(), _source.connect())
-                .pipe(filter(p => p.age > 20)),
-        );
+        const results = asAggregator(merge(_source.connect(), _source.connect()).pipe(filter(p => p.age > 20)));
         _source.addOrUpdate(newperson); // previously this would throw an exception
 
         expect(results.messages.length).toBe(2);
@@ -169,5 +166,4 @@ describe('FilterFixture', () => {
         expect(results.messages[1].updates).toBe(1);
         expect(results.data.size).toBe(1);
     });
-
 });

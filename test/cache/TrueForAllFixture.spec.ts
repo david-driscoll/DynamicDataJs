@@ -10,12 +10,13 @@ describe('TrueForAllFixture', () => {
     let _observable: Observable<boolean>;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<ObjectWithObservable, number>((p => p.id)));
-        _observable = _source.connect()
-            .pipe(trueForAll(
+        _source = updateable(new SourceCache<ObjectWithObservable, number>(p => p.id));
+        _observable = _source.connect().pipe(
+            trueForAll(
                 o => o.observable.pipe(startWith(o.value)),
-                (obj, invoked) => invoked),
-            );
+                (object, invoked) => invoked,
+            ),
+        );
     });
 
     afterEach(() => {

@@ -14,17 +14,13 @@ describe('TransformTreeFixture', () => {
     let _sourceCache: ISourceCache<EmployeeDto, number> & ISourceUpdater<EmployeeDto, number>;
     let _result: IObservableCache<Node<EmployeeDto, number>, number>;
     let _filter: BehaviorSubject<(node: Node<EmployeeDto, number>) => boolean>;
-    let sourceId = 0;
+    const sourceId = 0;
     let cacheId = 0;
 
     beforeEach(() => {
-        _sourceCache = updateable(new SourceCache<EmployeeDto, number>(e => e.id));
+        _sourceCache = updateable(new SourceCache<EmployeeDto, number>(employee => employee.id));
         _filter = new BehaviorSubject<(node: Node<EmployeeDto, number>) => boolean>(n => n.isRoot);
-        _result = asObservableCache(_sourceCache.connect()
-            .pipe(
-                transformToTree(e => e.bossId, _filter),
-            ),
-        );
+        _result = asObservableCache(_sourceCache.connect().pipe(transformToTree(employee => employee.bossId, _filter)));
         cacheId = (_result as any).id;
     });
 
@@ -168,7 +164,6 @@ describe('TransformTreeFixture', () => {
         _filter.next(node => node.isRoot);
         expect(_result.size).toBe(2);
     });
-
 
     function* createEmployees() {
         yield new EmployeeDto(1, 0, 'Employee1');

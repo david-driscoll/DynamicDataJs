@@ -1,4 +1,4 @@
-import { ConnectableObservable, merge, Observable, OperatorFunction } from 'rxjs';
+import { ConnectableObservable, merge, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { map, publish } from 'rxjs/operators';
 import { Cache } from '../Cache';
@@ -62,7 +62,7 @@ export function transformForced<TSource, TKey, TDestination>(
 
             //create change set of items where force refresh is applied
             const refresher: Observable<IChangeSet<TSource, TKey>> = forceTransform.pipe(
-                map(z => (typeof z === 'function' ? z : (value: TSource, key: TKey) => true)),
+                map(z => (typeof z === 'function' ? z : () => true)),
                 map(selector => captureChanges(cache, selector as any)),
                 map(changes => new ChangeSet(changes)),
                 notEmpty(),

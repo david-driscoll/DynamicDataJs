@@ -12,7 +12,8 @@ describe('DeferAndSkipFixture', () => {
 
         const cache = updateable(new SourceCache<Person, string>(p => p.name));
 
-        const deferStream = cache.connect()
+        const deferStream = cache
+            .connect()
             .pipe(deferUntilLoaded())
             .subscribe(changes => {
                 updateReceived = true;
@@ -34,9 +35,10 @@ describe('DeferAndSkipFixture', () => {
 
         const cache = updateable(new SourceCache<Person, string>(p => p.name));
 
-        const deferStream = cache.connect()
+        const deferStream = cache
+            .connect()
             .pipe(skipInitial())
-            .subscribe(changes => updateReceived = true);
+            .subscribe(changes => (updateReceived = true));
 
         expect(updateReceived).toBe(false);
 

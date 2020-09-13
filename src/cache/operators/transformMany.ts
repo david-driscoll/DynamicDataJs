@@ -1,12 +1,10 @@
-import { Observable, OperatorFunction } from 'rxjs';
+import { Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
-import { map, scan } from 'rxjs/operators';
-import { ChangeAwareCache } from '../ChangeAwareCache';
-import { notEmpty } from './notEmpty';
+import { map } from 'rxjs/operators';
 import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 import { transform } from './transform';
 import { from as ixFrom, first, toArray } from 'ix/iterable';
-import { filter as ixFilter, map as ixMap, except, intersect } from 'ix/iterable/operators';
+import { map as ixMap, except, intersect } from 'ix/iterable/operators';
 import { ChangeSet } from '../ChangeSet';
 import { Change } from '../Change';
 import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
@@ -41,7 +39,7 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
 
     return function transformManyOperator(source) {
         return source.pipe(
-            transform((t, key) => {
+            transform(t => {
                 const destination = toArray(ixFrom(manySelector(t)).pipe(ixMap(m => ({ item: m, key: keySelector(m) }))));
                 return new ManyContainer(() => destination);
             }, true),

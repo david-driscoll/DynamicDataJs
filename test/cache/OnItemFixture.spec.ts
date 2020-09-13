@@ -4,13 +4,14 @@ import { onItemAdded } from '../../src/cache/operators/onItemAdded';
 import { onItemUpdated } from '../../src/cache/operators/onItemUpdated';
 import { onItemRemoved } from '../../src/cache/operators/onItemRemoved';
 
-describe('OnItemFixture', function() {
+describe('OnItemFixture', function () {
     it('OnItemAddCalled', () => {
         let called = false;
         const source = updateable(new SourceCache<Person, number>(x => x.age));
 
-        source.connect()
-            .pipe(onItemAdded(_ => called = true))
+        source
+            .connect()
+            .pipe(onItemAdded(_ => (called = true)))
             .subscribe();
 
         const person = new Person('A', 1);
@@ -23,8 +24,9 @@ describe('OnItemFixture', function() {
         let called = false;
         const source = updateable(new SourceCache<Person, number>(x => x.age));
 
-        source.connect()
-            .pipe(onItemRemoved(_ => called = true))
+        source
+            .connect()
+            .pipe(onItemRemoved(_ => (called = true)))
             .subscribe();
 
         const person = new Person('A', 1);
@@ -37,8 +39,9 @@ describe('OnItemFixture', function() {
         let called = false;
         const source = updateable(new SourceCache<Person, number>(x => x.age));
 
-        source.connect()
-            .pipe(onItemUpdated((x, y) => called = true))
+        source
+            .connect()
+            .pipe(onItemUpdated((x, y) => (called = true)))
             .subscribe();
 
         const person = new Person('A', 1);

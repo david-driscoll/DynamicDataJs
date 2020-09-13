@@ -10,7 +10,6 @@ import { bind } from '../../src/cache/operators/bind';
 import { Person } from '../domain/Person';
 
 describe('GroupFixture', () => {
-
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     beforeEach(() => {
         _source = updateable(new SourceCache<Person, string>(p => p.name));
@@ -22,16 +21,14 @@ describe('GroupFixture', () => {
 
     it('Add', () => {
         let called = false;
-        const subscriber = _source.connect()
-            .pipe(
-                groupOn(z => z.age),
-            )
-            .subscribe(
-                updates => {
-                    expect(updates.size).toBe(1);
-                    expect(first(updates)!.reason).toBe('add');
-                    called = true;
-                });
+        const subscriber = _source
+            .connect()
+            .pipe(groupOn(z => z.age))
+            .subscribe(updates => {
+                expect(updates.size).toBe(1);
+                expect(first(updates)!.reason).toBe('add');
+                called = true;
+            });
         _source.addOrUpdate(new Person('Person1', 20));
 
         subscriber.unsubscribe();
@@ -40,7 +37,12 @@ describe('GroupFixture', () => {
 
     it('UpdateNotPossible', () => {
         let called = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age), skip(1))
+        const subscriber = _source
+            .connect()
+            .pipe(
+                groupOn(z => z.age),
+                skip(1),
+            )
             .subscribe(updates => {
                 called = true;
             });
@@ -52,7 +54,9 @@ describe('GroupFixture', () => {
 
     it('UpdateAnItemWillChangedThegroup', () => {
         let called = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age))
+        const subscriber = _source
+            .connect()
+            .pipe(groupOn(z => z.age))
             .subscribe(updates => {
                 called = true;
             });
@@ -64,13 +68,17 @@ describe('GroupFixture', () => {
 
     it('Remove', () => {
         let called = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age), skip(1))
-            .subscribe(
-                updates => {
-                    expect(updates.size).toBe(1);
-                    expect(first(updates)?.reason).toBe('remove');
-                    called = true;
-                });
+        const subscriber = _source
+            .connect()
+            .pipe(
+                groupOn(z => z.age),
+                skip(1),
+            )
+            .subscribe(updates => {
+                expect(updates.size).toBe(1);
+                expect(first(updates)?.reason).toBe('remove');
+                called = true;
+            });
         _source.addOrUpdate(new Person('Person1', 20));
         _source.remove(new Person('Person1', 20));
         subscriber.unsubscribe();
@@ -79,11 +87,13 @@ describe('GroupFixture', () => {
 
     it('FiresCompletedWhenDisposed', () => {
         let completed = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age))
+        const subscriber = _source
+            .connect()
+            .pipe(groupOn(z => z.age))
             .subscribe({
                 complete() {
                     completed = true;
-                }
+                },
             });
         _source.dispose();
         subscriber.unsubscribe();
@@ -92,15 +102,16 @@ describe('GroupFixture', () => {
 
     it('FiresManyValueForBatchOfDifferentAdds', () => {
         let called = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age))
-            .subscribe(
-                updates => {
-                    expect(updates.size).toBe(4);
-                    for (const update of updates) {
-                        expect(update.reason).toBe('add');
-                    }
-                    called = true;
-                });
+        const subscriber = _source
+            .connect()
+            .pipe(groupOn(z => z.age))
+            .subscribe(updates => {
+                expect(updates.size).toBe(4);
+                for (const update of updates) {
+                    expect(update.reason).toBe('add');
+                }
+                called = true;
+            });
         _source.edit(updater => {
             updater.addOrUpdate(new Person('Person1', 20));
             updater.addOrUpdate(new Person('Person2', 21));
@@ -114,13 +125,14 @@ describe('GroupFixture', () => {
 
     it('FiresOnlyOnceForABatchOfUniqueValues', () => {
         let called = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age))
-            .subscribe(
-                updates => {
-                    expect(updates.size).toBe(1);
-                    expect(first(updates)!.reason).toBe('add');
-                    called = true;
-                });
+        const subscriber = _source
+            .connect()
+            .pipe(groupOn(z => z.age))
+            .subscribe(updates => {
+                expect(updates.size).toBe(1);
+                expect(first(updates)!.reason).toBe('add');
+                called = true;
+            });
         _source.edit(updater => {
             updater.addOrUpdate(new Person('Person1', 20));
             updater.addOrUpdate(new Person('Person2', 20));
@@ -135,15 +147,19 @@ describe('GroupFixture', () => {
     it('FiresRemoveWhenEmptied', () => {
         let called = false;
         //skip first one a this is setting up the stream
-        const subscriber = _source.connect().pipe(groupOn(z => z.age), skip(1))
-            .subscribe(
-                updates => {
-                    expect(updates.size).toBe(1);
-                    for (const update of updates) {
-                        expect(update.reason).toBe('remove');
-                    }
-                    called = true;
-                });
+        const subscriber = _source
+            .connect()
+            .pipe(
+                groupOn(z => z.age),
+                skip(1),
+            )
+            .subscribe(updates => {
+                expect(updates.size).toBe(1);
+                for (const update of updates) {
+                    expect(update.reason).toBe('remove');
+                }
+                called = true;
+            });
         const person = new Person('Person1', 20);
 
         _source.addOrUpdate(person);
@@ -157,7 +173,9 @@ describe('GroupFixture', () => {
 
     it('ReceivesUpdateWhenFeederIsInvoked', () => {
         let called = false;
-        const subscriber = _source.connect().pipe(groupOn(z => z.age))
+        const subscriber = _source
+            .connect()
+            .pipe(groupOn(z => z.age))
             .subscribe(updates => {
                 called = true;
             });
@@ -168,7 +186,8 @@ describe('GroupFixture', () => {
 
     it('AddItemAfterUpdateItemProcessAdd', () => {
         const _entries: GroupViewModel[] = [];
-        const subscriber = _source.connect()
+        const subscriber = _source
+            .connect()
             .pipe(
                 groupOn(z => z.name[0]),
                 transform(x => new GroupViewModel(x)),
@@ -195,7 +214,8 @@ describe('GroupFixture', () => {
 
     it('UpdateItemAfterAddItemProcessAdd', () => {
         const _entries: GroupViewModel[] = [];
-        const subscriber = _source.connect()
+        const subscriber = _source
+            .connect()
             .pipe(
                 groupOn(z => z.name[0]),
                 transform(x => new GroupViewModel(x)),
@@ -221,18 +241,20 @@ describe('GroupFixture', () => {
     });
 });
 
-
 class GroupViewModel {
     public readonly entries: GroupEntryViewModel[] = [];
 
     public constructor(person: Group<Person, string, string>) {
-        person.cache.connect()
-            .pipe(transform(x => new GroupEntryViewModel(x)), bind(this.entries))
+        person.cache
+            .connect()
+            .pipe(
+                transform(x => new GroupEntryViewModel(x)),
+                bind(this.entries),
+            )
             .subscribe();
     }
 }
 
 class GroupEntryViewModel {
-    constructor(public readonly person: Person) {
-    }
+    constructor(public readonly person: Person) {}
 }

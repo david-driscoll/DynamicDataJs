@@ -1,5 +1,4 @@
-﻿import construct = Reflect.construct;
-import { Disposable } from '../../src/util';
+﻿import { Disposable } from '../../src/util';
 import { SourceCache, updateable } from '../../src/cache/SourceCache';
 import { ISourceUpdater } from '../../src/cache/ISourceUpdater';
 import { ChangeSetAggregator } from '../util/aggregator';
@@ -7,6 +6,7 @@ import { ISourceCache } from '../../src/cache/ISourceCache';
 import { subscribeMany } from '../../src/cache/operators/subscribeMany';
 import { every, first, range } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
+import construct = Reflect.construct;
 
 describe('SubscribeManyFixture', function () {
     let _source: ISourceCache<SubscribeableObject, number> & ISourceUpdater<SubscribeableObject, number>;
