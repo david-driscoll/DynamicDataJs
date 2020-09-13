@@ -40,7 +40,7 @@ jobs:
         uses: RocketSurgeonsGuild/actions/sync-milestone@v0.2.4
         with:
           default-label: ':sparkles: mysterious'
-          github-token: ${{ secrets.RSG_BOT_TOKEN }}
+          github-token: ${{ secrets.BOT_TOKEN }}
 
       - name: Get Repo and Owner
         shell: pwsh

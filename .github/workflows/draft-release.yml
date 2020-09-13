@@ -59,7 +59,7 @@ jobs:
           dotnet gitreleasemanager create `
             -o "${{ steps.repository.outputs.owner }}" `
             -r "${{ steps.repository.outputs.repository }}" `
-            --token "${{ secrets.RSG_BOT_TOKEN }}" `
+            --token "${{ secrets.BOT_TOKEN }}" `
             -m "v${{ steps.gitversion.outputs.majorMinorPatch }}"
 
       - name: Export Changelog
