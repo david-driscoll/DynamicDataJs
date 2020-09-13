@@ -6,8 +6,7 @@ import { notEmpty } from './notEmpty';
 import { Group } from '../IGroupChangeSet';
 import { DistinctChangeSet } from '../DistinctChangeSet';
 import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
-
-export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
+import { DynamicDataError } from '../DynamicDataError';
 
 /**
  * Projects each update item to a new form using the specified transform function

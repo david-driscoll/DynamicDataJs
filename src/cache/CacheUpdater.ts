@@ -1,12 +1,10 @@
 import { ISourceUpdater } from './ISourceUpdater';
-import { ICacheUpdater } from './ICacheUpdater';
 import { ArrayOrIterable } from '../util/ArrayOrIterable';
 import { EqualityComparer, isEqualityComparer } from '../util/isEqualityComparer';
 import { IChangeSet } from './IChangeSet';
 import { ICache } from './ICache';
 import { Cache } from './Cache';
 import { isIterable } from '../util/isIterable';
-import { iterator } from 'rxjs/internal-compatibility';
 import { isMap } from '../util/isMap';
 
 export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey> {
@@ -142,11 +140,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
 
     public removePairs(entries: ArrayOrIterable<[TKey, TObject]>) {
         if (Array.isArray(entries)) {
-            for (const [key, value] of entries) {
+            for (const [key] of entries) {
                 this.removeKey(key);
             }
         } else if (isIterable(entries)) {
-            for (const [key, value] of entries) {
+            for (const [key] of entries) {
                 this.removeKey(key);
             }
         }

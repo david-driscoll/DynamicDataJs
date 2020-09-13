@@ -1,7 +1,7 @@
 import { merge, Observable, OperatorFunction } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { ChangeAwareCache } from '../ChangeAwareCache';
-import { DynamicDataError } from './transform';
+import { DynamicDataError } from '../DynamicDataError';
 import { Change } from '../Change';
 import { ChangeSet } from '../ChangeSet';
 import { from } from 'rxjs';

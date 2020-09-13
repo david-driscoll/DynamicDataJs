@@ -11,8 +11,6 @@ import { ChangeSet } from '../ChangeSet';
 import { Change } from '../Change';
 import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
-export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
-
 /**
  * Equivalent to a select many transform. To work, the key must individually identify each child.
  * @typeparam TDestination The type of the destination.

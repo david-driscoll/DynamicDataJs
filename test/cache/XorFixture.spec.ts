@@ -24,20 +24,20 @@ describe('XOrFixture', () => {
     });
 
     it('UpdatingOneSourceOnlyProducesResult', () => {
-        const person = new Person('Adult1', 50);
+        var person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
 
         expect(_results.messages.length).toBe(1);
         expect(_results.data.size).toBe(1);
     });
     it('UpdatingBothDoeNotProducesResult', () => {
-        const person = new Person('Adult1', 50);
+        var person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
         expect(_results.data.size).toBe(0);
     });
     it('RemovingFromOneDoesNotFromResult', () => {
-        const person = new Person('Adult1', 50);
+        var person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
 
@@ -46,11 +46,11 @@ describe('XOrFixture', () => {
         expect(_results.data.size).toBe(1);
     });
     it('UpdatingOneProducesOnlyOneUpdate', () => {
-        const person = new Person('Adult1', 50);
+        var person = new Person('Adult1', 50);
         _source1.addOrUpdate(person);
         _source2.addOrUpdate(person);
 
-        const personUpdated = new Person('Adult1', 51);
+        var personUpdated = new Person('Adult1', 51);
         _source2.addOrUpdate(personUpdated);
         expect(_results.messages.length).toBe(2);
         expect(_results.data.size).toBe(0);
