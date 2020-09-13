@@ -3,19 +3,25 @@
     "version": "0.1.0",
     "description": "",
     "author": "David Driscoll",
-    "module": "dist/index.esm.js",
-    "main": "dist/index.js",
-    "typings": "dist/index.d.ts",
+    "module": "esm/index.js",
+    "main": "index.js",
+    "typings": "index.d.ts",
     "files": [
-        "dist",
-        "src"
+        "esm",
+        "binding",
+        "cache",
+        "diagnostics",
+        "notify",
+        "util",
+        "src",
+        "*.js*",
+        "*.d.ts"
     ],
     "scripts": {
-        "start": "tsdx watch",
-        "build": "tsdx build",
-        "test": "tsdx test",
+        "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json",
+        "test": "jest",
         "lint": "eslint --fix src/**/*.ts test/**/*.ts",
-        "prepare": "tsdx build"
+        "prepare": "npm run build"
     },
     "repository": {
         "type": "git",

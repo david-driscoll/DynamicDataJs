@@ -1,0 +1,19 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "binding": true,
+        "cache": true,
+        "diagnostics": true,
+        "notify": true,
+        "util": true,
+        "*.d.ts": true,
+        "*.js": {
+            "when": "$(basename).js.map"
+        },
+        "*.js.map": true
+    }
+}
