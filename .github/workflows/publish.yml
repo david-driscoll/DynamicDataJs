@@ -32,10 +32,12 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@master
 
-      - name: change version
-        uses: reedyuk/npm-version@vlatest
-        with:
-          version: '${{ steps.gitversion.outputs.fullSemVer }}'
+      - name: 🆚 npm version
+        shell: pwsh
+        run: |
+          $data = gc .\package.json -Raw | ConvertFrom-Json;
+          $data.version = '0.1.1';
+          set-content .\package.json ($data|ConvertTo-Json)
 
       - name: 🎁 npm install
         run: npm ci
