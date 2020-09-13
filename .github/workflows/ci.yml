@@ -5,15 +5,13 @@ on:
     branches:
       - master
       - next
-    tags:
-      - v*
   pull_request:
     branches:
       - master
       - next
 
 jobs:
-  Build:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,6 +19,10 @@ jobs:
         with:
           clean: 'false'
           fetch-depth: '0'
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
 
       - name: Fetch all history for all tags and branches
         run: |
@@ -30,6 +32,10 @@ jobs:
         uses: gittools/actions/gitversion/setup@master
         with:
           versionSpec: '5.x'
+
+      - name: Use GitVersion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@master
 
       - name: 🎁 npm install
         run: npm ci
@@ -41,3 +47,50 @@ jobs:
         uses: codecov/codecov-action@v1.0.13
         with:
           name: 'actions-${{ matrix.os }}'
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          clean: 'false'
+          fetch-depth: '0'
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Fetch all history for all tags and branches
+        run: |
+          git fetch --prune
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@master
+        with:
+          versionSpec: '5.x'
+
+      - name: Use GitVersion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@master
+
+      - name: change version
+        uses: reedyuk/npm-version
+        with:
+          version: '${{ steps.gitversion.outputs.fullSemVer }}'
+
+      - name: 🎁 npm install
+        run: npm ci
+
+      - name: 📦 npm publish (beta)
+        run: npm publish --tag beta
+        condition: ${{ github.event_name == 'push' && github.event.ref === 'refs/heads/master' }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
+      - name: 📦 npm publish (next)
+        run: npm publish --tag next
+        condition: ${{ github.event_name == 'push' && github.event.ref === 'refs/heads/next' }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

@@ -1,0 +1,46 @@
+
+name: Publish release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          clean: 'false'
+          fetch-depth: '0'
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Fetch all history for all tags and branches
+        run: |
+          git fetch --prune
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@master
+        with:
+          versionSpec: '5.x'
+
+      - name: Use GitVersion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@master
+
+      - name: change version
+        uses: reedyuk/npm-version@vlatest
+        with:
+          version: '${{ steps.gitversion.outputs.fullSemVer }}'
+
+      - name: 🎁 npm install
+        run: npm ci
+
+      - name: 📦 npm publish (latest)
+        run: npm publish --tag latest
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
