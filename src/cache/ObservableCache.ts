@@ -20,8 +20,8 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     private _editLevel = 0; // The level of recursion in editing.
     private _keySelector?: (object: TObject) => TKey;
 
-    constructor(keySelector: (object: TObject) => TKey, deepEqual?: boolean);
-    constructor(source: Observable<IChangeSet<TObject, TKey>>, deepEqual?: boolean);
+    constructor(keySelector?: (object: TObject) => TKey, deepEqual?: boolean);
+    constructor(source?: Observable<IChangeSet<TObject, TKey>>, deepEqual?: boolean);
     constructor(deepEqual: boolean);
     constructor();
     constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((object: TObject) => TKey) | boolean, deepEqual = false) {

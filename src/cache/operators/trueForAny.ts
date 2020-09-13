@@ -21,8 +21,10 @@ export function trueForAny<TObject, TKey, TValue>(
     return function trueForAllOperator(source) {
         return source.pipe(
             trueFor(observableSelector, items => {
-                return some(items, o => {
-                    return (o.latestValue !== undefined && equalityCondition(o.item, o.latestValue)) ?? false;
+                return some(items, {
+                    predicate: o => {
+                        return (o.latestValue !== undefined && equalityCondition(o.item, o.latestValue)) ?? false;
+                    },
                 });
             }),
         );

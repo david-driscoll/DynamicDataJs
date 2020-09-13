@@ -15,9 +15,7 @@ describe('GroupOnPropertyFixture', () => {
 
     beforeEach(() => {
         _source = updateable(new SourceCache<Person, string>(p => p.key));
-        _results = asAggregator(_source.connect()
-            .pipe(groupOnProperty('age')),
-        );
+        _results = asAggregator(_source.connect().pipe(groupOnProperty('age')));
     });
 
     afterEach(() => {
@@ -63,11 +61,12 @@ describe('GroupOnPropertyFixture', () => {
 
         _source.addOrUpdateValues(people);
 
-        const expectedGroupCount = count(from(people)
-            .pipe(
+        const expectedGroupCount = count(
+            from(people).pipe(
                 map(x => x.age),
                 distinct(),
-            ));
+            ),
+        );
         expect(_results.data.size).toBe(expectedGroupCount);
     });
 
@@ -76,23 +75,19 @@ describe('GroupOnPropertyFixture', () => {
 
         _source.addOrUpdateValues(people);
 
-        const initialCount = count(people
-            .pipe(
+        const initialCount = count(
+            people.pipe(
                 map(z => z.age),
-                distinct(z => z.toString())
+                distinct({ keySelector: z => z.toString() }),
             ),
         );
 
         expect(_results.data.size).toBe(initialCount);
 
-        people
-            .pipe(
-                take(25),
-            )
-            .forEach(p => p.age = 200);
+        people.pipe(take(25)).forEach(p => (p.age = 200));
 
-        const changedCount = count(people
-            .pipe(
+        const changedCount = count(
+            people.pipe(
                 map(z => z.age),
                 distinct(),
             ),
@@ -101,10 +96,7 @@ describe('GroupOnPropertyFixture', () => {
         expect(_results.data.size).toBe(changedCount);
 
         //check that each item is only in one cache
-        const peopleInCache = toArray(
-            from(_results.data.values())
-                .pipe(flatMap(g => g.cache.values())),
-        );
+        const peopleInCache = toArray(from(_results.data.values()).pipe(flatMap(g => g.cache.values())));
 
         expect(peopleInCache.length).toBe(100);
     });

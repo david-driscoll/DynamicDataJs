@@ -8,18 +8,20 @@ import { subscribeMany } from '../../src/cache/operators/subscribeMany';
 import { every, first, range } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
 
-describe('SubscribeManyFixture', function() {
+describe('SubscribeManyFixture', function () {
     let _source: ISourceCache<SubscribeableObject, number> & ISourceUpdater<SubscribeableObject, number>;
     let _results: ChangeSetAggregator<SubscribeableObject, number>;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<SubscribeableObject, number>((p => p.id)));
+        _source = updateable(new SourceCache<SubscribeableObject, number>(p => p.id));
         _results = new ChangeSetAggregator<SubscribeableObject, number>(
-            _source.connect()
-                .pipe(subscribeMany(subscribeable => {
+            _source.connect().pipe(
+                subscribeMany(subscribeable => {
                     subscribeable.subscribe();
                     return Disposable.create(subscribeable);
-                })));
+                }),
+            ),
+        );
     });
 
     afterEach(() => {
@@ -59,7 +61,7 @@ describe('SubscribeManyFixture', function() {
         _source.clear();
 
         expect(_results.messages.length).toBe(2);
-        expect(every(_results.messages[1], d => !d.current.isSubscribed)).toBe(true);
+        expect(every(_results.messages[1], { predicate: d => !d.current.isSubscribed })).toBe(true);
     });
 
     class SubscribeableObject {

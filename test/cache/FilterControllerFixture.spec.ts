@@ -18,11 +18,9 @@ describe('FilterControllerFixture', () => {
     let _filter: Subject<(value: Person) => boolean>;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<Person, string>((p => p.key)));
+        _source = updateable(new SourceCache<Person, string>(p => p.key));
         _filter = new BehaviorSubject<(value: Person) => boolean>(p => p.age > 20);
-        _results = new ChangeSetAggregator<Person, string>(_source.connect()
-            .pipe(filterDynamic(_filter))
-        );
+        _results = new ChangeSetAggregator<Person, string>(_source.connect().pipe(filterDynamic(_filter)));
     });
 
     afterEach(() => {
@@ -42,38 +40,35 @@ describe('FilterControllerFixture', () => {
         expect(_results.messages[1].removes).toBe(50);
         expect(_results.messages[1].adds).toBe(20);
 
-        expect(every(_results.data.values(), p => p.age <= 50)).toBe(true);
+        expect(every(_results.data.values(), { predicate: p => p.age <= 50 })).toBe(true);
     });
 
     it('ReapplyFilterDoesntThrow', () => {
-        const source = updateable(new SourceCache<Person, string>((p => p.key)));
+        const source = updateable(new SourceCache<Person, string>(p => p.key));
 
         source.addOrUpdateValues(toArray(range(1, 100).pipe(map(i => new Person('P' + i, i)))));
 
-        expect(() => asObservableCache(
-            source.connect()
-                .pipe(filterDynamic(of(undefined))),
-        )).not.toThrow();
+        expect(() => asObservableCache(source.connect().pipe(filterDynamic(of(undefined))))).not.toThrow();
         source.dispose();
     });
 
     it('RepeatedApply', () => {
-        const source = updateable(new SourceCache<Person, string>((p => p.key)));
+        const source = updateable(new SourceCache<Person, string>(p => p.key));
 
         source.addOrUpdateValues(toArray(range(1, 100).pipe(map(i => new Person('P' + i, i)))));
         _filter.next(p => true);
 
         let latestChanges: IChangeSet<Person, string> = null!;
         const disposer = asObservableCache(
-            source.connect()
-                .pipe(
-                    filterDynamic(_filter),
-                    tap({
-                        next(changes) {
-                            latestChanges = changes;
-                        },
-                    }),
-                ));
+            source.connect().pipe(
+                filterDynamic(_filter),
+                tap({
+                    next(changes) {
+                        latestChanges = changes;
+                    },
+                }),
+            ),
+        );
 
         _filter.next(p => false);
         expect(latestChanges.removes).toBe(100);
@@ -171,7 +166,12 @@ describe('FilterControllerFixture', () => {
         expect(_results.messages.length).toBe(1);
         expect(_results.messages[0].adds).toBe(80);
 
-        const filtered = toArray(from(people).pipe(filter(p => p.age > 20), orderBy(p => p.age)));
+        const filtered = toArray(
+            from(people).pipe(
+                filter(p => p.age > 20),
+                orderBy(p => p.age),
+            ),
+        );
         expect(toArray(from(_results.data.values()).pipe(orderBy(p => p.age)))).toMatchObject(filtered);
     });
 
@@ -196,7 +196,12 @@ describe('FilterControllerFixture', () => {
 
         expect(_results.messages.length).toBe(80);
         expect(_results.data.size).toBe(80);
-        const filtered = toArray(from(people).pipe(filter(p => p.age > 20), orderBy(p => p.age)));
+        const filtered = toArray(
+            from(people).pipe(
+                filter(p => p.age > 20),
+                orderBy(p => p.age),
+            ),
+        );
         expect(toArray(from(_results.data.values()).pipe(orderBy(p => p.age)))).toMatchObject(filtered);
     });
 

@@ -83,8 +83,8 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
                         }
 
                         for (const destination of updates) {
-                            const current = first(currentItems, d => d.key === destination.key)!;
-                            const previous = first(previousItems, d => d.key === destination.key)!;
+                            const current = first(currentItems, { predicate: d => d.key === destination.key })!;
+                            const previous = first(previousItems, { predicate: d => d.key === destination.key })!;
 
                             //Do not update is items are the same reference
                             if (current.item !== previous.item) {

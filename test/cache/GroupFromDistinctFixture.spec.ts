@@ -7,7 +7,7 @@ import { count, every, from, range, toArray } from 'ix/iterable';
 import { map, flatMap } from 'ix/iterable/operators';
 import faker from 'faker';
 import { PersonWithEmployment } from '../domain/PersonWithEmployment';
-import { groupOn} from '../../src/cache/operators/groupOn';
+import { groupOn } from '../../src/cache/operators/groupOn';
 import { distinctValues } from '../../src/cache/operators/distinctValues';
 import { transform } from '../../src/cache/operators/transform';
 import { asObservableCache } from '../../src/cache/operators/asObservableCache';
@@ -21,7 +21,7 @@ describe('GroupFromDistinctFixture', () => {
 
     beforeEach(() => {
         _personCache = updateable(new SourceCache<Person, string>(p => p.key));
-        _employmentCache = updateable(new SourceCache<PersonEmployment, PersonEmpKey>(e => e.key));
+        _employmentCache = updateable(new SourceCache<PersonEmployment, PersonEmpKey>(employee => employee.key));
     });
 
     afterEach(() => {
@@ -36,20 +36,19 @@ describe('GroupFromDistinctFixture', () => {
         const people = toArray(range(1, numberOfPeople).pipe(map(i => new Person(`Person${i}`, i))));
 
         //create 0-3 jobs for each person and select from companies
-        const emphistory = toArray(range(1, numberOfPeople)
-            .pipe(
+        const emphistory = toArray(
+            range(1, numberOfPeople).pipe(
                 flatMap(i => {
                     const companiestogenrate = faker.random.number({ min: 1, max: 3 });
                     return range(0, companiestogenrate).pipe(map(c => new PersonEmployment(`Person${i}`, companies[c])));
                 }),
-            ));
+            ),
+        );
 
         // Cache results
-        const allpeopleWithEmpHistory = asObservableCache(_employmentCache.connect()
-            .pipe(
-                groupOnDistinct(z => z.name, _personCache.connect().pipe(
-                    distinctValues(p => p.name)
-                )),
+        const allpeopleWithEmpHistory = asObservableCache(
+            _employmentCache.connect().pipe(
+                groupOnDistinct(z => z.name, _personCache.connect().pipe(distinctValues(p => p.name))),
                 transform(x => new PersonWithEmployment(x)),
             ),
         );
@@ -61,12 +60,9 @@ describe('GroupFromDistinctFixture', () => {
         expect(count(from(allpeopleWithEmpHistory.values()).pipe(flatMap(d => d.employmentData.values())))).toBe(emphistory.length);
 
         //check grouped items have the same key as the parent
-        from(allpeopleWithEmpHistory.values()).forEach
-        (
-            p => {
-                expect(every(p.employmentData.values(), emph => emph.name == p.person)).toBe(true);
-            },
-        );
+        from(allpeopleWithEmpHistory.values()).forEach(p => {
+            expect(every(p.employmentData.values(), { predicate: emph => emph.name == p.person })).toBe(true);
+        });
 
         _personCache.edit(updater => updater.removeKey('Person2'));
         expect(allpeopleWithEmpHistory.size).toBe(numberOfPeople - 1);

@@ -22,9 +22,11 @@ export function trueForAll<TObject, TKey, TValue>(
         return source.pipe(
             trueFor(observableSelector, items => {
                 items; //?
-                return every(items, o => {
-                    o; //?
-                    return (o.latestValue !== undefined && equalityCondition(o.item, o.latestValue)) ?? false;
+                return every(items, {
+                    predicate: o => {
+                        o; //?
+                        return (o.latestValue !== undefined && equalityCondition(o.item, o.latestValue)) ?? false;
+                    },
                 });
             }),
         );

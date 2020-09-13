@@ -55,7 +55,7 @@ describe('DisposeManyFixture', () => {
             _source.clear();
 
             expect(_results.messages.length).toBe(2);
-            expect(every(_results.messages[1], d => d.current.isDisposed)).toBe(true);
+            expect(every(_results.messages[1], { predicate: d => d.current.isDisposed })).toBe(true);
         });
     });
 
@@ -105,7 +105,7 @@ describe('DisposeManyFixture', () => {
             _source.clear();
 
             expect(_results.messages.length).toBe(2);
-            expect(every(_results.messages[0], d => d.current.isUnsubscribed)).toBe(true);
+            expect(every(_results.messages[0], { predicate: d => d.current.isUnsubscribed })).toBe(true);
         });
     });
 
@@ -119,8 +119,7 @@ describe('DisposeManyFixture', () => {
             return this._id;
         }
 
-        public constructor(private _id: number) {
-        }
+        public constructor(private _id: number) {}
 
         public dispose() {
             this._isDisposed = true;
@@ -137,8 +136,7 @@ describe('DisposeManyFixture', () => {
             return this._id;
         }
 
-        public constructor(private _id: number) {
-        }
+        public constructor(private _id: number) {}
 
         public unsubscribe() {
             this._isUnsubscribed = true;

@@ -24,5 +24,6 @@ module.exports = {
         'no-nested-ternary': 'off',
         'unicorn/no-null': 'off',
         'unicorn/no-nested-ternary': 'off',
+        'unicorn/no-useless-undefined': 'off',
     },
 };

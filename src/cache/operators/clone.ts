@@ -128,7 +128,7 @@ function setFindAdapter<TObject, TKey>(collection: Set<TObject>) {
             collection.add(value);
         },
         remove(value: TObject, key: TKey): void {
-            const found = find(collection, v => equal(v, value));
+            const found = find(collection, { predicate: v => equal(v, value) });
             if (found !== undefined) {
                 collection.delete(found);
             }
@@ -150,7 +150,7 @@ function mapDeleteAdapter<TObject, TKey>(collection: Map<TKey, TObject>) {
 function mapFindAdapter<TObject, TKey>(collection: Map<TKey, TObject>) {
     return {
         add(value: TObject, key: TKey): void {
-            const foundKey = find(collection, ([k]) => equal(k, key));
+            const foundKey = find(collection, { predicate: ([k]) => equal(k, key) });
             if (foundKey !== undefined) {
                 collection.set(foundKey[0], value);
             } else {
@@ -158,7 +158,7 @@ function mapFindAdapter<TObject, TKey>(collection: Map<TKey, TObject>) {
             }
         },
         remove(value: TObject, key: TKey): void {
-            const foundKey = find(collection, ([k]) => equal(k, key));
+            const foundKey = find(collection, { predicate: ([k]) => equal(k, key) });
             if (foundKey !== undefined) {
                 collection.delete(foundKey[0]);
             } else {

@@ -85,7 +85,7 @@ export class Node<TObject, TKey> implements IDisposable {
     /**
      * @internal
      */
-    public setParent(parent: Node<TObject, TKey> | undefined) {
+    public setParent(parent?: Node<TObject, TKey> | undefined) {
         this._parent = parent;
     }
 

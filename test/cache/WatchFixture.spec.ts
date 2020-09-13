@@ -14,8 +14,7 @@ describe('WatchFixture', () => {
             return this._isDisposed;
         }
 
-        public constructor(public readonly id: number) {
-        }
+        public constructor(public readonly id: number) {}
 
         public dispose() {
             this._isDisposed = true;
@@ -26,7 +25,7 @@ describe('WatchFixture', () => {
     let _results: ChangeSetAggregator<DisposableObject, number>;
 
     beforeEach(() => {
-        _source = updateable(new SourceCache<DisposableObject, number>((p => p.id)));
+        _source = updateable(new SourceCache<DisposableObject, number>(p => p.id));
         _results = new ChangeSetAggregator<DisposableObject, number>(_source.connect().pipe(disposeMany()));
     });
 
@@ -67,6 +66,6 @@ describe('WatchFixture', () => {
         _source.clear();
 
         expect(_results.messages.length).toBe(2);
-        expect(every(_results.messages[1], d => d.current.isDisposed)).toBe(true);
+        expect(every(_results.messages[1], { predicate: d => d.current.isDisposed })).toBe(true);
     });
 });

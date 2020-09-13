@@ -23,7 +23,7 @@ describe('SortFixtureWithReorder', () => {
 
     beforeEach(() => {
         _comparer = SortComparer.ascending<Person>('age').thenByAscending('name');
-        _source = updateable(new SourceCache<Person, string>((p => p.key)));
+        _source = updateable(new SourceCache<Person, string>(p => p.key));
         _results = asAggregator(_source.connect().pipe(sort(_comparer)));
     });
 
@@ -35,7 +35,8 @@ describe('SortFixtureWithReorder', () => {
     it('DoesNotThrow1', () => {
         const cache = new SourceCache<Data, number>(d => d.id);
         const sortPump = new Subject<unknown>();
-        const disposable = cache.connect()
+        const disposable = cache
+            .connect()
             .pipe(sort(SortComparer.ascending<Data>('id'), undefined, sortPump))
             .subscribe();
 
@@ -44,30 +45,27 @@ describe('SortFixtureWithReorder', () => {
 
     it('DoesNotThrow2', () => {
         const cache = new SourceCache<Data, number>(d => d.id);
-        const disposable = cache.connect()
+        const disposable = cache
+            .connect()
             .pipe(sort(undefined, new BehaviorSubject<Comparer<Data>>(SortComparer.ascending<Data>('id'))))
             .subscribe();
 
         disposable.unsubscribe();
     });
 
-
     class Data {
-        constructor(public readonly id: number, public readonly  value: string) {
-        }
+        constructor(public readonly id: number, public readonly value: string) {}
     }
 
     class TestString {
-        public constructor(public readonly name: string) {
-        }
+        public constructor(public readonly name: string) {}
     }
 
     class ViewModel {
-        constructor(public readonly  name: string) {
-        }
+        constructor(public readonly name: string) {}
 
         public static comparer = function comparer(a: ViewModel, b: ViewModel) {
-            return a?.name.toLowerCase() === b?.name.toLowerCase() ? 0 as const : a?.name.toLowerCase() > b?.name.toLowerCase() ? 1 as const : -1 as const;
+            return a?.name.toLowerCase() === b?.name.toLowerCase() ? (0 as const) : a?.name.toLowerCase() > b?.name.toLowerCase() ? (1 as const) : (-1 as const);
         };
     }
 
@@ -76,13 +74,14 @@ describe('SortFixtureWithReorder', () => {
 
         const filterSubject = new BehaviorSubject<(person: Person) => boolean>(p => true);
 
-        const agg = asAggregator(source.connect()
-            .pipe(
+        const agg = asAggregator(
+            source.connect().pipe(
                 filterDynamic(filterSubject),
                 groupOn(z => z.key),
                 transform(z => new ViewModel(z.key)),
                 sort(ViewModel.comparer),
-            ));
+            ),
+        );
 
         source.edit(x => {
             x.addOrUpdate(new Person('A', 1, 'F'));
@@ -100,7 +99,12 @@ describe('SortFixtureWithReorder', () => {
 
         expect(_results.data.size).toBe(100);
 
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, _comparer), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, _comparer),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const actualResult = toArray(_results.messages[0].sortedItems);
 
         expect(actualResult).toEqual(expectedResult);
@@ -287,9 +291,8 @@ describe('SortFixture', () => {
     beforeEach(() => {
         _comparer = SortComparer.ascending<Person>('age').thenByAscending('name');
 
-        _source = updateable(new SourceCache<Person, string>((p => p.key)));
-        _results = asAggregator(_source.connect().pipe(sort(_comparer)),
-        );
+        _source = updateable(new SourceCache<Person, string>(p => p.key));
+        _results = asAggregator(_source.connect().pipe(sort(_comparer)));
     });
 
     afterEach(() => {
@@ -300,7 +303,8 @@ describe('SortFixture', () => {
     it('DoesNotThrow1', () => {
         const cache = new SourceCache<Data, number>(d => d.id);
         const sortPump = new Subject<unknown>();
-        const disposable = cache.connect()
+        const disposable = cache
+            .connect()
             .pipe(sort(SortComparer.ascending<Data>('id'), undefined, sortPump))
             .subscribe();
 
@@ -308,7 +312,8 @@ describe('SortFixture', () => {
     });
     it('DoesNotThrow2', () => {
         const cache = new SourceCache<Data, number>(d => d.id);
-        const disposable = cache.connect()
+        const disposable = cache
+            .connect()
             .pipe(sort(undefined, new BehaviorSubject<Comparer<Data>>(SortComparer.ascending<Data>('id'))))
             .subscribe();
 
@@ -316,21 +321,18 @@ describe('SortFixture', () => {
     });
 
     class Data {
-        constructor(public readonly id: number, public readonly  value: string) {
-        }
+        constructor(public readonly id: number, public readonly value: string) {}
     }
 
     class TestString {
-        public constructor(public readonly name: string) {
-        }
+        public constructor(public readonly name: string) {}
     }
 
     class ViewModel {
-        constructor(public readonly  name: string) {
-        }
+        constructor(public readonly name: string) {}
 
         public static comparer = function comparer(a: ViewModel, b: ViewModel) {
-            return a?.name.toLowerCase() === b?.name.toLowerCase() ? 0 as const : a?.name.toLowerCase() > b?.name.toLowerCase() ? 1 as const : -1 as const;
+            return a?.name.toLowerCase() === b?.name.toLowerCase() ? (0 as const) : a?.name.toLowerCase() > b?.name.toLowerCase() ? (1 as const) : (-1 as const);
         };
     }
 
@@ -339,13 +341,14 @@ describe('SortFixture', () => {
 
         const filterSubject = new BehaviorSubject<(person: Person) => boolean>(p => true);
 
-        const agg = asAggregator(source.connect()
-            .pipe(
+        const agg = asAggregator(
+            source.connect().pipe(
                 filterDynamic(filterSubject),
                 groupOn(z => z.key),
                 transform(z => new ViewModel(z.key)),
                 sort(ViewModel.comparer),
-            ));
+            ),
+        );
 
         source.edit(x => {
             x.addOrUpdate(new Person('A', 1, 'F'));
@@ -363,7 +366,12 @@ describe('SortFixture', () => {
 
         expect(_results.data.size).toBe(100);
 
-        const expectedResult = toArray(from(people).pipe(orderBy(p => p, _comparer), map(p => [p.name, p] as const)));
+        const expectedResult = toArray(
+            from(people).pipe(
+                orderBy(p => p, _comparer),
+                map(p => [p.name, p] as const),
+            ),
+        );
         const actualResult = toArray(_results.messages[0].sortedItems);
 
         expect(actualResult).toEqual(expectedResult);

@@ -17,9 +17,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = [];
             _source = updateable(new SourceCache<Person, string>(p => p.name));
-            _cloner = _source.connect()
-                .pipe(clone(_collection))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection)).subscribe();
         });
 
         afterEach(() => {
@@ -78,9 +76,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = [];
             _source = updateable(new SourceCache<Person, string>(p => p.name));
-            _cloner = _source.connect()
-                .pipe(clone(_collection, true))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection, true)).subscribe();
         });
 
         afterEach(() => {
@@ -139,9 +135,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = new Map();
             _source = updateable(new SourceCache<Person, string>(p => p.name));
-            _cloner = _source.connect()
-                .pipe(clone(_collection))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection)).subscribe();
         });
 
         afterEach(() => {
@@ -200,9 +194,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = new Map();
             _source = updateable(new SourceCache<Person, string>(p => p.name, true));
-            _cloner = _source.connect()
-                .pipe(clone(_collection, true))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection, true)).subscribe();
         });
 
         afterEach(() => {
@@ -261,9 +253,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = new Map();
             _source = updateable(new SourceCache<Person, { name: string }>(p => ({ name: p.name }), true));
-            _cloner = _source.connect()
-                .pipe(clone(_collection, true))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection, true)).subscribe();
         });
 
         afterEach(() => {
@@ -276,7 +266,7 @@ describe('CloneFixture', () => {
             _source.addOrUpdate(person);
 
             expect(_collection.size).toBe(1);
-            const key = find(_source.keys(), z => z.name === person.name)!;
+            const key = find(_source.keys(), { predicate: z => z.name === person.name })!;
             expect(_collection.get(key)).toBe(person);
         });
 
@@ -287,10 +277,9 @@ describe('CloneFixture', () => {
             _source.addOrUpdate(personUpdated);
 
             expect(_collection.size).toBe(1);
-            const key = find(_source.keys(), z => z.name === person.name)!;
+            const key = find(_source.keys(), { predicate: z => z.name === person.name })!;
             expect(_collection.get(key)).toBe(personUpdated);
         });
-
 
         it('RemoveSourceRemovesFromTheDestination', () => {
             const person = new Person('Adult1', 50);
@@ -325,9 +314,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = new Set();
             _source = updateable(new SourceCache<Person, string>(p => p.name));
-            _cloner = _source.connect()
-                .pipe(clone(_collection))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection)).subscribe();
         });
 
         afterEach(() => {
@@ -376,7 +363,7 @@ describe('CloneFixture', () => {
 
             expect(_collection.size).toBe(0);
         });
-    })
+    });
 
     describe('Set deepEqual', () => {
         let _collection: Set<Person>;
@@ -386,9 +373,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = new Set();
             _source = updateable(new SourceCache<Person, string>(p => p.name));
-            _cloner = _source.connect()
-                .pipe(clone(_collection, true))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection, true)).subscribe();
         });
 
         afterEach(() => {
@@ -437,7 +422,7 @@ describe('CloneFixture', () => {
 
             expect(_collection.size).toBe(0);
         });
-    })
+    });
 
     describe('WeakSet', () => {
         let _collection: WeakSet<Person>;
@@ -447,9 +432,7 @@ describe('CloneFixture', () => {
         beforeEach(() => {
             _collection = new Set();
             _source = updateable(new SourceCache<Person, string>(p => p.name));
-            _cloner = _source.connect()
-                .pipe(clone(_collection))
-                .subscribe();
+            _cloner = _source.connect().pipe(clone(_collection)).subscribe();
         });
 
         afterEach(() => {
@@ -481,5 +464,5 @@ describe('CloneFixture', () => {
 
             expect(_collection.has(person)).toBe(false);
         });
-    })
+    });
 });
