@@ -55,6 +55,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     }
 
     public lookup(key: TKey) {
+        this.ensureInitialised();
         return this._mapAdapter.get(key);
     }
 

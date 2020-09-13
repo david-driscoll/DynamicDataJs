@@ -1,0 +1,43 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - master
+      - next
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - master
+      - next
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          clean: 'false'
+          fetch-depth: '0'
+
+      - name: Fetch all history for all tags and branches
+        run: |
+          git fetch --prune
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@master
+        with:
+          versionSpec: '5.x'
+
+      - name: 🎁 npm install
+        run: npm ci
+
+      - name: 🚦 Test
+        run: npm test
+
+      - name: 🐿 Publish Coverage
+        uses: codecov/codecov-action@v1.0.13
+        with:
+          name: 'actions-${{ matrix.os }}'
