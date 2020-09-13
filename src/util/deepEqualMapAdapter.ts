@@ -11,12 +11,12 @@ export function deepEqualMapAdapter<TKey, TObject>(
 } {
     return {
         get(key) {
-            return find(map, { predicate: f => equal(f[0], key) });
+            return map.get(key) ?? find(map, { predicate: f => equal(f[0], key) });
         },
         set(key, value) {
             const foundKey = find(map, { predicate: ([k]) => equal(k, key) });
             if (foundKey !== undefined) {
-                return map.set(foundKey[0], value);
+                map.delete(foundKey[0]);
             }
             return map.set(key, value);
         },

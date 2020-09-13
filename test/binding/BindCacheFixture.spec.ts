@@ -9,11 +9,10 @@ import { first, toArray } from 'ix/iterable';
 import { randomPersonGenerator } from '../domain/RandomPersonGenerator';
 
 describe('BindingListCacheFixture', () => {
-
     let _collection: Person[];
     let _source: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
     let _binder: Subscription;
-    let _comparer = SortComparer.ascending<Person>('name');
+    const _comparer = SortComparer.ascending<Person>('name');
 
     beforeEach(() => {
         _collection = [];
@@ -27,7 +26,7 @@ describe('BindingListCacheFixture', () => {
     });
 
     it('AddToSourceAddsToDestination', () => {
-        let person = new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source.addOrUpdate(person);
 
         expect(_collection.length).toBe(1);
@@ -35,8 +34,8 @@ describe('BindingListCacheFixture', () => {
     });
 
     it('UpdateToSourceUpdatesTheDestination', () => {
-        let person = new Person('Adult1', 50);
-        let personUpdated = new Person('Adult1', 51);
+        const person = new Person('Adult1', 50);
+        const personUpdated = new Person('Adult1', 51);
         _source.addOrUpdate(person);
         _source.addOrUpdate(personUpdated);
 
@@ -45,7 +44,7 @@ describe('BindingListCacheFixture', () => {
     });
 
     it('RemoveSourceRemovesFromTheDestination', () => {
-        let person = new Person('Adult1', 50);
+        const person = new Person('Adult1', 50);
         _source.addOrUpdate(person);
         _source.remove(person);
 
@@ -53,7 +52,7 @@ describe('BindingListCacheFixture', () => {
     });
 
     it('BatchAdd', () => {
-        let people = toArray(randomPersonGenerator(100));
+        const people = toArray(randomPersonGenerator(100));
         _source.addOrUpdateValues(people);
 
         expect(_collection.length).toBe(100);
@@ -61,7 +60,7 @@ describe('BindingListCacheFixture', () => {
     });
 
     it('BatchRemove', () => {
-        let people = toArray(randomPersonGenerator(100));
+        const people = toArray(randomPersonGenerator(100));
         _source.addOrUpdateValues(people);
         _source.clear();
         expect(_collection.length).toBe(0);
