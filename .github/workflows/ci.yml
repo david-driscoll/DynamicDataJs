@@ -85,12 +85,12 @@ jobs:
 
       - name: 📦 npm publish (beta)
         run: npm publish --tag beta
-        if: ${{ github.event_name == 'push' && github.event.ref === 'refs/heads/master' }}
+        if: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/master' }}
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
 
       - name: 📦 npm publish (next)
         run: npm publish --tag next
-        if: ${{ github.event_name == 'push' && github.event.ref === 'refs/heads/next' }}
+        if: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/next' }}
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
