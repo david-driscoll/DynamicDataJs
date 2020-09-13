@@ -1,4 +1,4 @@
-import { ConnectableObservable, merge, Observable } from 'rxjs';
+import { merge, Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { map, publish } from 'rxjs/operators';
 import { Cache } from '../Cache';
@@ -54,7 +54,15 @@ export function transformForced<TSource, TKey, TDestination>(
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination> {
     return function forceTransformOperator(source) {
         return new Observable<IChangeSet<TDestination, TKey>>(observer => {
-            const shared: ConnectableObservable<IChangeSet<TSource, TKey>> = source.pipe(publish()) as any;
+            // eslint-disable-next-line unicorn/consistent-function-scoping
+            function* captureChanges(cache: Cache<TSource, TKey>, shouldTransform: (value: TSource, key: TKey) => boolean) {
+                for (const [key, value] of cache.entries()) {
+                    if (shouldTransform(value, key)) {
+                        yield new Change<TSource, TKey>('refresh', key, value);
+                    }
+                }
+            }
+            const shared = publish<IChangeSet<TSource, TKey>>()(source);
 
             //capture all items so we can apply a forced transform
             const cache = new Cache<TSource, TKey>();
@@ -75,14 +83,5 @@ export function transformForced<TSource, TKey, TDestination>(
 
             return new CompositeDisposable(cacheLoader, rawTransform.subscribe(observer), shared.connect());
         });
-
-        // eslint-disable-next-line unicorn/consistent-function-scoping
-        function* captureChanges(cache: Cache<TSource, TKey>, shouldTransform: (value: TSource, key: TKey) => boolean) {
-            for (const [key, value] of cache.entries()) {
-                if (shouldTransform(value, key)) {
-                    yield new Change<TSource, TKey>('refresh', key, value);
-                }
-            }
-        }
     };
 }

@@ -18,7 +18,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 export function subscribeMany<TObject, TKey>(subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function subscribeManyOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
+            const published = publish<IChangeSet<TObject, TKey>>()(source);
             const subscriptions = published.pipe(transform(subscriptionFactory), disposeMany()).subscribe();
 
             return new CompositeDisposable(subscriptions, published.subscribe(observer), published.connect());

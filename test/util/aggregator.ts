@@ -17,7 +17,7 @@ export class ChangeSetAggregator<TObject, TKey, TChangeSet extends IChangeSet<TO
      * @param source The source.
      */
     public constructor(source: Observable<TChangeSet>) {
-        const published: ConnectableObservable<TChangeSet> = source.pipe(publish()) as any;
+        const published = publish<TChangeSet>()(source);
 
         const error = published.subscribe(
             updates => {},

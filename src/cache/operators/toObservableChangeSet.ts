@@ -48,33 +48,34 @@ export function toObservableChangeSet<TObject, TKey>(
         }
 
         const cache = new ChangeAwareCache<ExpirableItem<TObject, TKey>, TKey>();
-        const sizeLimited: ConnectableObservable<IChangeSet<ExpirableItem<TObject, TKey>, TKey>> = source.pipe(
-            scan((state, latest) => {
-                ixFrom(latest)
-                    .pipe(
-                        ixMap(t => {
-                            const key = keySelector(t);
-                            return CreateExpirableItem(t, key, orderItemWasAdded);
-                        }),
-                    )
-                    .forEach(ei => cache.addOrUpdate(ei, ei.key));
-
-                if (limitSizeTo > 0 && state.size > limitSizeTo) {
-                    const toRemove = state.size - limitSizeTo;
-
-                    //remove oldest items
-                    ixFrom(cache.entries())
+        const sizeLimited = publish<IChangeSet<ExpirableItem<TObject, TKey>, TKey>>()(
+            source.pipe(
+                scan((state, latest) => {
+                    ixFrom(latest)
                         .pipe(
-                            orderBy(exp => exp[1].index),
-                            take(toRemove),
+                            ixMap(t => {
+                                const key = keySelector(t);
+                                return CreateExpirableItem(t, key, orderItemWasAdded);
+                            }),
                         )
-                        .forEach(ei => cache.removeKey(ei[0]));
-                }
-                return state;
-            }, cache),
-            map(state => state.captureChanges()),
-            publish(),
-        ) as any;
+                        .forEach(ei => cache.addOrUpdate(ei, ei.key));
+
+                    if (limitSizeTo > 0 && state.size > limitSizeTo) {
+                        const toRemove = state.size - limitSizeTo;
+
+                        //remove oldest items
+                        ixFrom(cache.entries())
+                            .pipe(
+                                orderBy(exp => exp[1].index),
+                                take(toRemove),
+                            )
+                            .forEach(ei => cache.removeKey(ei[0]));
+                    }
+                    return state;
+                }, cache),
+                map(state => state.captureChanges()),
+            ),
+        );
 
         const timeLimited = (expireAfter === undefined ? (NEVER as Observable<IChangeSet<ExpirableItem<TObject, TKey>, TKey>>) : sizeLimited).pipe(
             filter(ei => ei.expireAt !== -1),

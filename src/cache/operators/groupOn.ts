@@ -40,7 +40,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                 filter(z => z.size !== 0),
             );
 
-            const published: ConnectableObservable<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>> = merge(groups, regroup$).pipe(publish()) as any;
+            const published = publish<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>>()(merge(groups, regroup$));
             const subscriber = published.subscribe(observer);
             const disposer = published.pipe(disposeMany()).subscribe();
 

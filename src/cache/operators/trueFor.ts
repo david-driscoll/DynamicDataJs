@@ -13,14 +13,13 @@ export function trueFor<TObject, TKey, TValue>(
 ): OperatorFunction<IChangeSet<TObject, TKey>, boolean> {
     return function trueForOperator(source) {
         return new Observable<boolean>(observer => {
-            const transformed: ConnectableObservable<IChangeSet<ObservableWithValue<TObject, TValue>, TKey>> = source.pipe(
-                transform(t => new ObservableWithValue<TObject, TValue>(t, observableSelector(t))),
-                publish(),
-            ) as any;
+            const transformed = publish<IChangeSet<ObservableWithValue<TObject, TValue>, TKey>>()(
+                source.pipe(transform(t => new ObservableWithValue<TObject, TValue>(t, observableSelector(t)))),
+            );
             const inlineChanges = transformed.pipe(mergeMany(t => t.observable));
             const queried = transformed.pipe(toCollection());
 
-            //nb: we do not care about the inline change because we are only monitoring it to cause a re-evalutaion of all items
+            //nb: we do not care about the inline change because we are only monitoring it to cause a re-evaluation of all items
             const publisher = combineLatest([queried, inlineChanges])
                 .pipe(
                     map(([items, _]) => collectionMatcher(items)),

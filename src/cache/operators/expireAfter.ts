@@ -113,7 +113,7 @@ export function expireAfter<TObject, TKey>(
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const cache = new IntermediateCache<TObject, TKey>(source);
 
-            const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
+            const published = publish<IChangeSet<TObject, TKey>>()(source);
             const subscriber = published.subscribe(observer);
 
             const autoRemover = published
