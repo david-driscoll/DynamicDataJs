@@ -33,60 +33,61 @@ export function toObservableChangeSet<TObject, TKey>(
     scheduler: SchedulerLike = queueScheduler,
 ): Observable<IChangeSet<TObject, TKey>> {
     return new Observable<IChangeSet<TObject, TKey>>(observer => {
-        let orderItemWasAdded = -1;
+        const orderItemWasAdded = -1;
 
-        if (expireAfter == null && limitSizeTo < 1) {
+        if (expireAfter == undefined && limitSizeTo < 1) {
             return source
                 .pipe(
                     scan((state, latest) => {
-                        for (const item of latest)
-                            state.addOrUpdate(item, keySelector(item));
+                        for (const item of latest) state.addOrUpdate(item, keySelector(item));
                         return state;
                     }, new ChangeAwareCache<TObject, TKey>()),
-                    map(state => state.captureChanges()))
+                    map(state => state.captureChanges()),
+                )
                 .subscribe(observer);
         }
 
         const cache = new ChangeAwareCache<ExpirableItem<TObject, TKey>, TKey>();
-        const sizeLimited: ConnectableObservable<IChangeSet<ExpirableItem<TObject, TKey>, TKey>> = source
-            .pipe(scan((state, latest) => {
-                    ixFrom(latest)
-                        .pipe(ixMap(t => {
+        const sizeLimited: ConnectableObservable<IChangeSet<ExpirableItem<TObject, TKey>, TKey>> = source.pipe(
+            scan((state, latest) => {
+                ixFrom(latest)
+                    .pipe(
+                        ixMap(t => {
                             const key = keySelector(t);
                             return CreateExpirableItem(t, key, orderItemWasAdded);
-                        }))
-                        .forEach(ei => cache.addOrUpdate(ei, ei.key));
+                        }),
+                    )
+                    .forEach(ei => cache.addOrUpdate(ei, ei.key));
 
-                    if (limitSizeTo > 0 && state.size > limitSizeTo) {
-                        const toRemove = state.size - limitSizeTo;
+                if (limitSizeTo > 0 && state.size > limitSizeTo) {
+                    const toRemove = state.size - limitSizeTo;
 
-                        //remove oldest items
-                        ixFrom(cache.entries())
-                            .pipe(
-                                orderBy(exp => exp[1].index),
-                                take(toRemove),
-                            )
-                            .forEach(ei => cache.removeKey(ei[0]));
-                    }
-                    return state;
-                }, cache),
-                map(state => state.captureChanges()),
-                publish(),
-            ) as any;
+                    //remove oldest items
+                    ixFrom(cache.entries())
+                        .pipe(
+                            orderBy(exp => exp[1].index),
+                            take(toRemove),
+                        )
+                        .forEach(ei => cache.removeKey(ei[0]));
+                }
+                return state;
+            }, cache),
+            map(state => state.captureChanges()),
+            publish(),
+        ) as any;
 
-        const timeLimited = (expireAfter === undefined ? (NEVER as Observable<IChangeSet<ExpirableItem<TObject, TKey>, TKey>>) : sizeLimited)
-            .pipe(
-                filter(ei => ei.expireAt !== -1),
-                groupOn(ei => ei.expireAt),
-                mergeMany(grouping => {
-                    const expireAt = grouping.key - scheduler.now();
-                    return timer(expireAt, scheduler).pipe(map(_ => grouping));
-                }),
-                map(grouping => {
-                    cache.removeKeys(grouping.cache.keys());
-                    return cache.captureChanges();
-                }),
-            );
+        const timeLimited = (expireAfter === undefined ? (NEVER as Observable<IChangeSet<ExpirableItem<TObject, TKey>, TKey>>) : sizeLimited).pipe(
+            filter(ei => ei.expireAt !== -1),
+            groupOn(ei => ei.expireAt),
+            mergeMany(grouping => {
+                const expireAt = grouping.key - scheduler.now();
+                return timer(expireAt, scheduler).pipe(map(_ => grouping));
+            }),
+            map(grouping => {
+                cache.removeKeys(grouping.cache.keys());
+                return cache.captureChanges();
+            }),
+        );
 
         const publisher = merge(sizeLimited, timeLimited)
             .pipe(

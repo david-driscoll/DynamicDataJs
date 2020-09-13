@@ -84,12 +84,13 @@ bind.create = function createBindAdpater<TObject, TKey>(values: TObject[], index
                     }
                     break;
                 }
-                case 'update': {
-                    const index = indexOf(update.previous!, update.key);
-                    if (index > -1) {
-                        values.splice(index, 1, update.current);
+                case 'update':
+                    {
+                        const index = indexOf(update.previous!, update.key);
+                        if (index > -1) {
+                            values.splice(index, 1, update.current);
+                        }
                     }
-                }
                     break;
             }
         }
@@ -114,4 +115,4 @@ bind.create = function createBindAdpater<TObject, TKey>(values: TObject[], index
             }
         }
     }
-}
+};

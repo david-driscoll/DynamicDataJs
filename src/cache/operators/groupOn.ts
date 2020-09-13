@@ -22,26 +22,23 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
  */
 export function groupOn<TObject, TKey, TGroupKey>(
     groupSelectorKey: (value: TObject) => TGroupKey,
-    regrouper: Observable<unknown> = NEVER): ChangeSetOperatorFunction<TObject, TKey, Group<TObject, TKey, TGroupKey>, TGroupKey> {
-
+    regrouper: Observable<unknown> = NEVER,
+): ChangeSetOperatorFunction<TObject, TKey, Group<TObject, TKey, TGroupKey>, TGroupKey> {
     return function groupOnOperator(source) {
-
         const _groupCache = new Map<TGroupKey, ManagedGroup<TObject, TKey, TGroupKey>>();
         const _itemCache = new Map<TKey, ChangeWithGroup>();
 
         return new Observable<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>>(observer => {
-            const groups = source
-                .pipe(
-                    finalize(() => observer.complete()),
-                    map(x => update(x)),
-                    filter(z => z.size !== 0),
-                );
+            const groups = source.pipe(
+                finalize(() => observer.complete()),
+                map(x => update(x)),
+                filter(z => z.size !== 0),
+            );
 
-            const regroup$ = regrouper
-                .pipe(
-                    map(x => regroup()),
-                    filter(z => z.size !== 0),
-                );
+            const regroup$ = regrouper.pipe(
+                map(x => regroup()),
+                filter(z => z.size !== 0),
+            );
 
             const published: ConnectableObservable<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>> = merge(groups, regroup$).pipe(publish()) as any;
             const subscriber = published.subscribe(observer);
@@ -60,7 +57,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
             return handleUpdates(updates);
         }
 
-        type ChangeWithGroup = { item: TObject; key: TKey; groupKey: TGroupKey; reason: ChangeReason; };
+        type ChangeWithGroup = { item: TObject; key: TKey; groupKey: TGroupKey; reason: ChangeReason };
 
         function createChangeWithGroup(change: Change<TObject, TKey>): ChangeWithGroup {
             return {
@@ -73,8 +70,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
 
         function regroup() {
             //re-evaluate all items in the group
-            const items = ixFrom(_itemCache.entries())
-                .pipe(ixMap(([key, value]) => new Change<TObject, TKey>('refresh', key, value.item)));
+            const items = ixFrom(_itemCache.entries()).pipe(ixMap(([key, value]) => new Change<TObject, TKey>('refresh', key, value.item)));
             return handleUpdates(new ChangeSet<TObject, TKey>(items), true);
         }
 
@@ -93,16 +89,15 @@ export function groupOn<TObject, TKey, TGroupKey>(
             const result: Change<Group<TObject, TKey, TGroupKey>, TGroupKey>[] = [];
 
             //Group all items
-            const grouped = ixFrom(changes)
-                .pipe(
-                    ixMap(createChangeWithGroup),
-                    ixGroupBy(z => z.groupKey),
-                );
+            const grouped = ixFrom(changes).pipe(
+                ixMap(createChangeWithGroup),
+                ixGroupBy(z => z.groupKey),
+            );
 
             //1. iterate and maintain child caches (_groupCache)
             //2. maintain which group each item belongs to (_itemCache)
             grouped.forEach(group => {
-                let [groupCache, created] = getCache(group.key);
+                const [groupCache, created] = getCache(group.key);
                 if (created) {
                     result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('add', group.key, groupCache));
                 }
@@ -121,8 +116,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
 
                                 //check whether the previous item was in a different group. If so remove from old group
                                 const previous = _itemCache.get(current.key);
-                                if (previous === undefined)
-                                    throw new Error(`${current.key} is missing from previous value on update.`);
+                                if (previous === undefined) throw new Error(`${current.key} is missing from previous value on update.`);
 
                                 if (previous.groupKey !== current.groupKey) {
                                     const g = _groupCache.get(previous.groupKey);
@@ -202,8 +196,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                 });
 
                 if (groupCache.cache.size === 0) {
-                    if (_groupCache.has(group.key))
-                        _groupCache.delete(group.key);
+                    if (_groupCache.has(group.key)) _groupCache.delete(group.key);
                     result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', group.key, groupCache));
                 }
             });
@@ -212,4 +205,3 @@ export function groupOn<TObject, TKey, TGroupKey>(
         }
     };
 }
-

@@ -26,35 +26,37 @@ export function transform<TSource, TKey, TDestination>(
     return function transformOperator(source) {
         return source.pipe(
             scan((cache, changes) => {
-                for (let change of changes) {
+                for (const change of changes) {
                     switch (change.reason) {
                         case 'add':
-                        case 'update': {
-                            let transformed: TDestination;
-                            if (exceptionCallback != null) {
-                                try {
+                        case 'update':
+                            {
+                                let transformed: TDestination;
+                                if (exceptionCallback != undefined) {
+                                    try {
+                                        transformed = transformFactory(change.current, change.key, change.previous);
+                                        cache.addOrUpdate(transformed, change.key);
+                                    } catch (error) {
+                                        exceptionCallback({ error: error, key: change.key, value: change.current });
+                                    }
+                                } else {
                                     transformed = transformFactory(change.current, change.key, change.previous);
                                     cache.addOrUpdate(transformed, change.key);
-                                } catch (error) {
-                                    exceptionCallback({ error: error, key: change.key, value: change.current });
                                 }
-                            } else {
-                                transformed = transformFactory(change.current, change.key, change.previous);
-                                cache.addOrUpdate(transformed, change.key);
                             }
-                        }
                             break;
                         case 'remove':
                             cache.removeKey(change.key);
                             break;
-                        case 'refresh': {
-                            if (transformOnRefresh) {
-                                const transformed = transformFactory(change.current, change.key, change.previous);
-                                cache.addOrUpdate(transformed, change.key);
-                            } else {
-                                cache.refreshKey(change.key);
+                        case 'refresh':
+                            {
+                                if (transformOnRefresh) {
+                                    const transformed = transformFactory(change.current, change.key, change.previous);
+                                    cache.addOrUpdate(transformed, change.key);
+                                } else {
+                                    cache.refreshKey(change.key);
+                                }
                             }
-                        }
                             break;
                         case 'moved':
                             //Do nothing !
@@ -68,4 +70,3 @@ export function transform<TSource, TKey, TDestination>(
         );
     };
 }
-

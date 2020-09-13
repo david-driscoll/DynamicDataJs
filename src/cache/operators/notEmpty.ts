@@ -13,4 +13,3 @@ export function notEmpty<TObject, TKey>(): MonoTypeChangeSetOperatorFunction<TOb
         return source.pipe(filter(changes => changes.size !== 0));
     };
 }
-

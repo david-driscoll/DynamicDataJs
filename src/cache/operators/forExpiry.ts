@@ -26,7 +26,6 @@ export function forExpiry<TObject, TKey>(
 ): OperatorFunction<IChangeSet<TObject, TKey>, Iterable<readonly [TKey, TObject]>> {
     return function forExpiryOperator(source) {
         return new Observable<Iterable<readonly [TKey, TObject]>>(observer => {
-
             const autoRemover = asObservableCache(
                 source.pipe(
                     transform((value, key, previous) => {
@@ -56,14 +55,13 @@ export function forExpiry<TObject, TKey>(
                 removalSubscription.disposable = interval(timerInterval, scheduler).subscribe(removalAction);
             } else {
                 //create a timer for each distinct time
-                removalSubscription.disposable = autoRemover.connect()
+                removalSubscription.disposable = autoRemover
+                    .connect()
                     .pipe(
                         distinctValues(ei => ei.expireAt),
                         subscribeMany(datetime => {
                             const expireAt = datetime - scheduler.now();
-                            return timer(expireAt, scheduler)
-                                .pipe(take(1))
-                                .subscribe(removalAction);
+                            return timer(expireAt, scheduler).pipe(take(1)).subscribe(removalAction);
                         }),
                     )
                     .subscribe();

@@ -23,19 +23,21 @@ export function groupOnProperty<TObject, TKey, TGroupKey, TProperty extends keyo
     scheduler: SchedulerLike = queueScheduler,
 ): ChangeSetOperatorFunction<TObject, TKey, Group<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>, TObject[TProperty]> {
     return function groupOnKeyOperator(source) {
-        return source
-            .pipe(publish(shared => {
+        return source.pipe(
+            publish(shared => {
                 // Monitor explicit property changes
                 let regrouper = shared.pipe(whenValueChanged(key, false));
 
                 //add a throttle if specified
                 if (propertyChangedThrottle) {
-                    regrouper = regrouper
-                        .pipe(throttleTime(propertyChangedThrottle, scheduler ?? queueScheduler));
+                    regrouper = regrouper.pipe(throttleTime(propertyChangedThrottle, scheduler ?? queueScheduler));
                 }
 
                 // Use property changes as a trigger to re-evaluate Grouping
-                return shared.pipe(groupOn(x => x[key], regrouper)) as any as Observable<IChangeSet<Group<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>, TObject[TProperty]>>;
-            }));
+                return (shared.pipe(groupOn(x => x[key], regrouper)) as any) as Observable<
+                    IChangeSet<Group<NotifyPropertyChangedType<TObject>, TKey, TObject[TProperty]>, TObject[TProperty]>
+                >;
+            }),
+        );
     };
 }

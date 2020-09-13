@@ -25,7 +25,7 @@ export class SourceCache<TObject, TKey> implements ISourceCache<TObject, TKey> {
         this._innerCache = new ObservableCache<TObject, TKey>(keySelector, deepEqual);
     }
 
-    [Symbol.toStringTag]: "ObservableCache" = 'ObservableCache';
+    [Symbol.toStringTag]: 'ObservableCache' = 'ObservableCache';
 
     edit(updateAction: (updater: ISourceUpdater<TObject, TKey>) => void): void {
         this._innerCache.updateFromSource(updateAction);
@@ -35,11 +35,11 @@ export class SourceCache<TObject, TKey> implements ISourceCache<TObject, TKey> {
         return this._innerCache.watch(key);
     }
 
-    connect(predicate?: ((obj: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
+    connect(predicate?: ((object: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
         return this._innerCache.connect(predicate);
     }
 
-    preview(predicate?: ((obj: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
+    preview(predicate?: ((object: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
         return this._innerCache.preview(predicate);
     }
 
@@ -85,10 +85,9 @@ export function updateable<TObject, TKey>(sourceCache: ISourceCache<TObject, TKe
 }
 
 class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, ISourceUpdater<TObject, TKey> {
-    constructor(private readonly _sourceCache: ISourceCache<TObject, TKey>) {
-    }
+    constructor(private readonly _sourceCache: ISourceCache<TObject, TKey>) {}
 
-    [Symbol.toStringTag]: "ObservableCache" = 'ObservableCache';
+    [Symbol.toStringTag]: 'ObservableCache' = 'ObservableCache';
 
     edit(updateAction: (updater: ISourceUpdater<TObject, TKey>) => void): void {
         return this._sourceCache.edit(updateAction);
@@ -98,11 +97,11 @@ class SimpleSourceCache<TObject, TKey> implements ISourceCache<TObject, TKey>, I
         return this._sourceCache.watch(key);
     }
 
-    connect(predicate?: ((obj: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
+    connect(predicate?: ((object: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
         return this._sourceCache.connect(predicate);
     }
 
-    preview(predicate?: ((obj: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
+    preview(predicate?: ((object: TObject) => boolean) | undefined): Observable<IChangeSet<TObject, TKey>> {
         return this._sourceCache.preview(predicate);
     }
 

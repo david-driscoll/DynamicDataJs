@@ -17,7 +17,8 @@ export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(
     value: NotifyPropertyChangedType<TObject>,
     key: TProperty,
     notifyInitial?: boolean,
-    fallbackValue?: () => TObject[TProperty]): Observable<TObject[TProperty]>;
+    fallbackValue?: () => TObject[TProperty],
+): Observable<TObject[TProperty]>;
 /**
  * Watches each item in the collection and notifies when any of them has changed
  * @typeparam TObject The type of the object.
@@ -26,8 +27,16 @@ export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(
  * @param key The key to watch
  * @param notifyInitial if set to <c>true</c> [notify on initial value].
  */
-export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(key: TProperty, notifyInitial?: boolean): OperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TProperty>, TObject[TProperty]>;
-export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(value: NotifyPropertyChangedType<TObject> | TProperty, key: TProperty | boolean, notifyInitial?: boolean, fallbackValue?: () => TObject[TProperty]) {
+export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(
+    key: TProperty,
+    notifyInitial?: boolean,
+): OperatorFunction<IChangeSet<NotifyPropertyChangedType<TObject>, TProperty>, TObject[TProperty]>;
+export function whenPropertyChanged<TObject, TProperty extends keyof TObject>(
+    value: NotifyPropertyChangedType<TObject> | TProperty,
+    key: TProperty | boolean,
+    notifyInitial?: boolean,
+    fallbackValue?: () => TObject[TProperty],
+) {
     if (isNotifyPropertyChanged(value)) {
         return whenChanged(value as any, key as TProperty, notifyInitial, fallbackValue);
     } else {

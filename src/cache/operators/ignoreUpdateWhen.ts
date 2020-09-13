@@ -18,11 +18,12 @@ export function ignoreUpdateWhen<TObject, TKey>(ignoreFunction: (current: TObjec
     return function ignoreUpdateWhenOperator(source) {
         return source.pipe(
             map(updates => {
-                const result = ixFrom(updates)
-                    .pipe(ixFilter(u => {
+                const result = ixFrom(updates).pipe(
+                    ixFilter(u => {
                         if (u.reason !== 'update') return true;
                         return !ignoreFunction(u.current, u.previous!);
-                    }));
+                    }),
+                );
                 return new ChangeSet(result);
             }),
             notEmpty(),

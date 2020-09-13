@@ -22,22 +22,23 @@ export function deferUntilLoaded<TObject, TKey>(): MonoTypeChangeSetOperatorFunc
 export function deferUntilLoaded<TObject, TKey>(source?: IObservableCache<TObject, TKey>) {
     if (source !== undefined) {
         return concat(
-            source.countChanged
-                .pipe(
-                    filter(count => count != 0),
-                    take(1),
-                    map(_ => new ChangeSet<TObject, TKey>()),
-                ), source.connect(),
+            source.countChanged.pipe(
+                filter(count => count != 0),
+                take(1),
+                map(_ => new ChangeSet<TObject, TKey>()),
+            ),
+            source.connect(),
         ).pipe(notEmpty());
     }
     return function deferUntilLoadedOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-        return concat(source
-            .pipe(
+        return concat(
+            source.pipe(
                 statusMonitor(),
                 filter(status => status == 'loaded'),
                 take(1),
                 map(_ => new ChangeSet<TObject, TKey>()),
-            ), source)
-            .pipe(notEmpty());
+            ),
+            source,
+        ).pipe(notEmpty());
     };
 }

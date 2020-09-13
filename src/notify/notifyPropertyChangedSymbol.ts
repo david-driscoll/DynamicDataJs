@@ -9,10 +9,18 @@ export const notifyPropertyChangedSymbol = Symbol.for('NotifyPropertyChanged');
 export const notifyCollectionChangedSymbol = Symbol.for('NotifyCollectionChanged');
 
 export type ObjectType<T> = T extends CollectionTypes ? never : T extends PrimitiveTypes ? never : T extends any[] ? never : T;
-export type NotifyPropertyChangedType<T = any> = T extends { [notifyPropertyChangedSymbol]: Observable<string> } ? T : T extends ObjectType<T> ? T & { [notifyPropertyChangedSymbol]: Observable<string> } : never;
+export type NotifyPropertyChangedType<T = any> = T extends { [notifyPropertyChangedSymbol]: Observable<string> }
+    ? T
+    : T extends ObjectType<T>
+    ? T & { [notifyPropertyChangedSymbol]: Observable<string> }
+    : never;
 
 export type CollectionType<T> = T extends CollectionTypes ? never : T extends any[] ? never : T;
-export type NotifyCollectionChangedType<T = any> = T extends { [notifyCollectionChangedSymbol]: Observable<string> } ? T : T extends CollectionType<T> ? T & { [notifyCollectionChangedSymbol]: Observable<unknown> } : never;
+export type NotifyCollectionChangedType<T = any> = T extends { [notifyCollectionChangedSymbol]: Observable<string> }
+    ? T
+    : T extends CollectionType<T>
+    ? T & { [notifyCollectionChangedSymbol]: Observable<unknown> }
+    : never;
 
 export const objectToString = Object.prototype.toString;
 export const toTypeString = (value: unknown): string => objectToString.call(value);
@@ -212,7 +220,7 @@ const collectionHandlers = (() => {
         }
 
         function createIterableMethod(method: string | symbol, isReadonly: boolean) {
-            return function(this: IterableCollections, ...arguments_: unknown[]) {
+            return function (this: IterableCollections, ...arguments_: unknown[]) {
                 const target = toRaw(this);
                 const isPair = method === 'entries' || (method === Symbol.iterator && target instanceof Map);
                 const innerIterator = getProto(target)[method].apply(target, arguments_);
@@ -226,9 +234,9 @@ const collectionHandlers = (() => {
                         return done
                             ? { value, done }
                             : {
-                                value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
-                                done,
-                            };
+                                  value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
+                                  done,
+                              };
                     },
                     // iterable protocol
                     [Symbol.iterator]() {
@@ -261,7 +269,7 @@ const collectionHandlers = (() => {
     };
 })();
 
-function createNotifyPropertyChanged<TObject extends new (...args: any) => any>(
+function createNotifyPropertyChanged<TObject extends new (...arguments_: any) => any>(
     target: InstanceType<TObject>,
     toProxy: WeakMap<any, NotifyPropertyChangedType<any>>,
     toRaw: WeakMap<NotifyPropertyChangedType<any>, any>,
@@ -286,7 +294,7 @@ function createNotifyPropertyChanged<TObject extends new (...args: any) => any>(
         return target as any;
     }
 
-    let observer = new Subject<any>();
+    const observer = new Subject<any>();
     if (collectionTypes.has(target.constructor)) {
         observed = new Proxy(target, collectionHandlers(observer));
     } else {

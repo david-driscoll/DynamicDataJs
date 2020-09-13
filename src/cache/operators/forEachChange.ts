@@ -12,6 +12,6 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
  */
 export function forEachChange<TObject, TKey>(action: (change: Change<TObject, TKey>) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function forEachChangeOperator(source) {
-        return source.pipe(tap(changes => changes.forEach(action)));
+        return source.pipe(tap(changes => changes.forEach(element => action(element))));
     };
 }

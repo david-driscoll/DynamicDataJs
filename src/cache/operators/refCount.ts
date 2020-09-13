@@ -1,4 +1,5 @@
-import { MonoTypeOperatorFunction, Observable } from 'rxjs';
+/* eslint-disable unicorn/prevent-abbreviations */
+import { Observable } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { IObservableCache } from '../IObservableCache';
 import { asObservableCache } from './asObservableCache';
@@ -11,21 +12,20 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
  * @typeparam TKey The type of the destination key.
  */
 export function refCount<TObject, TKey>(): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
-    return function refCountOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-        let _refCount = 0;
+    return function referenceCountOperator(source: Observable<IChangeSet<TObject, TKey>>) {
+        let _referenceCount = 0;
         let _cache: IObservableCache<TObject, TKey>;
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
-            if (++_refCount === 1) {
+            if (++_referenceCount === 1) {
                 _cache = asObservableCache(source);
             }
 
             const subscriber = _cache.connect().subscribe(observer);
 
             return () => {
-
                 subscriber.unsubscribe();
                 let cacheToDispose: IDisposable | undefined;
-                if (--_refCount == 0) {
+                if (--_referenceCount == 0) {
                     cacheToDispose = _cache;
                     _cache = undefined!;
                 }

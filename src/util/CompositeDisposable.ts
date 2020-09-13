@@ -28,9 +28,9 @@ export class CompositeDisposable extends Set<IDisposableOrSubscription> implemen
 
     public add(...disposables: IDisposableOrSubscription[]) {
         if (this.isDisposed) {
-            disposables.forEach((item) => Disposable.of(item).dispose());
+            disposables.forEach(item => Disposable.of(item).dispose());
         } else {
-            disposables.forEach((item) => super.add(item));
+            disposables.forEach(item => super.add(item));
         }
         return this;
     }

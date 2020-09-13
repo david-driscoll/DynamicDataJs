@@ -34,36 +34,32 @@ export function groupOnDistinct<TObject, TKey, TGroupKey>(
 ): OperatorFunction<IChangeSet<TObject, TKey>, IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>> {
     return function groupOnDistinctOperator(source) {
         return new Observable<IChangeSet<Group<TObject, TKey, TGroupKey>, TGroupKey>>(observer => {
-
-            const sourceGroup$ = source
-                .pipe(
-                    groupOn(groupSelector),
-                    disposeMany(),
-                );
+            const sourceGroup$ = source.pipe(groupOn(groupSelector), disposeMany());
 
             //create source group cache
             const sourceGroups = asObservableCache(sourceGroup$);
 
-            const parentGroups$ = resultGroupSource
-                .pipe(transform(x => {
-                        //if child already has data, populate it.
-                        const result = new ManagedGroup<TObject, TKey, TGroupKey>(x);
-                        const child = sourceGroups.lookup(x);
-                        if (child !== undefined) {
-                            //dodgy cast but fine as a groups is always a ManagedGroup;
-                            const group = <ManagedGroup<TObject, TKey, TGroupKey>>child;
-                            result.update(updater => updater.clone(group.getInitialUpdates()));
-                        }
+            const parentGroups$ = resultGroupSource.pipe(
+                transform(x => {
+                    //if child already has data, populate it.
+                    const result = new ManagedGroup<TObject, TKey, TGroupKey>(x);
+                    const child = sourceGroups.lookup(x);
+                    if (child !== undefined) {
+                        //dodgy cast but fine as a groups is always a ManagedGroup;
+                        const group = <ManagedGroup<TObject, TKey, TGroupKey>>child;
+                        result.update(updater => updater.clone(group.getInitialUpdates()));
+                    }
 
-                        return result;
-                    }),
-                    disposeMany(),
-                );
+                    return result;
+                }),
+                disposeMany(),
+            );
             //create parent groups
             const parentGroups = asObservableCache(parentGroups$);
 
             //connect to each individual item and update the resulting group
-            const updateFromChilds = sourceGroups.connect()
+            const updateFromChilds = sourceGroups
+                .connect()
                 .pipe(
                     subscribeMany(x => {
                         return x.cache.connect().subscribe(updates => {
@@ -75,18 +71,17 @@ export function groupOnDistinct<TObject, TKey, TGroupKey>(
                     }),
                     disposeMany(),
                 )
-             .subscribe();
+                .subscribe();
 
-            const notifier = parentGroups.connect()
+            const notifier = parentGroups
+                .connect()
                 .pipe(
                     map(x => {
-                        const groups = ixFrom(x).pipe(
-                            ixMap(s => new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>(s.reason, s.key, s.current)),
-                        );
+                        const groups = ixFrom(x).pipe(ixMap(s => new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>(s.reason, s.key, s.current)));
                         return new GroupChangeSet<TObject, TKey, TGroupKey>(groups);
                     }),
                 )
-             .subscribe(observer);
+                .subscribe(observer);
 
             return Disposable.create(() => {
                 notifier.unsubscribe();

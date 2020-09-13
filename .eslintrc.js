@@ -4,13 +4,7 @@ module.exports = {
         es6: true,
         node: true,
     },
-    extends: [
-        'eslint:recommended',
-        'plugin:@typescript-eslint/eslint-recommended',
-        'plugin:promise/recommended',
-        'plugin:unicorn/recommended',
-        'plugin:prettier/recommended',
-    ],
+    extends: ['eslint:recommended', 'plugin:@typescript-eslint/eslint-recommended', 'plugin:promise/recommended', 'plugin:unicorn/recommended', 'plugin:prettier/recommended'],
     globals: {
         Atomics: 'readonly',
         SharedArrayBuffer: 'readonly',
@@ -24,8 +18,11 @@ module.exports = {
     rules: {
         quotes: ['error', 'single'],
         semi: ['error', 'always'],
-        'no-undef': 0,
-        'no-unused-vars': 0,
-        'unicorn/filename-case': 0,
+        'no-undef': 'off',
+        'no-unused-vars': 'off',
+        'unicorn/filename-case': 'off',
+        'no-nested-ternary': 'off',
+        'unicorn/no-null': 'off',
+        'unicorn/no-nested-ternary': 'off',
     },
 };

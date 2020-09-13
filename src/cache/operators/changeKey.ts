@@ -14,13 +14,15 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
  * @typeparam TDestinationKey The type of the destination key.
  * @param selector The key selector eg. (item) => newKey;
  */
-export function changeKey<TObject, TSourceKey, TDestinationKey>(selector: (value: TObject, sourceKey: TSourceKey) => TDestinationKey): ChangeSetOperatorFunction<TObject, TSourceKey, TObject, TDestinationKey> {
+export function changeKey<TObject, TSourceKey, TDestinationKey>(
+    selector: (value: TObject, sourceKey: TSourceKey) => TDestinationKey,
+): ChangeSetOperatorFunction<TObject, TSourceKey, TObject, TDestinationKey> {
     return function changeKeyOperator(source) {
-        return source.pipe(map(
-            updates => {
+        return source.pipe(
+            map(updates => {
                 const changed = ixFrom(updates).pipe(ixMap(u => new Change(u.reason, selector(u.current, u.key), u.current, u.previous)));
                 return new ChangeSet(changed);
-            },
-        ));
+            }),
+        );
     };
 }

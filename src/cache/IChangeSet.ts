@@ -51,5 +51,5 @@ export interface IChangeSet<TObject, TKey> {
      * @param callbackfn
      * @param thisArg
      */
-    forEach(callbackfn: (value: Change<TObject, TKey>) => void, thisArg?: any): void;
+    forEach(callbackfn: (value: Change<TObject, TKey>) => void, thisArgument?: any): void;
 }

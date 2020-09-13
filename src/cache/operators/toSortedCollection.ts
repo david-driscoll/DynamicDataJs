@@ -15,7 +15,8 @@ import { orderBy, orderByDescending } from 'ix/iterable/operators';
  */
 export function toSortedCollection<TObject, TKey, TSortKey>(
     sortSelector: (value: TObject) => TSortKey,
-    sortOrder?: 'asc' | 'desc'): OperatorFunction<IChangeSet<TObject, TKey>, TObject[]>;
+    sortOrder?: 'asc' | 'desc',
+): OperatorFunction<IChangeSet<TObject, TKey>, TObject[]>;
 /**
  * Converts the changeset into a fully formed sorted collection. Each change in the source results in a new sorted collection
  * @typeparam TObject The type of the object.
@@ -28,13 +29,14 @@ export function toSortedCollection<TObject, TKey, TSortKey>(
 export function toSortedCollection<TObject, TKey, TSortKey>(
     sortSelector: (value: TObject) => TSortKey,
     comparer: (a: TSortKey, b: TSortKey) => number,
-    sortOrder?: 'asc' | 'desc'): OperatorFunction<IChangeSet<TObject, TKey>, TObject[]>;
+    sortOrder?: 'asc' | 'desc',
+): OperatorFunction<IChangeSet<TObject, TKey>, TObject[]>;
 export function toSortedCollection<TObject, TKey, TSortKey>(
     sortSelector: (value: TObject) => TSortKey,
     comparerOrSortOrder?: ((a: TSortKey, b: TSortKey) => number) | 'asc' | 'desc',
     sortOrder: 'asc' | 'desc' = 'asc',
 ): OperatorFunction<IChangeSet<TObject, TKey>, TObject[]> {
-    let comparer: ((a: TSortKey, b: TSortKey) => number) | undefined = undefined;
+    let comparer: ((a: TSortKey, b: TSortKey) => number) | undefined;
     if (typeof comparerOrSortOrder === 'string') {
         sortOrder = comparerOrSortOrder;
     } else {
@@ -43,15 +45,7 @@ export function toSortedCollection<TObject, TKey, TSortKey>(
     return function toSortedCollectionOperator(source) {
         return source.pipe(
             queryWhenChanged(),
-            map(query =>
-                ixToArray(
-                    ixFrom(query.values())
-                        .pipe(
-                            sortOrder === 'asc' ?
-                                orderBy(sortSelector, comparer) :
-                                orderByDescending(sortSelector, comparer),
-                        ),
-                ),
-            ));
+            map(query => ixToArray(ixFrom(query.values()).pipe(sortOrder === 'asc' ? orderBy(sortSelector, comparer) : orderByDescending(sortSelector, comparer)))),
+        );
     };
-};
+}

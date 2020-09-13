@@ -17,10 +17,10 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     private _data: Map<TKey, TObject>;
     private readonly _deepEqual: boolean;
     private _mapAdapter!: {
-        get: typeof Map.prototype.get,
-        set: typeof Map.prototype.set,
-        has: typeof Map.prototype.has,
-        delete: typeof Map.prototype.delete,
+        get: typeof Map.prototype.get;
+        set: typeof Map.prototype.set;
+        has: typeof Map.prototype.has;
+        delete: typeof Map.prototype.delete;
     };
 
     public get size() {
@@ -70,10 +70,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     public addOrUpdate(item: TObject, key: TKey) {
         this.ensureInitialised();
         const data = tryGetValue(this._mapAdapter, key);
-        this._changes!.add(data.found
-            ? new Change<TObject, TKey>('update', key, item, data.value)
-            : new Change<TObject, TKey>('add', key, item),
-        );
+        this._changes!.add(data.found ? new Change<TObject, TKey>('update', key, item, data.value) : new Change<TObject, TKey>('add', key, item));
 
         this._mapAdapter.set(key, item);
     }
@@ -82,7 +79,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
      *  Raises an evaluate change for the specified keys
      */
     public refresh() {
-        if (this._data == null) {
+        if (this._data == undefined) {
             return;
         }
 
@@ -119,15 +116,15 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     }
 
     private ensureInitialised() {
-        if (this._changes == null) {
+        if (this._changes == undefined) {
             this._changes = new ChangeSet<TObject, TKey>();
         }
 
-        if (this._data == null) {
+        if (this._data == undefined) {
             this._data = new Map<TKey, TObject>();
         }
 
-        if (this._mapAdapter == null) {
+        if (this._mapAdapter == undefined) {
             this._mapAdapter = this._deepEqual ? deepEqualMapAdapter(this._data) : this._data;
         }
     }
@@ -163,8 +160,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
     refreshKeys(keys: ArrayOrIterable<TKey>): void {
         this.ensureInitialised();
         if (Array.isArray(keys)) {
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
+            for (const key of keys) {
                 this.refreshKey(key);
             }
         } else if (isIterable(keys)) {
@@ -185,8 +181,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
 
     removeKeys(keys: ArrayOrIterable<TKey>): void {
         if (Array.isArray(keys)) {
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
+            for (const key of keys) {
                 this.removeKey(key);
             }
         } else if (isIterable(keys)) {
@@ -195,5 +190,4 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
             }
         }
     }
-
 }

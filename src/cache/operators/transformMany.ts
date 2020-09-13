@@ -42,19 +42,13 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
     }
 
     return function transformManyOperator(source) {
-        return source
-            .pipe(
-                transform((t, key) => {
-                    const destination = toArray(ixFrom(manySelector(t))
-                        .pipe(
-                            ixMap(m => ({ item: m, key: keySelector(m) })),
-                        ));
-                    return new ManyContainer(() => destination);
-                }, true),
-                map(
-                    changes => new ChangeSet<TDestination, TDestinationKey>(enumerateDestination(changes)),
-                ),
-            );
+        return source.pipe(
+            transform((t, key) => {
+                const destination = toArray(ixFrom(manySelector(t)).pipe(ixMap(m => ({ item: m, key: keySelector(m) }))));
+                return new ManyContainer(() => destination);
+            }, true),
+            map(changes => new ChangeSet<TDestination, TDestinationKey>(enumerateDestination(changes))),
+        );
     };
 
     type DestinationContainer = { item: TDestination; key: TDestinationKey };
@@ -64,44 +58,42 @@ export function transformMany<TSource, TSourceKey, TDestination, TDestinationKey
             switch (change.reason) {
                 case 'add':
                 case 'remove':
-                case 'refresh': {
-                    for (const destination of change.current.destination) {
-                        yield new Change<TDestination, TDestinationKey>(change.reason, destination.key, destination.item);
-                    }
-                }
-                    break;
-                case 'update': {
-                    const previousItems = ixFrom(change.previous?.destination ?? []);
-                    const currentItems = ixFrom(change.current.destination);
-
-                    const removes = previousItems.pipe(except(currentItems, (a, b) => a.key === b.key));
-                    const adds = currentItems.pipe(except(previousItems, (a, b) => a.key === b.key));
-                    const updates = currentItems.pipe(intersect(previousItems, (a, b) => a.key === b.key));
-
-                    for (const destination of removes) {
-                        yield new Change<TDestination, TDestinationKey>('remove', destination.key, destination.item);
-                    }
-
-                    for (const destination of adds) {
-                        yield new Change<TDestination, TDestinationKey>('add', destination.key, destination.item);
-                    }
-
-                    for (const destination of updates) {
-                        const current = first(currentItems, d => d.key === destination.key)!;
-                        const previous = first(previousItems, d => d.key === destination.key)!;
-
-                        //Do not update is items are the same reference
-                        if (current.item !== previous.item) {
-                            yield new Change<TDestination, TDestinationKey>('update', destination.key, current.item, previous.item);
+                case 'refresh':
+                    {
+                        for (const destination of change.current.destination) {
+                            yield new Change<TDestination, TDestinationKey>(change.reason, destination.key, destination.item);
                         }
                     }
-                }
+                    break;
+                case 'update':
+                    {
+                        const previousItems = ixFrom(change.previous?.destination ?? []);
+                        const currentItems = ixFrom(change.current.destination);
+
+                        const removes = previousItems.pipe(except(currentItems, (a, b) => a.key === b.key));
+                        const adds = currentItems.pipe(except(previousItems, (a, b) => a.key === b.key));
+                        const updates = currentItems.pipe(intersect(previousItems, (a, b) => a.key === b.key));
+
+                        for (const destination of removes) {
+                            yield new Change<TDestination, TDestinationKey>('remove', destination.key, destination.item);
+                        }
+
+                        for (const destination of adds) {
+                            yield new Change<TDestination, TDestinationKey>('add', destination.key, destination.item);
+                        }
+
+                        for (const destination of updates) {
+                            const current = first(currentItems, d => d.key === destination.key)!;
+                            const previous = first(previousItems, d => d.key === destination.key)!;
+
+                            //Do not update is items are the same reference
+                            if (current.item !== previous.item) {
+                                yield new Change<TDestination, TDestinationKey>('update', destination.key, current.item, previous.item);
+                            }
+                        }
+                    }
                     break;
             }
         }
     }
 }
-
-
-
-

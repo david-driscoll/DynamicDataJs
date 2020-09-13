@@ -28,23 +28,25 @@ export function transformPromise<TSource, TKey, TDestination>(
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
     forceTransform?: Observable<(source: TSource, key: TKey) => boolean>,
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination, TKey> {
-    type TransformResult = {
-        change: Change<TSource, TKey>;
-        container: TransformedItemContainer;
-        success: true;
-        key: TKey;
-    } | {
-
-        change: Change<TSource, TKey>;
-        container: undefined;
-        success: true;
-        key: TKey;
-    } | {
-        change: Change<TSource, TKey>;
-        error: Error;
-        success: false;
-        key: TKey;
-    };
+    type TransformResult =
+        | {
+              change: Change<TSource, TKey>;
+              container: TransformedItemContainer;
+              success: true;
+              key: TKey;
+          }
+        | {
+              change: Change<TSource, TKey>;
+              container: undefined;
+              success: true;
+              key: TKey;
+          }
+        | {
+              change: Change<TSource, TKey>;
+              error: Error;
+              success: false;
+              key: TKey;
+          };
 
     type TransformedItemContainer = { source: TSource; destination: TDestination };
 
@@ -52,18 +54,16 @@ export function transformPromise<TSource, TKey, TDestination>(
         return new Observable<IChangeSet<TDestination, TKey>>(observer => {
             const cache = new ChangeAwareCache<TransformedItemContainer, TKey>();
 
-            let transformer = source
-                .pipe(
-                    map(changes => from(doTransformChanges(cache, changes))),
+            let transformer = source.pipe(
+                map(changes => from(doTransformChanges(cache, changes))),
+                mergeAll(maximumConcurrency),
+            );
+
+            if (forceTransform != undefined) {
+                const forced = forceTransform.pipe(
+                    map(shouldTransform => from(doTransform(cache, shouldTransform))),
                     mergeAll(maximumConcurrency),
                 );
-
-            if (forceTransform != null) {
-                const forced = forceTransform
-                    .pipe(
-                        map(shouldTransform => from(doTransform(cache, shouldTransform))),
-                        mergeAll(maximumConcurrency),
-                    );
 
                 transformer = merge(transformer, forced);
             }
@@ -72,13 +72,14 @@ export function transformPromise<TSource, TKey, TDestination>(
         });
     };
 
-
-    async function doTransform(cache: ChangeAwareCache<TransformedItemContainer, TKey>, shouldTransform: (source: TSource, key: TKey) => boolean): Promise<IChangeSet<TDestination, TKey>> {
-        const toTransform = ixFrom(cache.entries())
-            .pipe(
-                ixFilter(([key, value]) => shouldTransform(value.source, key)),
-                ixMap(([key, value]) => new Change<TSource, TKey>('update', key, value.source, value.source)),
-            );
+    async function doTransform(
+        cache: ChangeAwareCache<TransformedItemContainer, TKey>,
+        shouldTransform: (source: TSource, key: TKey) => boolean,
+    ): Promise<IChangeSet<TDestination, TKey>> {
+        const toTransform = ixFrom(cache.entries()).pipe(
+            ixFilter(([key, value]) => shouldTransform(value.source, key)),
+            ixMap(([key, value]) => new Change<TSource, TKey>('update', key, value.source, value.source)),
+        );
 
         const transformed = await from(toTransform)
             .pipe(
@@ -110,13 +111,13 @@ export function transformPromise<TSource, TKey, TDestination>(
             }
 
             return createTransformResult(change);
-        } catch (ex) {
+        } catch (error) {
             //only handle errors if a handler has been specified
-            if (exceptionCallback != null) {
-                return createTransformError(change, ex);
+            if (exceptionCallback != undefined) {
+                return createTransformError(change, error);
             }
 
-            throw ex;
+            throw error;
         }
     }
 
@@ -130,7 +131,7 @@ export function transformPromise<TSource, TKey, TDestination>(
             });
         }
 
-        for (let result of transformedItems) {
+        for (const result of transformedItems) {
             if (!result.success) {
                 exceptionCallback?.({ key: result.key, value: result.change.current, error: result.error });
                 continue;
@@ -153,12 +154,11 @@ export function transformPromise<TSource, TKey, TDestination>(
         }
 
         const changes = cache.captureChanges();
-        const transformed = ixFrom(changes).pipe(ixMap(change => new Change<TDestination, TKey>(change.reason,
-            change.key,
-            change.current.destination,
-            change.previous?.destination,
-            change.currentIndex,
-            change.previousIndex))
+        const transformed = ixFrom(changes).pipe(
+            ixMap(
+                change =>
+                    new Change<TDestination, TKey>(change.reason, change.key, change.current.destination, change.previous?.destination, change.currentIndex, change.previousIndex),
+            ),
         );
 
         return new ChangeSet<TDestination, TKey>(transformed);

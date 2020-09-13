@@ -8,14 +8,14 @@ import { CacheUpdater } from './CacheUpdater';
 import { toArray } from 'ix/iterable';
 
 export class ReaderWriter<TObject, TKey> {
-    private readonly _keySelector?: (obj: TObject) => TKey;
+    private readonly _keySelector?: (object: TObject) => TKey;
     private _data = new Map<TKey, TObject>(); //could do with priming this on first time load
     private _activeUpdater?: CacheUpdater<TObject, TKey>;
     private readonly _deepEqual: boolean;
 
     public constructor(deepEqual: boolean);
-    public constructor(keySelector?: ((obj: TObject) => TKey), deepEqual?: boolean);
-    public constructor(keySelector?: ((obj: TObject) => TKey) | boolean, deepEqual = false) {
+    public constructor(keySelector?: (object: TObject) => TKey, deepEqual?: boolean);
+    public constructor(keySelector?: ((object: TObject) => TKey) | boolean, deepEqual = false) {
         if (typeof keySelector === 'boolean') {
             deepEqual = keySelector;
             keySelector = undefined;
@@ -32,9 +32,13 @@ export class ReaderWriter<TObject, TKey> {
         if (typeof changes === 'function') {
             return this.doUpdate(changes, previewHandler, collectChanges);
         }
-        return this.doUpdate((updater: ICacheUpdater<TObject, TKey>) => {
-            updater.clone(changes);
-        }, previewHandler, collectChanges);
+        return this.doUpdate(
+            (updater: ICacheUpdater<TObject, TKey>) => {
+                updater.clone(changes);
+            },
+            previewHandler,
+            collectChanges,
+        );
     }
 
     private doUpdate(
@@ -54,7 +58,7 @@ export class ReaderWriter<TObject, TKey> {
             const changes = changeAwareCache.captureChanges();
 
             {
-                let intermediate = this._data;
+                const intermediate = this._data;
                 this._data = copy;
                 copy = intermediate;
             }
@@ -87,7 +91,7 @@ export class ReaderWriter<TObject, TKey> {
      * @internal
      **/
     public writeNested(updateAction: ((updater: ICacheUpdater<TObject, TKey>) => void) | ((updater: ISourceUpdater<TObject, TKey>) => void)): void {
-        if (this._activeUpdater == null) {
+        if (this._activeUpdater == undefined) {
             throw new Error('WriteNested can only be used if another write is already in progress.');
         }
 
@@ -104,7 +108,7 @@ export class ReaderWriter<TObject, TKey> {
         const changes = new ChangeSet<TObject, TKey>();
 
         for (const [key, value] of dictionary.entries()) {
-            if (filter == null || filter(value)) {
+            if (filter == undefined || filter(value)) {
                 changes.add(new Change<TObject, TKey>('add', key, value));
             }
         }

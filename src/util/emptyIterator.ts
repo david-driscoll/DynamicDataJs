@@ -1,2 +1,1 @@
-function* emptyIterator<T>(): IterableIterator<T> {
-}
+function* emptyIterator<T>(): IterableIterator<T> {}

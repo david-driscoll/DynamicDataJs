@@ -18,10 +18,11 @@ export function includeUpdateWhen<TObject, TKey>(includeFunction: (current: TObj
     return function includeUpdateWhenOperator(source) {
         return source.pipe(
             map(updates => {
-                const result = ixFrom(updates)
-                    .pipe(ixFilter(u => {
+                const result = ixFrom(updates).pipe(
+                    ixFilter(u => {
                         return u.reason !== 'update' || includeFunction(u.current, u.previous!);
-                    }));
+                    }),
+                );
                 return new ChangeSet(result);
             }),
             notEmpty(),

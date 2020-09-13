@@ -27,7 +27,7 @@ export function expireAfter<TObject, TKey>(
     cache: ISourceCache<TObject, TKey>,
     timeSelector: (value: TObject) => number | undefined,
     interval?: number,
-    scheduler?: SchedulerLike
+    scheduler?: SchedulerLike,
 ): Observable<Iterable<[TKey, TObject]>>;
 /**
  * Automatically removes items from the cache after the time specified by
@@ -38,10 +38,7 @@ export function expireAfter<TObject, TKey>(
  * @param timeSelector The time selector.  Return null if the item should never be removed
  * @param scheduler The scheduler.
  */
-export function expireAfter<TObject, TKey>(
-    timeSelector: (value: TObject) => number | undefined,
-    scheduler?: SchedulerLike
-): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
+export function expireAfter<TObject, TKey>(timeSelector: (value: TObject) => number | undefined, scheduler?: SchedulerLike): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Automatically removes items from the cache after the time specified by
  * the time selector elapses.
@@ -55,7 +52,7 @@ export function expireAfter<TObject, TKey>(
 export function expireAfter<TObject, TKey>(
     cache: ISourceCache<TObject, TKey>,
     timeSelector: (value: TObject) => number | undefined,
-    scheduler?: SchedulerLike
+    scheduler?: SchedulerLike,
 ): Observable<Iterable<[TKey, TObject]>>;
 /**
  * Automatically removes items from the cache after the time specified by
@@ -70,7 +67,7 @@ export function expireAfter<TObject, TKey>(
 export function expireAfter<TObject, TKey>(
     timeSelector: (value: TObject) => number | undefined,
     interval?: number,
-    scheduler?: SchedulerLike
+    scheduler?: SchedulerLike,
 ): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 export function expireAfter<TObject, TKey>(
     cache: ISourceCache<TObject, TKey> | ((value: TObject) => number | undefined),
@@ -94,10 +91,11 @@ export function expireAfter<TObject, TKey>(
     }
     if (isSourceCache(cache)) {
         return new Observable<Iterable<readonly [TKey, TObject]>>(observer => {
-            return cache.connect()
+            return cache
+                .connect()
                 .pipe(
                     forExpiry(timeSelector as any, interval as any, scheduler),
-                    finalize(() => observer.complete())
+                    finalize(() => observer.complete()),
                 )
                 .subscribe(toRemove => {
                     try {

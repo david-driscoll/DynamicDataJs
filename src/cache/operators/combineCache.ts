@@ -16,8 +16,8 @@ export function combineCache<TObject, TKey>(operator: CombineOperator, items: Ar
         function updateAction(updates: IChangeSet<TObject, TKey>) {
             try {
                 observer.next(updates);
-            } catch (ex) {
-                observer.error(ex);
+            } catch (error) {
+                observer.error(error);
                 observer.complete();
             }
         }
@@ -25,8 +25,8 @@ export function combineCache<TObject, TKey>(operator: CombineOperator, items: Ar
         let subscriber: IDisposable = Disposable.empty;
         try {
             subscriber = combiner(operator, updateAction, toArray(items));
-        } catch (ex) {
-            observer.error(ex);
+        } catch (error) {
+            observer.error(error);
             observer.complete();
         }
         return () => subscriber.dispose();
@@ -49,14 +49,12 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
 
     return disposable;
 
-
     function update(cache: Cache<TObject, TKey>, updates: IChangeSet<TObject, TKey>) {
-        let notifications: IChangeSet<TObject, TKey>;
         //update cache for the individual source
         cache.clone(updates);
 
         //update combined
-        notifications = updateCombined(updates);
+        const notifications = updateCombined(updates);
 
         if (notifications.size !== 0) {
             updatedCallback(notifications);
@@ -66,62 +64,67 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
     function updateCombined(updates: IChangeSet<TObject, TKey>): IChangeSet<TObject, TKey> {
         //child caches have been updated before we reached this point.
 
-        for (let update of updates) {
+        for (const update of updates) {
             const key = update.key;
             switch (update.reason) {
                 case 'add':
-                case 'update': {
-                    // get the current key.
-                    // check whether the item should belong to the cache
-                    const cached = _combinedCache.lookup(key);
-                    const contained = cached !== undefined;
-                    const match = matchesConstraint(key);
+                case 'update':
+                    {
+                        // get the current key.
+                        // check whether the item should belong to the cache
+                        const cached = _combinedCache.lookup(key);
+                        const contained = cached !== undefined;
+                        const match = matchesConstraint(key);
 
-                    if (match) {
-                        if (contained) {
-                            if (update.current !== cached) {
+                        if (match) {
+                            if (contained) {
+                                if (update.current !== cached) {
+                                    _combinedCache.addOrUpdate(update.current, key);
+                                }
+                            } else {
                                 _combinedCache.addOrUpdate(update.current, key);
                             }
                         } else {
-                            _combinedCache.addOrUpdate(update.current, key);
-                        }
-                    } else {
-                        if (contained) {
-                            _combinedCache.removeKey(key);
+                            if (contained) {
+                                _combinedCache.removeKey(key);
+                            }
                         }
                     }
-                }
 
                     break;
 
-                case 'remove': {
-                    const cached = _combinedCache.lookup(key);
-                    const contained = cached !== undefined;
-                    const shouldBeIncluded = matchesConstraint(key);
+                case 'remove':
+                    {
+                        const cached = _combinedCache.lookup(key);
+                        const contained = cached !== undefined;
+                        const shouldBeIncluded = matchesConstraint(key);
 
-                    if (shouldBeIncluded) {
-                        const firstOne = first(ixFrom(caches).pipe(
-                            ixMap(s => s.lookup(key)),
-                            ixFilter(z => z !== undefined),
-                        ))!;
+                        if (shouldBeIncluded) {
+                            const firstOne = first(
+                                ixFrom(caches).pipe(
+                                    ixMap(s => s.lookup(key)),
+                                    ixFilter(z => z !== undefined),
+                                ),
+                            )!;
 
-                        if (cached === undefined) {
-                            _combinedCache.addOrUpdate(firstOne, key);
-                        } else if (firstOne !== cached) {
-                            _combinedCache.addOrUpdate(firstOne, key);
-                        }
-                    } else {
-                        if (contained) {
-                            _combinedCache.removeKey(key);
+                            if (cached === undefined) {
+                                _combinedCache.addOrUpdate(firstOne, key);
+                            } else if (firstOne !== cached) {
+                                _combinedCache.addOrUpdate(firstOne, key);
+                            }
+                        } else {
+                            if (contained) {
+                                _combinedCache.removeKey(key);
+                            }
                         }
                     }
-                }
 
                     break;
 
-                case 'refresh': {
-                    _combinedCache.refreshKey(key);
-                }
+                case 'refresh':
+                    {
+                        _combinedCache.refreshKey(key);
+                    }
 
                     break;
             }
@@ -131,22 +134,23 @@ function combiner<TObject, TKey>(type: CombineOperator, updatedCallback: (change
     }
 
     function matchesConstraint(key: TKey): boolean {
+        const predicate = { predicate: (s: Cache<any, TKey>) => s.lookup(key) !== undefined };
         switch (type) {
             case 'and': {
-                return every(caches, s => s.lookup(key) !== undefined);
+                return every(caches, predicate);
             }
 
             case 'or': {
-                return some(caches, s => s.lookup(key) !== undefined);
+                return some(caches, predicate);
             }
 
             case 'xor': {
-                return count(caches, s => s.lookup(key) !== undefined) == 1;
+                return count(caches, predicate) == 1;
             }
 
             case 'except': {
-                const first = some(ixFrom(caches).pipe(take(1)), s => s.lookup(key) !== undefined);
-                const others = some(ixFrom(caches).pipe(skip(1)), s => s.lookup(key) !== undefined);
+                const first = some(ixFrom(caches).pipe(take(1)), predicate);
+                const others = some(ixFrom(caches).pipe(skip(1)), predicate);
                 return first && !others;
             }
         }

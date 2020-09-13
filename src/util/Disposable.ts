@@ -22,6 +22,7 @@ export function canBeDisposed(value: any): value is IDisposableOrSubscription {
 }
 
 export type IDisposableOrSubscription = IDisposable | ISubscription | (() => void);
+// eslint-disable-next-line prefer-const
 let empty: Disposable;
 
 export class Disposable implements IDisposable, ISubscription {
@@ -47,8 +48,7 @@ export class Disposable implements IDisposable, ISubscription {
         return new Disposable(action);
     }
 
-    private _action: () => void = () => {
-    };
+    private _action: () => void = () => {};
     private _isDisposed = false;
 
     constructor(value: IDisposableOrSubscription);
@@ -85,4 +85,3 @@ export class Disposable implements IDisposable, ISubscription {
 empty = new Disposable(() => {
     /* */
 });
-

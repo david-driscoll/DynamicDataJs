@@ -18,7 +18,7 @@ export interface IConnectableCache<TObject, TKey> {
      *  Returns a filtered stream of cache changes preceded with the initial filtered state
      * @param predicate The result will be filtered using the specified predicate
      */
-    connect(predicate?: (obj: TObject) => boolean): Observable<IChangeSet<TObject, TKey>>;
+    connect(predicate?: (object: TObject) => boolean): Observable<IChangeSet<TObject, TKey>>;
 
     /**
      * Returns a filtered stream of cache changes.
@@ -26,7 +26,7 @@ export interface IConnectableCache<TObject, TKey> {
      *
      * @param predicate The result will be filtered using the specified predicate
      */
-    preview(predicate?: (obj: TObject) => boolean): Observable<IChangeSet<TObject, TKey>>;
+    preview(predicate?: (object: TObject) => boolean): Observable<IChangeSet<TObject, TKey>>;
 
     /**
      * A count changed observable starting with the current count

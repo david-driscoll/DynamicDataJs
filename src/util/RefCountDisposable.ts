@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prevent-abbreviations */
 /**
  *
  */
@@ -13,7 +14,9 @@ export class RefCountDisposable implements IDisposable {
         this._underlyingDisposable = Disposable.of(underlyingDisposable);
     }
 
-    public get isDisposed() { return this._isDisposed; }
+    public get isDisposed() {
+        return this._isDisposed;
+    }
 
     public dispose() {
         if (!this.isDisposed && !this._isPrimaryDisposed) {
@@ -30,7 +33,9 @@ export class RefCountDisposable implements IDisposable {
     }
 
     public getDisposable() {
-        if (this.isDisposed) { return Disposable.empty; }
+        if (this.isDisposed) {
+            return Disposable.empty;
+        }
 
         this._count += 1;
         return new InnerDisposable(this, () => {

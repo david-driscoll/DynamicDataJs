@@ -36,9 +36,9 @@ export function autoRefresh<TObject, TKey>(
     propertyChangeThrottle?: number | SchedulerLike,
     scheduler?: SchedulerLike,
 ): ChangeSetOperatorFunction<TObject, TKey, NotifyPropertyChangedType<TObject>> {
-    let props: string[] = [];
+    const properties: string[] = [];
     if (typeof key === 'string' || typeof key === 'symbol') {
-        props.push(key as any);
+        properties.push(key as any);
     } else {
         scheduler = propertyChangeThrottle as any;
         propertyChangeThrottle = changeSetBuffer as any;
@@ -47,14 +47,17 @@ export function autoRefresh<TObject, TKey>(
 
     return function autoRefreshOperator(source) {
         return source.pipe(
-            autoRefreshOnObservable<TObject, TKey>((t, v) => {
-                if (propertyChangeThrottle) {
-                    return whenAnyPropertyChanged(t, ...props as any[])
-                        .pipe(throttleTime(propertyChangeThrottle as number, scheduler));
-                } else {
-                    return whenAnyPropertyChanged(t, ...props as any[]);
-                }
-            }, changeSetBuffer as number | undefined, scheduler),
+            autoRefreshOnObservable<TObject, TKey>(
+                (t, v) => {
+                    if (propertyChangeThrottle) {
+                        return whenAnyPropertyChanged(t, ...(properties as any[])).pipe(throttleTime(propertyChangeThrottle as number, scheduler));
+                    } else {
+                        return whenAnyPropertyChanged(t, ...(properties as any[]));
+                    }
+                },
+                changeSetBuffer as number | undefined,
+                scheduler,
+            ),
         );
     };
 }

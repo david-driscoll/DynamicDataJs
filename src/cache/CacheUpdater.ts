@@ -11,11 +11,11 @@ import { isMap } from '../util/isMap';
 
 export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey> {
     private readonly _cache: ICache<TObject, TKey>;
-    private readonly _keySelector?: (obj: TObject) => TKey;
+    private readonly _keySelector?: (object: TObject) => TKey;
 
-    public constructor(cache: ICache<TObject, TKey>, keySelector?: (obj: TObject) => TKey);
-    public constructor(data: Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey, deepEqual?: boolean);
-    public constructor(data: ICache<TObject, TKey> | Map<TKey, TObject>, keySelector?: (obj: TObject) => TKey, deepEqual =false) {
+    public constructor(cache: ICache<TObject, TKey>, keySelector?: (object: TObject) => TKey);
+    public constructor(data: Map<TKey, TObject>, keySelector?: (object: TObject) => TKey, deepEqual?: boolean);
+    public constructor(data: ICache<TObject, TKey> | Map<TKey, TObject>, keySelector?: (object: TObject) => TKey, deepEqual = false) {
         if (isMap(data)) {
             // map
             this._cache = new Cache<TObject, TKey>(data, deepEqual);
@@ -29,13 +29,12 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
         return this._cache.size;
     }
 
-    public* entries(items: ArrayOrIterable<TObject>): IterableIterator<[TKey, TObject]> {
-        if (this._keySelector == null) {
+    public *entries(items: ArrayOrIterable<TObject>): IterableIterator<[TKey, TObject]> {
+        if (this._keySelector == undefined) {
             throw new Error('A key selector must be specified');
         }
         if (Array.isArray(items)) {
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
+            for (const item of items) {
                 yield [this._keySelector(item), item];
             }
         } else if (isIterable(items)) {
@@ -62,12 +61,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
         this.addOrUpdateValues(entry);
     }
 
-
     public addOrUpdate(item: TObject, key: TKey): void;
     public addOrUpdate(item: TObject): void;
     public addOrUpdate(item: TObject, comparer: EqualityComparer<TObject>): void;
     public addOrUpdate(item: TObject, comparer?: EqualityComparer<TObject> | TKey) {
-        if (this._keySelector == null && (!comparer || typeof comparer === 'function')) {
+        if (this._keySelector == undefined && (!comparer || typeof comparer === 'function')) {
             throw new Error('A key selector must be specified');
         }
 
@@ -83,7 +81,6 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
                     this._cache.addOrUpdate(item, key);
                     return;
                 }
-
             } else {
                 this._cache.addOrUpdate(item, comparer);
                 return;
@@ -101,8 +98,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     public addOrUpdatePairs(entries: ArrayOrIterable<[TKey, TObject]>): void;
     public addOrUpdatePairs(entries: ArrayOrIterable<[TKey, TObject]>) {
         if (Array.isArray(entries)) {
-            for (let i = 0; i < entries.length; i++) {
-                const [key, value] = entries[i];
+            for (const [key, value] of entries) {
                 this.addOrUpdate(value, key);
             }
         } else if (isIterable(entries)) {
@@ -114,8 +110,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
 
     public refreshKeys(keys: ArrayOrIterable<TKey>) {
         if (Array.isArray(keys)) {
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
+            for (const key of keys) {
                 this.refreshKey(key);
             }
         } else if (isIterable(keys)) {
@@ -131,8 +126,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
 
     public removeKeys(keys: ArrayOrIterable<TKey>) {
         if (Array.isArray(keys)) {
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
+            for (const key of keys) {
                 this.removeKey(key);
             }
         } else if (isIterable(keys)) {
@@ -148,8 +142,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
 
     public removePairs(entries: ArrayOrIterable<[TKey, TObject]>) {
         if (Array.isArray(entries)) {
-            for (let i = 0; i < entries.length; i++) {
-                const [key, value] = entries[i];
+            for (const [key, value] of entries) {
                 this.removeKey(key);
             }
         } else if (isIterable(entries)) {
@@ -173,8 +166,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
 
     public addOrUpdateValues(entries: ArrayOrIterable<TObject>) {
         if (Array.isArray(entries)) {
-            for (let i = 0; i < entries.length; i++) {
-                const entry = entries[i];
+            for (const entry of entries) {
                 this.addOrUpdate(entry);
             }
         } else if (isIterable(entries)) {
@@ -185,12 +177,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     }
 
     public refreshValues(entries: ArrayOrIterable<TObject>) {
-        if (this._keySelector == null) {
+        if (this._keySelector == undefined) {
             throw new Error('A key selector must be specified');
         }
         if (Array.isArray(entries)) {
-            for (let i = 0; i < entries.length; i++) {
-                const entry = entries[i];
+            for (const entry of entries) {
                 this.refreshKey(this._keySelector(entry));
             }
         } else if (isIterable(entries)) {
@@ -201,12 +192,11 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     }
 
     public removeValues(entries: ArrayOrIterable<TObject>) {
-        if (this._keySelector == null) {
+        if (this._keySelector == undefined) {
             throw new Error('A key selector must be specified');
         }
         if (Array.isArray(entries)) {
-            for (let i = 0; i < entries.length; i++) {
-                const entry = entries[i];
+            for (const entry of entries) {
                 this.removeKey(this._keySelector(entry));
             }
         } else if (isIterable(entries)) {
@@ -217,7 +207,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     }
 
     public getKey(item: TObject) {
-        if (this._keySelector == null) {
+        if (this._keySelector == undefined) {
             throw new Error('A key selector must be specified');
         }
         return this._keySelector(item);
@@ -228,7 +218,7 @@ export class CacheUpdater<TObject, TKey> implements ISourceUpdater<TObject, TKey
     }
 
     public remove(value: TObject) {
-        if (this._keySelector == null) {
+        if (this._keySelector == undefined) {
             throw new Error('A key selector must be specified');
         }
         this.removeKey(this._keySelector(value));

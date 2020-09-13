@@ -16,73 +16,72 @@ export class ChangeStatistics {
         this.lastUpdated = new Date();
     }
 
-/**
+    /**
 ///     Gets the adds.
  */
-/// <value>
-///     The adds.
-/// </value>
+    /// <value>
+    ///     The adds.
+    /// </value>
     public readonly adds: number;
 
-/**
+    /**
 ///     Gets the updates.
  */
-/// <value>
-///     The updates.
-/// </value>
+    /// <value>
+    ///     The updates.
+    /// </value>
     public readonly updates: number;
 
-/**
+    /**
 ///     Gets the removes.
  */
-/// <value>
-///     The removes.
-/// </value>
+    /// <value>
+    ///     The removes.
+    /// </value>
     public readonly removes: number;
 
-/**
+    /**
 ///     Gets the refreshes.
  */
-/// <value>
-///     The refreshes.
-/// </value>
+    /// <value>
+    ///     The refreshes.
+    /// </value>
     public readonly refreshes: number;
 
-/**
+    /**
 ///     Gets the count.
  */
-/// <value>
-///     The count.
-/// </value>
+    /// <value>
+    ///     The count.
+    /// </value>
     public readonly count: number;
 
-/**
+    /**
 ///     Gets the index.
  */
-/// <value>
-///     The index.
-/// </value>
+    /// <value>
+    ///     The index.
+    /// </value>
     public readonly index: number;
 
-/**
+    /**
 ///     Gets the moves.
  */
-/// <value>
-///     The moves.
-/// </value>
+    /// <value>
+    ///     The moves.
+    /// </value>
     public readonly moves: number;
 
-/**
+    /**
 ///     Gets the last updated.
  */
-/// <value>
-///     The last updated.
-/// </value>
+    /// <value>
+    ///     The last updated.
+    /// </value>
     public readonly lastUpdated: Date;
 
     /// <inheritdoc />
     public toString() {
         return `CurrentIndex: ${this.index}, Adds: ${this.adds}, Updates: ${this.updates}, Removes: ${this.removes}, Refreshes: ${this.refreshes}, Size: ${this.count}, Timestamp: ${this.lastUpdated}`;
     }
-
 }

@@ -8,10 +8,10 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
     private readonly _data: Map<TKey, TObject>;
     private readonly _deepEqual: boolean;
     private readonly _mapAdapter: {
-        get: typeof Map.prototype.get,
-        set: typeof Map.prototype.set,
-        has: typeof Map.prototype.has,
-        delete: typeof Map.prototype.delete,
+        get: typeof Map.prototype.get;
+        set: typeof Map.prototype.set;
+        has: typeof Map.prototype.has;
+        delete: typeof Map.prototype.delete;
     };
 
     public get size() {
@@ -57,9 +57,10 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
         for (const item of changes) {
             switch (item.reason) {
                 case 'update':
-                case 'add': {
-                    this._mapAdapter.set(item.key, item.current);
-                }
+                case 'add':
+                    {
+                        this._mapAdapter.set(item.key, item.current);
+                    }
 
                     break;
                 case 'remove':
@@ -79,8 +80,7 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
 
     public removeKeys(keys: ArrayOrIterable<TKey>) {
         if (Array.isArray(keys)) {
-            for (let i = 0; i < keys.length; i++) {
-                const key = keys[i];
+            for (const key of keys) {
                 if (this._mapAdapter.has(key)) {
                     this._mapAdapter.delete(key);
                 }
@@ -122,4 +122,3 @@ export class Cache<TObject, TKey> implements ICache<TObject, TKey> {
         return this.entries();
     }
 }
-

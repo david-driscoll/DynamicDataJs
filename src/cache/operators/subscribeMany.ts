@@ -19,12 +19,7 @@ export function subscribeMany<TObject, TKey>(subscriptionFactory: (value: TObjec
     return function subscribeManyOperator(source: Observable<IChangeSet<TObject, TKey>>) {
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const published: ConnectableObservable<IChangeSet<TObject, TKey>> = source.pipe(publish()) as any;
-            const subscriptions = published
-                .pipe(
-                    transform(subscriptionFactory),
-                    disposeMany(),
-                )
-                .subscribe();
+            const subscriptions = published.pipe(transform(subscriptionFactory), disposeMany()).subscribe();
 
             return new CompositeDisposable(subscriptions, published.subscribe(observer), published.connect());
         });

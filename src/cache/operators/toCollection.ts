@@ -11,6 +11,9 @@ import { toArray as ixToArray } from 'ix/iterable';
  */
 export function toCollection<TObject, TKey>(): OperatorFunction<IChangeSet<TObject, TKey>, TObject[]> {
     return function toCollectionOperator(source) {
-        return source.pipe(queryWhenChanged(), map(query => ixToArray(query.values())));
+        return source.pipe(
+            queryWhenChanged(),
+            map(query => ixToArray(query.values())),
+        );
     };
 }

@@ -3,9 +3,9 @@
  */
 import { ChangeReason } from './ChangeReason';
 
-function assert(condition: any, msg?: string): asserts condition {
+function assert(condition: any, message?: string): asserts condition {
     if (!condition) {
-        throw new Error(msg);
+        throw new Error(message);
     }
 }
 

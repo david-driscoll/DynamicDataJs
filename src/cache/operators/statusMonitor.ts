@@ -39,9 +39,7 @@ export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {
 
             const monitor = source.subscribe(updated, error, completion);
 
-            const subscriber = statusSubject
-                .pipe(startWith(status), distinctUntilChanged())
-                .subscribe(observer);
+            const subscriber = statusSubject.pipe(startWith(status), distinctUntilChanged()).subscribe(observer);
 
             return () => {
                 statusSubject.complete();

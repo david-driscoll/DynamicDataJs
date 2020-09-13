@@ -15,7 +15,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
  */
 export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     if (!removeAction) {
-        removeAction = function(value: any) {
+        removeAction = function (value: any) {
             if (isDisposable(value)) value.dispose();
             if (isSubscription(value)) value.unsubscribe();
         };
@@ -25,10 +25,12 @@ export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => vo
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const cache = new Cache<TObject, TKey>();
             const subscriber = source
-                .pipe(tap(
-                    changes => registerForRemoval(changes as any, cache),
-                    e => observer.error(e),
-                ))
+                .pipe(
+                    tap(
+                        changes => registerForRemoval(changes as any, cache),
+                        error => observer.error(error),
+                    ),
+                )
                 .subscribe(observer);
 
             return () => {

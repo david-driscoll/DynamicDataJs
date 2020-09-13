@@ -13,9 +13,7 @@ import { Change } from '../Change';
  * @param source The source
  * @param valueSelector The transform factory
  */
-export function distinctValues<TObject, TKey, TValue>(
-    valueSelector: (value: TObject) => TValue,
-): OperatorFunction<IChangeSet<TObject, TKey>, DistinctChangeSet<TValue>> {
+export function distinctValues<TObject, TKey, TValue>(valueSelector: (value: TObject) => TValue): OperatorFunction<IChangeSet<TObject, TKey>, DistinctChangeSet<TValue>> {
     const _valueCounters = new Map<TValue, number>();
     const _keyCounters = new Map<TKey, number>();
     const _itemCache = new Map<TKey, TValue>();
@@ -83,7 +81,7 @@ export function distinctValues<TObject, TKey, TValue>(
             result.add(new Change('remove', value, value));
         }
 
-        for (let change of changes) {
+        for (const change of changes) {
             const key = change.key;
             switch (change.reason) {
                 case 'add': {

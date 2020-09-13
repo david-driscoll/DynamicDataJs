@@ -1,12 +1,5 @@
 import { isNotifyPropertyChanged, NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
-import {
-    ConnectableObservable,
-    merge,
-    MonoTypeOperatorFunction,
-    Observable,
-    OperatorFunction,
-    SchedulerLike,
-} from 'rxjs';
+import { ConnectableObservable, merge, MonoTypeOperatorFunction, Observable, OperatorFunction, SchedulerLike } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { bufferTime, filter, map, publish } from 'rxjs/operators';
 import { mergeMany } from './mergeMany';
@@ -31,33 +24,39 @@ export function autoRefreshOnObservable<TObject, TKey>(
             const shared: ConnectableObservable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>> = source.pipe(publish()) as any;
 
             //monitor each item observable and create change
-            let changes = shared
-                .pipe(mergeMany((t, k) =>
-                    reevaluator(t, k)
-                        .pipe(map(_ => {
+            const changes = shared.pipe(
+                mergeMany((t, k) =>
+                    reevaluator(t, k).pipe(
+                        map(_ => {
                             if (!isNotifyPropertyChanged(t)) {
-                                throw new Error("Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges");
+                                throw new Error(
+                                    'Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges',
+                                );
                             }
                             return new Change<NotifyPropertyChangedType<TObject>, TKey>('refresh', k, t);
-                        })),
-                ));
+                        }),
+                    ),
+                ),
+            );
 
             //create a changeset, either buffered or one item at the time
             let refreshChanges: Observable<IChangeSet<NotifyPropertyChangedType<TObject>, TKey>>;
             if (changeSetBuffer === undefined) {
-                refreshChanges = changes.pipe(map(c => new ChangeSet<NotifyPropertyChangedType<TObject>, TKey>([c])));
+                refreshChanges = changes.pipe(
+                    map(
+                        c => new ChangeSet<NotifyPropertyChangedType<TObject>, TKey>([c]),
+                    ),
+                );
             } else {
-                refreshChanges = changes
-                    .pipe(
-                        // TODO: There has be to be better way to buffer / window these changes in such a way where we don't always have a buffer opening and closing
-                        bufferTime(changeSetBuffer, scheduler),
-                        filter(z => z.some(x => true)),
-                        map(items => new ChangeSet<NotifyPropertyChangedType<TObject>, TKey>(items)),
-                    );
+                refreshChanges = changes.pipe(
+                    // TODO: There has be to be better way to buffer / window these changes in such a way where we don't always have a buffer opening and closing
+                    bufferTime(changeSetBuffer, scheduler),
+                    filter(z => z.some(x => true)),
+                    map(items => new ChangeSet<NotifyPropertyChangedType<TObject>, TKey>(items)),
+                );
             }
 
-            const publisher = merge(shared, refreshChanges)
-                .subscribe(observer);
+            const publisher = merge(shared, refreshChanges).subscribe(observer);
 
             return new CompositeDisposable(publisher, shared.connect());
         });

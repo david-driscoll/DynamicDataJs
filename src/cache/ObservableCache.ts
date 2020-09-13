@@ -18,13 +18,13 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
     private readonly _readerWriter: ReaderWriter<TObject, TKey>;
     private readonly _cleanUp = new CompositeDisposable();
     private _editLevel = 0; // The level of recursion in editing.
-    private _keySelector?: (obj: TObject) => TKey;
+    private _keySelector?: (object: TObject) => TKey;
 
-    constructor(keySelector: (obj: TObject) => TKey, deepEqual?: boolean) ;
+    constructor(keySelector: (object: TObject) => TKey, deepEqual?: boolean);
     constructor(source: Observable<IChangeSet<TObject, TKey>>, deepEqual?: boolean);
     constructor(deepEqual: boolean);
     constructor();
-    constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((obj: TObject) => TKey) | boolean, deepEqual = false) {
+    constructor(sourceOrKeySelector?: Observable<IChangeSet<TObject, TKey>> | ((object: TObject) => TKey) | boolean, deepEqual = false) {
         if (typeof sourceOrKeySelector === 'boolean') {
             deepEqual = sourceOrKeySelector;
             sourceOrKeySelector = undefined;
@@ -58,13 +58,15 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
             this._readerWriter = new ReaderWriter<TObject, TKey>(sourceOrKeySelector, deepEqual);
         }
 
-        this._cleanUp.add(Disposable.create(() => {
-            this._changes.complete();
-            this._changesPreview.complete();
-            if (this._countChanged.isValueCreated) {
-                this._countChanged.value!.complete();
-            }
-        }));
+        this._cleanUp.add(
+            Disposable.create(() => {
+                this._changes.complete();
+                this._changesPreview.complete();
+                if (this._countChanged.isValueCreated) {
+                    this._countChanged.value!.complete();
+                }
+            }),
+        );
     }
 
     [Symbol.iterator](): IterableIterator<[TKey, TObject]> {
@@ -141,7 +143,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
             }
 
             return this._changes.pipe(finalize(() => observer.complete())).subscribe(changes => {
-                for (let change of changes) {
+                for (const change of changes) {
                     if (change.key === key) {
                         observer.next(change);
                     }
@@ -155,9 +157,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
             const initial = of(this.getInitialUpdates(predicate));
             const changes = concat(initial, this._changes.asObservable());
 
-            return (predicate ? changes.pipe(filter(predicate)) : changes)
-                .pipe(notEmpty())
-                ;
+            return (predicate ? changes.pipe(filter(predicate)) : changes).pipe(notEmpty());
         });
     }
 

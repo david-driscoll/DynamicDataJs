@@ -1,11 +1,13 @@
 import { find } from 'ix/iterable';
 import equal from 'fast-deep-equal';
 
-export function deepEqualMapAdapter<TKey, TObject>(map: Map<TKey, TObject>): {
-    get: typeof Map.prototype.get,
-    set: typeof Map.prototype.set,
-    has: typeof Map.prototype.has,
-    delete: typeof Map.prototype.delete,
+export function deepEqualMapAdapter<TKey, TObject>(
+    map: Map<TKey, TObject>,
+): {
+    get: typeof Map.prototype.get;
+    set: typeof Map.prototype.set;
+    has: typeof Map.prototype.has;
+    delete: typeof Map.prototype.delete;
 } {
     return {
         get(key) {

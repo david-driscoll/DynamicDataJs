@@ -25,7 +25,10 @@ export function watchValue<TObject, TKey>(cache: IObservableCache<TObject, TKey>
     } else {
         key = cache;
         return function watchValueOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-            return source.pipe(watch(key), map(z => z.current));
+            return source.pipe(
+                watch(key),
+                map(z => z.current),
+            );
         };
     }
 }

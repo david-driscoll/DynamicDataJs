@@ -10,7 +10,13 @@ function defaultComparer<T>(a: T, b: T) {
 const NotifyPropertyChangedBaseSubject = Symbol.for('NotifyPropertyChangedBaseSubject');
 const notifyPropertyChangedSymbolInternal = Symbol.for('notifyPropertyChangedSymbolInternal');
 
-function setAndRaise<THIS extends { [notifyPropertyChangedSymbol]: Observable<keyof THIS> }, TProperty extends keyof THIS>(target: THIS, property: TProperty, setter: (value: THIS[TProperty]) => void, newValue: THIS[TProperty], equalityComparer: EqualityComparer<THIS[TProperty]> = defaultComparer) {
+function setAndRaise<THIS extends { [notifyPropertyChangedSymbol]: Observable<keyof THIS> }, TProperty extends keyof THIS>(
+    target: THIS,
+    property: TProperty,
+    setter: (value: THIS[TProperty]) => void,
+    newValue: THIS[TProperty],
+    equalityComparer: EqualityComparer<THIS[TProperty]> = defaultComparer,
+) {
     if (defaultComparer(target[property], newValue)) {
         return;
     }
@@ -29,7 +35,6 @@ function creator(object: any) {
     (object as any)[notifyPropertyChangedSymbolInternal] = sub.asObservable();
 }
 
-
 export abstract class NotifyPropertyChangedBase {
     private readonly [NotifyPropertyChangedBaseSubject] = new Subject<keyof this>();
     [notifyPropertyChangedSymbol] = this[NotifyPropertyChangedBaseSubject].asObservable();
@@ -38,7 +43,13 @@ Object.defineProperty(NotifyPropertyChangedBase.prototype, 'setAndRaise', {
     enumerable: false,
     configurable: false,
     writable: false,
-    value: function setAndRaiseProto<THIS extends NotifyPropertyChangedBase, TProperty extends keyof THIS>(this: THIS, property: TProperty, setter: (value: THIS[TProperty]) => void, newValue: THIS[TProperty], equalityComparer: EqualityComparer<THIS[TProperty]> = defaultComparer) {
+    value: function setAndRaiseProto<THIS extends NotifyPropertyChangedBase, TProperty extends keyof THIS>(
+        this: THIS,
+        property: TProperty,
+        setter: (value: THIS[TProperty]) => void,
+        newValue: THIS[TProperty],
+        equalityComparer: EqualityComparer<THIS[TProperty]> = defaultComparer,
+    ) {
         if (this[notifyPropertyChangedSymbol] === undefined) {
             creator(this);
         }
@@ -46,7 +57,7 @@ Object.defineProperty(NotifyPropertyChangedBase.prototype, 'setAndRaise', {
     },
 });
 
-export function NotifyPropertyChanged<TFunction extends { new(...args: any[]): {} }>(target: TFunction): TFunction {
+export function NotifyPropertyChanged<TFunction extends { new (...arguments_: any[]): {} }>(target: TFunction): TFunction {
     Object.defineProperty(target.prototype, NotifyPropertyChangedBaseSubject, {
         enumerable: false,
         configurable: false,
@@ -76,7 +87,16 @@ export function NotifyPropertyChanged<TFunction extends { new(...args: any[]): {
         enumerable: false,
         configurable: false,
         writable: false,
-        value: function setAndRaiseProto<THIS extends InstanceType<TFunction> & { [notifyPropertyChangedSymbol]: Observable<keyof InstanceType<TFunction>> }, TProperty extends keyof THIS>(this: THIS, property: TProperty, setter: (value: THIS[TProperty]) => void, newValue: THIS[TProperty], equalityComparer: EqualityComparer<THIS[TProperty]> = defaultComparer) {
+        value: function setAndRaiseProto<
+            THIS extends InstanceType<TFunction> & { [notifyPropertyChangedSymbol]: Observable<keyof InstanceType<TFunction>> },
+            TProperty extends keyof THIS
+        >(
+            this: THIS,
+            property: TProperty,
+            setter: (value: THIS[TProperty]) => void,
+            newValue: THIS[TProperty],
+            equalityComparer: EqualityComparer<THIS[TProperty]> = defaultComparer,
+        ) {
             if (this[notifyPropertyChangedSymbol] === undefined) {
                 creator(this);
             }
@@ -98,7 +118,7 @@ export function NotifyChanged<T>(equalityComparer: EqualityComparer<T> = default
                         return this[propertyKey];
                     },
                     set(this: NotifyPropertyChangedBase, value): void {
-                        setAndRaise(this, propertyKey as any, v => (this as any)[propertyKey] = v, value, equalityComparer);
+                        setAndRaise(this, propertyKey as any, v => ((this as any)[propertyKey] = v), value, equalityComparer);
                     },
                 });
             } else {
@@ -129,7 +149,7 @@ export function NotifyChanged<T>(equalityComparer: EqualityComparer<T> = default
                     return this[sym];
                 },
                 set(this: NotifyPropertyChangedBase, value): void {
-                    setAndRaise(this, propertyKey as any, v => (this as any)[sym] = v, value, equalityComparer);
+                    setAndRaise(this, propertyKey as any, v => ((this as any)[sym] = v), value, equalityComparer);
                 },
             });
         }

@@ -32,7 +32,7 @@ export class IndexCalculator<TObject, TKey> {
     public reset(cache: ChangeAwareCache<TObject, TKey>) {
         this._list = toArray(from(cache.entries()).pipe(orderBy(z => z, this._comparer)));
         // cache.clone(this._list)
-        return this.reorder()
+        return this.reorder();
     }
 
     public changeComparer(comparer: KeyValueComparer<TObject, TKey>): IChangeSet<TObject, TKey> {
@@ -63,7 +63,7 @@ export class IndexCalculator<TObject, TKey> {
                 continue;
             }
 
-            var old = this._list.indexOf(current);
+            const old = this._list.indexOf(current);
             this._list.splice(old, 1);
             this._list.splice(index, 0, current);
 
@@ -80,41 +80,43 @@ export class IndexCalculator<TObject, TKey> {
             const current: [TKey, TObject] = [u.key, u.current];
 
             switch (u.reason) {
-                case 'add': {
-                    const position = this.getInsertPositionBinary(current);
-                    this._list.splice(position, 0, current);
+                case 'add':
+                    {
+                        const position = this.getInsertPositionBinary(current);
+                        this._list.splice(position, 0, current);
 
-                    result.push(new Change<TObject, TKey>('add', u.key, u.current, position));
-                }
-
-                    break;
-
-                case 'update': {
-                    const old = this.getCurrentPosition([u.key, u.previous!]);
-                    this._list.splice(old, 1);
-
-                    const newposition = this.getInsertPositionBinary(current);
-                    this._list.splice(newposition, 0, current);
-
-                    result.push(new Change<TObject, TKey>('update',
-                        u.key,
-                        u.current, u.previous, newposition, old));
-                }
+                        result.push(new Change<TObject, TKey>('add', u.key, u.current, position));
+                    }
 
                     break;
 
-                case 'remove': {
-                    const position = this.getCurrentPosition(current);
-                    this._list.splice(position, 1);
-                    result.push(new Change<TObject, TKey>('remove', u.key, u.current, position));
-                }
+                case 'update':
+                    {
+                        const old = this.getCurrentPosition([u.key, u.previous!]);
+                        this._list.splice(old, 1);
+
+                        const newposition = this.getInsertPositionBinary(current);
+                        this._list.splice(newposition, 0, current);
+
+                        result.push(new Change<TObject, TKey>('update', u.key, u.current, u.previous, newposition, old));
+                    }
 
                     break;
 
-                case 'refresh': {
-                    refreshes.push(u);
-                    result.push(u);
-                }
+                case 'remove':
+                    {
+                        const position = this.getCurrentPosition(current);
+                        this._list.splice(position, 1);
+                        result.push(new Change<TObject, TKey>('remove', u.key, u.current, position));
+                    }
+
+                    break;
+
+                case 'refresh':
+                    {
+                        refreshes.push(u);
+                        result.push(u);
+                    }
 
                     break;
             }
@@ -188,8 +190,8 @@ export class IndexCalculator<TObject, TKey> {
     }
 
     private getInsertPositionLinear(list: readonly [TKey, TObject][], item: readonly [TKey, TObject]): number {
-        for (let i = 0; i < list.length; i++) {
-            if (this._comparer(item, list[i]) < 0) {
+        for (const [i, element] of list.entries()) {
+            if (this._comparer(item, element) < 0) {
                 return i;
             }
         }

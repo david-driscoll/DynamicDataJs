@@ -11,10 +11,9 @@ import { filter, mergeMap } from 'rxjs/operators';
  */
 export function watch<TObject, TKey>(key: TKey): OperatorFunction<IChangeSet<TObject, TKey>, Change<TObject, TKey>> {
     return function watchOperator(source) {
-        return source
-            .pipe(
-                mergeMap(updates => updates),
-                filter(update => update.key === key),
-            );
+        return source.pipe(
+            mergeMap(updates => updates),
+            filter(update => update.key === key),
+        );
     };
 }

@@ -13,9 +13,12 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
  */
 export function onItemUpdated<TObject, TKey>(action: (current: TObject, previous: TObject) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function onItemUpdatedOperator(source) {
-        return source
-            .pipe(
-                tap(changes => ixFrom(changes).pipe(ixFilter(x => x.reason === 'update')).forEach(change => action(change.current, change.previous!))),
-            );
+        return source.pipe(
+            tap(changes =>
+                ixFrom(changes)
+                    .pipe(ixFilter(x => x.reason === 'update'))
+                    .forEach(change => action(change.current, change.previous!)),
+            ),
+        );
     };
 }

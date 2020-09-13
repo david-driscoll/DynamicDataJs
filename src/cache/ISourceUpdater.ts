@@ -14,8 +14,7 @@ import { ICacheUpdater } from './ICacheUpdater';
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */
-export interface ISourceUpdater<TObject, TKey> extends ICacheUpdater<TObject, TKey>
-{
+export interface ISourceUpdater<TObject, TKey> extends ICacheUpdater<TObject, TKey> {
     /**
      *  Clears existing values and loads the specified items
      * @param entries The entries.

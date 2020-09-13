@@ -12,6 +12,6 @@ export function keyValueComparer<TObject, TKey>(keyComparer: Comparer<TKey>, val
     };
 }
 
-export function defaultComparer<T extends { valueOf(): any } >(a: T, b: T) {
+export function defaultComparer<T extends { valueOf(): any }>(a: T, b: T) {
     return a === b ? 0 : a > b ? 1 : -1;
 }

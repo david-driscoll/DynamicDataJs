@@ -41,18 +41,16 @@ export function clone<TObject extends object, TKey>(target: WeakSet<TObject>): M
  * @param deepEqual Use deep equality for finding values
  */
 export function clone<TObject, TKey>(target: TObject[], deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
-export function clone<TObject, TKey>(collection: Map<TKey, TObject> | Set<TObject> | WeakSet<any> | TObject[], deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
-
-    type collectionWrapper = { add(value: TObject, key: TKey): void; remove(value: TObject, key: TKey): void; };
+export function clone<TObject, TKey>(
+    collection: Map<TKey, TObject> | Set<TObject> | WeakSet<any> | TObject[],
+    deepEqual?: boolean,
+): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
+    type collectionWrapper = { add(value: TObject, key: TKey): void; remove(value: TObject, key: TKey): void };
     let cw: collectionWrapper;
     if (Array.isArray(collection)) {
-        cw = deepEqual ?
-            arrayFindIndexAdapter(collection) :
-            arrayIndexOfAdapter(collection);
+        cw = deepEqual ? arrayFindIndexAdapter(collection) : arrayIndexOfAdapter(collection);
     } else if (isMap(collection)) {
-        cw = deepEqual ?
-            mapFindAdapter(collection) :
-            mapDeleteAdapter(collection);
+        cw = deepEqual ? mapFindAdapter(collection) : mapDeleteAdapter(collection);
     } else if (isWeakSet(collection) || isSet(collection)) {
         if (isWeakSet(collection)) {
             cw = setDeleteAdapter(collection as any);

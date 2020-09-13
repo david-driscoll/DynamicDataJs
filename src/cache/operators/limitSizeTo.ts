@@ -66,20 +66,20 @@ class SizeLimiter<TObject, TKey> {
     public change(updates: IChangeSet<ExpirableItem<TObject, TKey>, TKey>): IChangeSet<TObject, TKey> {
         this._cache.clone(updates);
 
-        const itemstoexpire =ixToArray(ixFrom(this._cache.entries()).pipe(
-            orderByDescending(([key, value]) => value.expireAt),
-            ixSkip(this._sizeLimit),
-            ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value)),
-        ));
+        const itemstoexpire = ixToArray(
+            ixFrom(this._cache.entries()).pipe(
+                orderByDescending(([key, value]) => value.expireAt),
+                ixSkip(this._sizeLimit),
+                ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value)),
+            ),
+        );
 
-        if (itemstoexpire.length) {
+        if (itemstoexpire.length > 0) {
             this._cache.removeKeys(itemstoexpire.map(z => z.key));
         }
 
         const notifications = this._cache.captureChanges();
-        const changed = ixFrom(notifications).pipe(
-            ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value)),
-        );
+        const changed = ixFrom(notifications).pipe(ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value)));
 
         return new ChangeSet<TObject, TKey>(changed);
     }

@@ -25,10 +25,7 @@ export function filterDynamic<TObject, TKey>(
  * @param predicateChanged Observable to change the underlying predicate.
  * @param reapplyFilter Observable to re-evaluate whether the filter still matches items. Use when filtering on mutable values
  */
-export function filterDynamic<TObject, TKey>(
-    predicateChanged: Observable<unknown>,
-    reapplyFilter?: Observable<unknown>,
-): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
+export function filterDynamic<TObject, TKey>(predicateChanged: Observable<unknown>, reapplyFilter?: Observable<unknown>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  *  Creates a filtered stream which can be dynamically filtered
  * @typeparam TObject The type of the object.
@@ -44,18 +41,20 @@ export function filterDynamic<TObject, TKey>(
         return new Observable<IChangeSet<TObject, TKey>>(observer => {
             const allData = new Cache<TObject, TKey>();
             const filteredData = new ChangeAwareCache<TObject, TKey>();
-            let predicate: ((value: TObject, key: TKey) => boolean) = t => false;
+            let predicate = function (value: TObject, key: TKey) {
+                return false;
+            };
 
-            const refresher = latestPredicateObservable()
-                .pipe(
-                    map(p => {
-                        //reapply filter using all data from the cache
-                        predicate = p;
-                        return refreshFilteredFrom(filteredData, allData, p);
-                    }));
+            const refresher = latestPredicateObservable().pipe(
+                map(p => {
+                    //reapply filter using all data from the cache
+                    predicate = p;
+                    return refreshFilteredFrom(filteredData, allData, p);
+                }),
+            );
 
-            const dataChanged = source
-                .pipe(map(changes => {
+            const dataChanged = source.pipe(
+                map(changes => {
                     //maintain all data [required to re-apply filter]
                     allData.clone(changes);
 
@@ -64,29 +63,26 @@ export function filterDynamic<TObject, TKey>(
 
                     //get latest changes
                     return filteredData.captureChanges();
-                }));
+                }),
+            );
 
-            return merge(refresher, dataChanged)
-                .pipe(notEmpty())
-                .subscribe(observer);
+            return merge(refresher, dataChanged).pipe(notEmpty()).subscribe(observer);
         });
 
         function latestPredicateObservable(): Observable<(value: TObject, key: TKey) => boolean> {
             return new Observable<(value: TObject, key: TKey) => boolean>(observable => {
-                let latest: (value: TObject, key: TKey) => boolean = t => false;
+                let latest = function (value: TObject, key: TKey) {
+                    return false;
+                };
 
                 observable.next(latest);
 
-                const predicateChangedSub = predicateChanged
-                    .pipe(map(z => (typeof z === 'function' ? z : ((value: TObject, key: TKey) => true))))
-                    .subscribe(predicate => {
-                        latest = predicate as any;
-                        observable.next(latest);
-                    });
+                const predicateChangedSub = predicateChanged.pipe(map(z => (typeof z === 'function' ? z : (value: TObject, key: TKey) => true))).subscribe(predicate => {
+                    latest = predicate as any;
+                    observable.next(latest);
+                });
 
-                const reapplierSub = reapplyFilter == undefined
-                    ? Subscription.EMPTY
-                    : reapplyFilter.subscribe(_ => observable.next(latest));
+                const reapplierSub = reapplyFilter == undefined ? Subscription.EMPTY : reapplyFilter.subscribe(_ => observable.next(latest));
 
                 return () => {
                     predicateChangedSub.unsubscribe();
@@ -105,21 +101,22 @@ export function filterDynamic<TObject, TKey>(
  */
 export function filter<TObject, TKey>(predicate: (value: TObject) => boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function filterOperator(source: Observable<IChangeSet<TObject, TKey>>) {
-        return source
-            .pipe(scan((cache, changes) => {
-                    filterChanges(cache, changes, predicate);
-                    return cache;
-                }, new ChangeAwareCache<TObject, TKey>()),
-                map(cache => cache.captureChanges()),
-                notEmpty(),
-            );
+        return source.pipe(
+            scan((cache, changes) => {
+                filterChanges(cache, changes, predicate);
+                return cache;
+            }, new ChangeAwareCache<TObject, TKey>()),
+            map(cache => cache.captureChanges()),
+            notEmpty(),
+        );
     };
 }
 
 function refreshFilteredFrom<TObject, TKey>(
     filtered: ChangeAwareCache<TObject, TKey>,
     allData: Cache<TObject, TKey>,
-    predicate: (value: TObject, key: TKey) => boolean): IChangeSet<TObject, TKey> {
+    predicate: (value: TObject, key: TKey) => boolean,
+): IChangeSet<TObject, TKey> {
     if (allData.size == 0) {
         return ChangeSet.empty<TObject, TKey>();
     }
@@ -142,49 +139,50 @@ function refreshFilteredFrom<TObject, TKey>(
     return filtered.captureChanges();
 }
 
-function filterChanges<TObject, TKey>(cache: ChangeAwareCache<TObject, TKey>,
-                                      changes: IChangeSet<TObject, TKey>,
-                                      predicate: (value: TObject, key: TKey) => boolean) {
+function filterChanges<TObject, TKey>(cache: ChangeAwareCache<TObject, TKey>, changes: IChangeSet<TObject, TKey>, predicate: (value: TObject, key: TKey) => boolean) {
     for (const change of changes) {
         const key = change.key;
         switch (change.reason) {
-            case 'add': {
-                const current = change.current;
-                if (predicate(current, key)) {
-                    cache.addOrUpdate(current, key);
-                } else {
-                    cache.removeKey(key);
+            case 'add':
+                {
+                    const current = change.current;
+                    if (predicate(current, key)) {
+                        cache.addOrUpdate(current, key);
+                    } else {
+                        cache.removeKey(key);
+                    }
                 }
-            }
 
                 break;
-            case 'update': {
-                const current = change.current;
-                if (predicate(current, key)) {
-                    cache.addOrUpdate(current, key);
-                } else {
-                    cache.removeKey(key);
+            case 'update':
+                {
+                    const current = change.current;
+                    if (predicate(current, key)) {
+                        cache.addOrUpdate(current, key);
+                    } else {
+                        cache.removeKey(key);
+                    }
                 }
-            }
 
                 break;
             case 'remove':
                 cache.removeKey(key);
                 break;
-            case 'refresh': {
-                const exisiting = cache.lookup(key);
-                if (predicate(change.current, key)) {
-                    if (!exisiting) {
-                        cache.addOrUpdate(change.current, key);
+            case 'refresh':
+                {
+                    const exisiting = cache.lookup(key);
+                    if (predicate(change.current, key)) {
+                        if (!exisiting) {
+                            cache.addOrUpdate(change.current, key);
+                        } else {
+                            cache.refreshKey(key);
+                        }
                     } else {
-                        cache.refreshKey(key);
-                    }
-                } else {
-                    if (exisiting) {
-                        cache.removeKey(key);
+                        if (exisiting) {
+                            cache.removeKey(key);
+                        }
                     }
                 }
-            }
 
                 break;
         }

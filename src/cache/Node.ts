@@ -70,6 +70,7 @@ export class Node<TObject, TKey> implements IDisposable {
 
             i++;
             parent = parent.parent;
+            // eslint-disable-next-line no-constant-condition
         } while (true);
         return i;
     }

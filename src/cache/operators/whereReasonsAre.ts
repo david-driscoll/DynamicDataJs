@@ -16,10 +16,9 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
  */
 export function whereReasonsAre<TObject, TKey>(...reasons: ChangeReason[]): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function onItemUpdatedOperator(source) {
-        return source
-            .pipe(
-                map(updates => new ChangeSet(ixFrom(updates).pipe(ixFilter(x => reasons.includes(x.reason))))),
-                notEmpty(),
-            );
+        return source.pipe(
+            map(updates => new ChangeSet(ixFrom(updates).pipe(ixFilter(x => reasons.includes(x.reason))))),
+            notEmpty(),
+        );
     };
 }

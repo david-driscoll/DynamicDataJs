@@ -13,40 +13,37 @@ import { mergeMany } from './mergeMany';
  * @typeparam TValue The type of the value.
  * @param itemChangedTrigger Should the query be triggered for observables on individual items
  */
-export function queryWhenChanged<TObject, TKey>(
-    itemChangedTrigger?: (value: TObject) => Observable<unknown>): OperatorFunction<IChangeSet<TObject, TKey>, IQuery<TObject, TKey>> {
+export function queryWhenChanged<TObject, TKey>(itemChangedTrigger?: (value: TObject) => Observable<unknown>): OperatorFunction<IChangeSet<TObject, TKey>, IQuery<TObject, TKey>> {
     return function queryWhenChangedBaseOperator(source) {
-        if (itemChangedTrigger == null) {
-            return source
-                .pipe(scan(
-                    (cache, changes) => {
-                        cache.clone(changes);
-                        return cache;
-                    }, new Cache<TObject, TKey>(),
-                    ),
-                    map(list => new AnonymousQuery<TObject, TKey>(list)),
-                );
+        if (itemChangedTrigger == undefined) {
+            return source.pipe(
+                scan((cache, changes) => {
+                    cache.clone(changes);
+                    return cache;
+                }, new Cache<TObject, TKey>()),
+                map(list => new AnonymousQuery<TObject, TKey>(list)),
+            );
         }
 
-        return source
-            .pipe(publish(shared => {
+        return source.pipe(
+            publish(shared => {
                 const state = new Cache<TObject, TKey>();
 
-                const inlineChange = shared
-                    .pipe(mergeMany(itemChangedTrigger),
-                        map(_ => new AnonymousQuery<TObject, TKey>(state)),
-                    );
+                const inlineChange = shared.pipe(
+                    mergeMany(itemChangedTrigger),
+                    map(_ => new AnonymousQuery<TObject, TKey>(state)),
+                );
 
-
-                const sourceChanged = shared
-                    .pipe(scan((list, changes) => {
-                            list.clone(changes);
-                            return list;
-                        }, state),
-                        map(list => new AnonymousQuery<TObject, TKey>(list)),
-                    );
+                const sourceChanged = shared.pipe(
+                    scan((list, changes) => {
+                        list.clone(changes);
+                        return list;
+                    }, state),
+                    map(list => new AnonymousQuery<TObject, TKey>(list)),
+                );
 
                 return merge(sourceChanged, inlineChange);
-            }));
+            }),
+        );
     };
 }

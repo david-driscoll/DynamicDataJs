@@ -57,7 +57,6 @@
 // return source.StartWith(new ChangeSet<TObject, TKey>{change});
 // }
 
-
 // public static IObservable<IPagedChangeSet<TObject, TKey>> Page<TObject, TKey>([NotNull] this IObservable<ISortedChangeSet<TObject, TKey>> source,
 // [NotNull] IObservable<IPageRequest> pageRequests)
 // {

@@ -8,16 +8,8 @@ export class KeyValueCollection<TObject, TKey> implements IKeyValueCollection<TO
     private readonly _items: ReadonlyArray<[TKey, TObject]>;
 
     public constructor();
-    public constructor(
-        items: ReadonlyArray<[TKey, TObject]>,
-        comparer: KeyValueComparer<TObject, TKey>,
-        sortReason: SortReason,
-        optimizations: SortOptimizations);
-    public constructor(
-        items?: ReadonlyArray<[TKey, TObject]>,
-        comparer?: KeyValueComparer<TObject, TKey>,
-        sortReason?: SortReason,
-        optimizations?: SortOptimizations) {
+    public constructor(items: ReadonlyArray<[TKey, TObject]>, comparer: KeyValueComparer<TObject, TKey>, sortReason: SortReason, optimizations: SortOptimizations);
+    public constructor(items?: ReadonlyArray<[TKey, TObject]>, comparer?: KeyValueComparer<TObject, TKey>, sortReason?: SortReason, optimizations?: SortOptimizations) {
         if (items === undefined) {
             this._items = [];
             this.size = 0;
@@ -66,5 +58,5 @@ export class KeyValueCollection<TObject, TKey> implements IKeyValueCollection<TO
 
     values() {
         return this._items.values();
-    };
+    }
 }

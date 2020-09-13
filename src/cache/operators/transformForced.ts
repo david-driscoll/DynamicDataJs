@@ -22,7 +22,7 @@ export function transformForced<TSource, TKey, TDestination>(
     transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
     forceTransform: Observable<(value: TSource, key: TKey) => boolean>,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
-): ChangeSetOperatorFunction<TSource, TKey, TDestination>
+): ChangeSetOperatorFunction<TSource, TKey, TDestination>;
 /**
  * Projects each update item to a new form using the specified transform function
  * @typeparam TDestination The type of the destination.
@@ -61,7 +61,7 @@ export function transformForced<TSource, TKey, TDestination>(
 
             //create change set of items where force refresh is applied
             const refresher: Observable<IChangeSet<TSource, TKey>> = forceTransform.pipe(
-                map(z => (typeof z === 'function' ? z : ((value: TSource, key: TKey) => true))),
+                map(z => (typeof z === 'function' ? z : (value: TSource, key: TKey) => true)),
                 map(selector => captureChanges(cache, selector as any)),
                 map(changes => new ChangeSet(changes)),
                 notEmpty(),
@@ -76,7 +76,7 @@ export function transformForced<TSource, TKey, TDestination>(
         });
 
         // eslint-disable-next-line unicorn/consistent-function-scoping
-        function* captureChanges(cache: Cache<TSource, TKey>, shouldTransform: ((value: TSource, key: TKey) => boolean)) {
+        function* captureChanges(cache: Cache<TSource, TKey>, shouldTransform: (value: TSource, key: TKey) => boolean) {
             for (const [key, value] of cache.entries()) {
                 if (shouldTransform(value, key)) {
                     yield new Change<TSource, TKey>('refresh', key, value);

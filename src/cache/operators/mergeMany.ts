@@ -16,8 +16,7 @@ export function mergeMany<TObject, TKey, TDestination>(
     return function mergeManyOperator(source) {
         return new Observable<TDestination>(observer => {
             return source.pipe(subscribeMany((t, v) => observableSelector(t, v).subscribe(x => observer.next(x)))).subscribe(
-                x => {
-                },
+                x => {},
                 ex => observer.error(ex),
                 // TODO: Is this needed
                 () => observer.complete(),

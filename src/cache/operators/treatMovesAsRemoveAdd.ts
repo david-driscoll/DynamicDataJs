@@ -11,19 +11,18 @@ import { SortedChangeSet } from '../SortedChangeSet';
  * @typeparam TKey The type of the key.
  */
 export function treatMovesAsRemoveAdd<TObject, TKey>(): MonoTypeOperatorFunction<ISortedChangeSet<TObject, TKey>> {
-    return function treatMovesAsRemoveAddOperator(source) {
-        function* replaceMoves(items: IChangeSet<TObject, TKey>): Iterable<Change<TObject, TKey>> {
-            for (const change of items) {
-                if (change.reason === 'moved') {
-                    yield new Change<TObject, TKey>('remove', change.key, change.current, change.previousIndex);
-                    yield new Change<TObject, TKey>('add', change.key, change.current, change.currentIndex);
-                } else {
-                    yield change;
-                }
+    function* replaceMoves(items: IChangeSet<TObject, TKey>): Iterable<Change<TObject, TKey>> {
+        for (const change of items) {
+            if (change.reason === 'moved') {
+                yield new Change<TObject, TKey>('remove', change.key, change.current, change.previousIndex);
+                yield new Change<TObject, TKey>('add', change.key, change.current, change.currentIndex);
+            } else {
+                yield change;
             }
         }
+    }
 
-        return source
-            .pipe(map(changes => new SortedChangeSet<TObject, TKey>(changes.sortedItems, replaceMoves(changes))));
+    return function treatMovesAsRemoveAddOperator(source) {
+        return source.pipe(map(changes => new SortedChangeSet<TObject, TKey>(changes.sortedItems, replaceMoves(changes))));
     };
 }

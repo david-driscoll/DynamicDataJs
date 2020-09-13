@@ -28,10 +28,9 @@ export function sort<TObject, TKey>(
     resort: Observable<unknown> = NEVER,
     resetThreshold = -1,
     keyComparer: Comparer<TKey> = defaultComparer,
-    sortOptimisations: SortOptimizations = 'none'
+    sortOptimisations: SortOptimizations = 'none',
 ): OperatorFunction<IChangeSet<TObject, TKey>, ISortedChangeSet<TObject, TKey>> {
     return function sortOperator(source) {
-
         const _cache = new ChangeAwareCache<TObject, TKey>();
 
         let _comparer: KeyValueComparer<TObject, TKey> | undefined = keyValueComparer(keyComparer, comparer);
@@ -81,55 +80,59 @@ export function sort<TObject, TKey>(
             if (!_initialised) {
                 sortReason = 'initialLoad';
                 _initialised = true;
-            } else if (changes !== undefined && (resetThreshold > 0 && changes.size >= resetThreshold)) {
+            } else if (changes !== undefined && resetThreshold > 0 && changes.size >= resetThreshold) {
                 sortReason = 'reset';
             }
 
             let changeSet: IChangeSet<TObject, TKey>;
             switch (sortReason) {
-                case 'initialLoad': {
-                    //For the first batch, changes may have arrived before the comparer was set.
-                    //therefore infer the first batch of changes from the cache
-                    _calculator = new IndexCalculator<TObject, TKey>(_comparer, sortOptimisations);
-                    changeSet = _calculator.load(_cache);
-                }
+                case 'initialLoad':
+                    {
+                        //For the first batch, changes may have arrived before the comparer was set.
+                        //therefore infer the first batch of changes from the cache
+                        _calculator = new IndexCalculator<TObject, TKey>(_comparer, sortOptimisations);
+                        changeSet = _calculator.load(_cache);
+                    }
 
                     break;
-                case 'reset': {
-                    _calculator.reset(_cache);
-                    changeSet = changes!;
-                }
-
-                    break;
-                case 'dataChanged': {
-                    changeSet = _calculator.calculate(changes!);
-                }
-                    break;
-
-                case 'comparerChanged': {
-                    changeSet = _calculator.changeComparer(_comparer);
-                    if (resetThreshold > 0 && _cache.size >= resetThreshold) {
-                        sortReason = 'reset';
+                case 'reset':
+                    {
                         _calculator.reset(_cache);
-                    } else {
-                        sortReason = 'reorder';
+                        changeSet = changes!;
+                    }
+
+                    break;
+                case 'dataChanged':
+                    {
+                        changeSet = _calculator.calculate(changes!);
+                    }
+                    break;
+
+                case 'comparerChanged':
+                    {
+                        changeSet = _calculator.changeComparer(_comparer);
+                        if (resetThreshold > 0 && _cache.size >= resetThreshold) {
+                            sortReason = 'reset';
+                            _calculator.reset(_cache);
+                        } else {
+                            sortReason = 'reorder';
+                            changeSet = _calculator.reorder();
+                        }
+                    }
+
+                    break;
+
+                case 'reorder':
+                    {
                         changeSet = _calculator.reorder();
                     }
-                }
-
-                    break;
-
-                case 'reorder': {
-                    changeSet = _calculator.reorder();
-                }
 
                     break;
                 default:
                     throw new Error('sortReason');
             }
 
-            if ((sortReason === 'initialLoad' || sortReason === 'dataChanged')
-                && changeSet.size == 0) {
+            if ((sortReason === 'initialLoad' || sortReason === 'dataChanged') && changeSet.size == 0) {
                 return;
             }
 
@@ -139,7 +142,6 @@ export function sort<TObject, TKey>(
 
             _sorted = new KeyValueCollection<TObject, TKey>(_calculator.list.slice(0), _comparer, sortReason, sortOptimisations);
             return new SortedChangeSet<TObject, TKey>(_sorted, changeSet);
-
         }
     };
 }
@@ -147,7 +149,7 @@ export function sort<TObject, TKey>(
 type SortExpression<T> = Comparer<T> & {
     thenByAscending<Key extends keyof T>(key: Key): SortExpression<T>;
     thenByDescending<Key extends keyof T>(key: Key): SortExpression<T>;
-}
+};
 
 function defaultAscending<T, Key extends keyof T = keyof T>(key: Key) {
     return function defaultAscendingComparer(a: T, b: T): number /* (-1 | 0 | 1) */ {
@@ -157,7 +159,7 @@ function defaultAscending<T, Key extends keyof T = keyof T>(key: Key) {
 
 function defaultDescending<T, Key extends keyof T = keyof T>(key: Key) {
     return function defaultDescendingComparer(a: T, b: T): number /* (-1 | 0 | 1) */ {
-        return 0 - defaultComparer(a[key], b[key]) as any;
+        return (0 - defaultComparer(a[key], b[key])) as any;
     };
 }
 

@@ -18,11 +18,13 @@ export function asObservableCache<TObject, TKey>(source: IObservableCache<TObjec
  * @param deepEqual Use deep equality with the cache
  */
 export function asObservableCache<TObject, TKey>(source: Observable<IChangeSet<TObject, TKey>>, deepEqual?: boolean): IObservableCache<TObject, TKey>;
-export function asObservableCache<TObject, TKey>(source: IObservableCache<TObject, TKey> | Observable<IChangeSet<TObject, TKey>>, deepEqual = false): IObservableCache<TObject, TKey> {
+export function asObservableCache<TObject, TKey>(
+    source: IObservableCache<TObject, TKey> | Observable<IChangeSet<TObject, TKey>>,
+    deepEqual = false,
+): IObservableCache<TObject, TKey> {
     if (isObservable(source)) {
         return new ObservableCache(source, deepEqual);
     } else {
         return source;
     }
 }
-
