@@ -36,7 +36,7 @@ jobs:
         shell: pwsh
         run: |
           $data = gc .\package.json -Raw | ConvertFrom-Json;
-          $data.version = '0.1.1';
+          $data.version = '${{ steps.gitversion.outputs.fullSemVer }}';
           set-content .\package.json ($data|ConvertTo-Json)
 
       - name: 🎁 npm install
