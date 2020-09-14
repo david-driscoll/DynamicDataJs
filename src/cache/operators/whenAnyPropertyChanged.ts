@@ -6,6 +6,7 @@ import { mergeMany } from './mergeMany';
 
 /**
  * Notifies when any any property on the object has changed
+ * @category Operator
  * @typeparam TObject The type of the object
  * @param value The object to observe
  * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes
@@ -13,6 +14,7 @@ import { mergeMany } from './mergeMany';
 export function whenAnyPropertyChanged<TObject>(value: TObject, ...propertiesToMonitor: (keyof TObject)[]): Observable<NotifyPropertyChangedType<TObject>>;
 /**
  * Watches each item in the collection and notifies when any of them has changed
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param propertiesToMonitor specify properties to Monitor, or omit to monitor all property changes

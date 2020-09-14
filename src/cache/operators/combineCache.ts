@@ -11,6 +11,12 @@ import { from as ixFrom } from 'ix/iterable/from';
 import { filter as ixFilter, skip, take } from 'ix/iterable/operators';
 import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 
+/**
+ * Combine a set of observables into a cache
+ * @category Operator
+ * @param operator the operator to use for combining
+ * @param items The list of observables that will be combined
+ */
 export function combineCache<TObject, TKey>(operator: CombineOperator, items: ArrayOrIterable<Observable<IChangeSet<TObject, TKey>>>): Observable<IChangeSet<TObject, TKey>> {
     return new Observable<IChangeSet<TObject, TKey>>(observer => {
         function updateAction(updates: IChangeSet<TObject, TKey>) {

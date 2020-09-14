@@ -5,6 +5,7 @@ export type ConnectionStatus = 'pending' | 'loaded' | 'errored' | 'completed';
 
 /**
  * Monitors the status of a stream
+ * @category Operator
  * @typeparam T
  */
 export function statusMonitor<T>(): OperatorFunction<T, ConnectionStatus> {

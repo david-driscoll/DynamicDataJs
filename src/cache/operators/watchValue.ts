@@ -6,6 +6,7 @@ import { watch } from './watch';
 
 /**
  * Watches updates for a single value matching the specified key
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param cache The cache.
@@ -14,6 +15,7 @@ import { watch } from './watch';
 export function watchValue<TObject, TKey>(cache: IObservableCache<TObject, TKey>, key: TKey): Observable<TObject>;
 /**
  * Watches updates for a single value matching the specified key
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param key The key.

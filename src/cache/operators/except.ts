@@ -6,6 +6,7 @@ import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 /**
  * Dynamically apply a logical Except operator between the collections
  * Items from the first collection in the outer list are included unless contained in any of the other lists
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param items The items

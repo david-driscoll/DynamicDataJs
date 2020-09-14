@@ -10,6 +10,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 /**
  * Only includes the update when the condition is met.
  * The first parameter in the ignore function is the current value and the second parameter is the previous value
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param includeFunction The include function (current,previous)=>{ return true to include }.

@@ -8,7 +8,8 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 import { ChangeSet } from '../ChangeSet';
 
 /**
- *  Creates a filtered stream which can be dynamically filtered
+ * Creates a filtered stream which can be dynamically filtered
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param predicateChanged Observable to change the underlying predicate.
@@ -19,7 +20,8 @@ export function filterDynamic<TObject, TKey>(
     reapplyFilter?: Observable<unknown>,
 ): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
- *  Creates a filtered stream which can be dynamically filtered
+ * Creates a filtered stream which can be dynamically filtered
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param predicateChanged Observable to change the underlying predicate.
@@ -27,7 +29,8 @@ export function filterDynamic<TObject, TKey>(
  */
 export function filterDynamic<TObject, TKey>(predicateChanged: Observable<unknown>, reapplyFilter?: Observable<unknown>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
- *  Creates a filtered stream which can be dynamically filtered
+ * Creates a filtered stream which can be dynamically filtered
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param predicateChanged Observable to change the underlying predicate.

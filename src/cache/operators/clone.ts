@@ -12,6 +12,7 @@ import { find, from } from 'ix/iterable';
 
 /**
  * Clones the changes  into the specified collection
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
@@ -20,6 +21,7 @@ import { find, from } from 'ix/iterable';
 export function clone<TObject, TKey>(target: Map<TKey, TObject>, deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
@@ -28,6 +30,7 @@ export function clone<TObject, TKey>(target: Map<TKey, TObject>, deepEqual?: boo
 export function clone<TObject, TKey>(target: Set<TObject>, deepEqual?: boolean): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.
@@ -35,6 +38,7 @@ export function clone<TObject, TKey>(target: Set<TObject>, deepEqual?: boolean):
 export function clone<TObject extends object, TKey>(target: WeakSet<TObject>): MonoTypeChangeSetOperatorFunction<TObject, TKey>;
 /**
  * Clones the changes  into the specified collection
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param target The target.

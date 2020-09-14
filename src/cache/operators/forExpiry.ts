@@ -13,6 +13,7 @@ import { subscribeMany } from './subscribeMany';
 /**
  * Automatically removes items from the stream after the time specified by
  * the timeSelector elapses.  Return null if the item should never be removed
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param timeSelector The time selector.

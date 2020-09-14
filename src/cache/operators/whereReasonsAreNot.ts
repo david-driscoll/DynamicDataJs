@@ -10,6 +10,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 
 /**
  * Excludes updates for the specified reasons
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param reasons The reasons.

@@ -6,6 +6,7 @@ import { ChangeStatistics } from '../ChangeStatistics';
 
 /**
  * Accumulates update statistics
+ * @category Diagnostic Operator
  * @typeparam TSource The type of the source.
  * @typeparam TKey The type of the key.
  * @param source The source.

@@ -4,7 +4,8 @@ import { Change } from '../Change';
 import { filter, mergeMap } from 'rxjs/operators';
 
 /**
- * Returns an observable of any updates which match the specified key,  preceeded with the initital cache state
+ * Returns an observable of any updates which match the specified key, preceded with the initial cache state
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param key The key.

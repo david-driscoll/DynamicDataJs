@@ -7,6 +7,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 
 /**
  * Callback for each item as and when it is being removed from the stream
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param action The remove action.

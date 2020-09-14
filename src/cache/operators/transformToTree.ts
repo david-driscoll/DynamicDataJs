@@ -12,7 +12,8 @@ import { Node } from '../Node';
 import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
- * Transforms the object to a fully recursive tree, create a hiearchy based on the pivot function
+ * Transforms the object to a fully recursive tree, create a hierarchy based on the pivot function
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param pivotOn The pivot on.

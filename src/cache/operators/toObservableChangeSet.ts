@@ -17,6 +17,7 @@ import { CompositeDisposable } from '../../util';
 /**
  * Converts the observable to an observable changeset.
  * Change set observes observable change events.
+ * @category Operator
  * @typeparam TObject The type of the object
  * @typeparam The type of the key
  * @param source The source

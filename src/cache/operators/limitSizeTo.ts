@@ -19,6 +19,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 /**
  * Applies a size limiter to the number of records which can be included in the
  * underlying cache.  When the size limit is reached the oldest items are removed.
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param size The size.

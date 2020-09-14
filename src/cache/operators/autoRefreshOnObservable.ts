@@ -10,6 +10,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Automatically refresh downstream operator. The refresh is triggered when the observable receives a notification
+ * @category Operator
  * @param reevaluator An observable which acts on items within the collection and produces a value when the item should be refreshed
  * @param changeSetBuffer Batch up changes by specifying the buffer. This greatly increases performance when many elements require a refresh
  * @param scheduler The scheduler

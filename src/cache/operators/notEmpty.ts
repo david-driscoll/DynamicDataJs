@@ -4,7 +4,8 @@ import { filter } from 'rxjs/operators';
 import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
- * Supresses updates which are empty
+ * Suppresses updates which are empty
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */

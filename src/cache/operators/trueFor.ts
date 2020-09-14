@@ -7,6 +7,10 @@ import { mergeMany } from './mergeMany';
 import { CompositeDisposable } from '../../util';
 import { toCollection } from './toCollection';
 
+/**
+ * @ignore
+ * Used for trueForAll and trueForAny
+ */
 export function trueFor<TObject, TKey, TValue>(
     observableSelector: (value: TObject) => Observable<TValue>,
     collectionMatcher: (data: ArrayOrIterable<ObservableWithValue<TObject, TValue>>) => boolean,

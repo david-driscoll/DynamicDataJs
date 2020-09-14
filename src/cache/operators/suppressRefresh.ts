@@ -4,10 +4,13 @@ import { whereReasonsAreNot } from './whereReasonsAreNot';
 import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
- * Supress  refresh notifications
+ * Suppress refresh notifications
+ * @category Operator
+ * @typeparam TObject The type of the object.
+ * @typeparam TKey The type of the key.
  */
 export function suppressRefresh<TObject, TKey>(): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
-    return function supressRefreshOperator(source) {
+    return function suppressRefreshOperator(source) {
         return source.pipe(whereReasonsAreNot('refresh'));
     };
 }

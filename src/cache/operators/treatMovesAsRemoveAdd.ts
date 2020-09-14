@@ -7,6 +7,7 @@ import { SortedChangeSet } from '../SortedChangeSet';
 
 /**
  * Converts moves changes to remove + add
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */

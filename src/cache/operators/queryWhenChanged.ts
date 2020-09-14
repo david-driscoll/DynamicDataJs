@@ -8,6 +8,7 @@ import { mergeMany } from './mergeMany';
 
 /**
  * The latest copy of the cache is exposed for querying i)  after each modification to the underlying data ii) on subscription
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TValue The type of the value.

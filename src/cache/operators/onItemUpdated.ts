@@ -7,6 +7,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 
 /**
  * Callback when an item has been updated eg. (current, previous)=>{}
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param action The update action.

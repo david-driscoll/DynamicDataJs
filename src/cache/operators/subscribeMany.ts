@@ -10,10 +10,11 @@ import { DistinctChangeSet } from '../DistinctChangeSet';
 import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
- * Subscribes to each item when it is added to the stream and unsubcribes when it is removed.  All items will be unsubscribed when the stream is disposed
+ * Subscribes to each item when it is added to the stream and unsubscribes when it is removed.  All items will be unsubscribed when the stream is disposed
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
- * @param subscriptionFactory The subsription function
+ * @param subscriptionFactory The subscription function
  */
 export function subscribeMany<TObject, TKey>(subscriptionFactory: (value: TObject, key: TKey) => IDisposableOrSubscription): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     return function subscribeManyOperator(source: Observable<IChangeSet<TObject, TKey>>) {

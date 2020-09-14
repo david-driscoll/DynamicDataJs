@@ -8,6 +8,7 @@ import { every } from 'ix/iterable';
  * the equality condition. The observable is re-evaluated whenever
  * i) The cache changes
  * or ii) The inner observable changes
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TValue The type of the value.

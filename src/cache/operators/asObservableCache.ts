@@ -5,6 +5,7 @@ import { IChangeSet } from '../IChangeSet';
 
 /**
  * Converts the source to an read only observable cache
+ * @category Operator
  * @typeparam TObject The type of the object
  * @typeparam TKey The type of the key
  * @param source The source
@@ -12,6 +13,7 @@ import { IChangeSet } from '../IChangeSet';
 export function asObservableCache<TObject, TKey>(source: IObservableCache<TObject, TKey>): IObservableCache<TObject, TKey>;
 /**
  * Converts the source to an read only observable cache
+ * @category Operator
  * @typeparam TObject The type of the object
  * @typeparam TKey The type of the key
  * @param source The source

@@ -21,9 +21,10 @@ import { ChangeSet } from '../ChangeSet';
 /**
  *   Groups the source on the value returned by group selector factory.
  *   A group is included for each item in the resulting group source.
- * @typeparam TObject">The type of the object
- * @typeparam TKey">The type of the key
- * @typeparam TGroupKey">The type of the group key
+ * @category Operator
+ * @typeparam TObject The type of the object
+ * @typeparam TKey The type of the key
+ * @typeparam TGroupKey The type of the group key
  * @param groupSelector The group selector factory.
  * @param resultGroupSource A distinct stream used to determine the result
  * @summary Useful for parent-child collection when the parent and child are soured from different streams

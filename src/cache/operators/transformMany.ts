@@ -11,6 +11,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Equivalent to a select many transform. To work, the key must individually identify each child.
+ * @category Operator
  * @typeparam TDestination The type of the destination.
  * @typeparam TSource The type of the source.
  * @typeparam TSourceKey The type of the source key.

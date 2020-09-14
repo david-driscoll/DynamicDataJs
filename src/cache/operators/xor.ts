@@ -6,6 +6,7 @@ import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 /**
  * Apply a logical Xor operator between the collections.
  * Items which are only in one of the sources are included in the result
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param items The items

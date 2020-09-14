@@ -5,7 +5,8 @@ import { skip } from 'rxjs/operators';
 import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
- * Defer the subscribtion until loaded and skip initial changeset
+ * Defer the subscription until loaded and skip initial changeset
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */

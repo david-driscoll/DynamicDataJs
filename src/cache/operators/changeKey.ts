@@ -9,6 +9,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Changes the primary key.
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TSourceKey The type of the source key.
  * @typeparam TDestinationKey The type of the destination key.

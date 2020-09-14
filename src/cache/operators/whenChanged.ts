@@ -2,8 +2,16 @@ import { isNotifyPropertyChanged, notificationsFor, NotifyPropertyChangedType } 
 import { filter, map } from 'rxjs/operators';
 import { concat, defer, Observable, of } from 'rxjs';
 
+/**
+ * Used for whenAnyChanged
+ * @ignore
+ */
 export type PropertyValue<TObject, TProperty extends keyof TObject> = { sender: TObject; value: TObject[TProperty] };
 
+/**
+ * Used for whenAny operators
+ * @ignore
+ */
 export function whenChanged<TObject, TProperty extends keyof TObject>(value: TObject, key: TProperty, notifyInitial = true, fallbackValue?: () => TObject[TProperty]) {
     if (!isNotifyPropertyChanged(value)) {
         throw new Error(

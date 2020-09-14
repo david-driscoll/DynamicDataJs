@@ -12,6 +12,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Projects each update item to a new form using the specified transform function
+ * @category Operator
  * @typeparam TDestination The type of the destination.
  * @typeparam TSource The type of the source.
  * @typeparam TKey The type of the key.
@@ -26,6 +27,7 @@ export function transformForced<TSource, TKey, TDestination>(
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination>;
 /**
  * Projects each update item to a new form using the specified transform function
+ * @category Operator
  * @typeparam TDestination The type of the destination.
  * @typeparam TSource The type of the source.
  * @typeparam TKey The type of the key.
@@ -40,6 +42,7 @@ export function transformForced<TSource, TKey, TDestination>(
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination>;
 /**
  * Projects each update item to a new form using the specified transform function
+ * @category Operator
  * @typeparam TDestination The type of the destination.
  * @typeparam TSource The type of the source.
  * @typeparam TKey The type of the key.

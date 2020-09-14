@@ -6,6 +6,7 @@ import { whenChanged } from './whenChanged';
 
 /**
  * Observes property changes for the specified property, starting with the current value
+ * @category Operator
  * @param value The source
  * @param key The key to observe
  * @param notifyInitial If true the resulting observable includes the initial value
@@ -21,6 +22,7 @@ export function whenValueChanged<TObject, TProperty extends keyof TObject>(
 ): Observable<TObject[TProperty]>;
 /**
  * Watches each item in the collection and notifies when any of them has changed
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TValue The type of the value.

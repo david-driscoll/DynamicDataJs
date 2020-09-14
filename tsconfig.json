@@ -18,6 +18,10 @@
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true
     },
+    "typedocOptions": {
+        "mode": "file",
+        "out": "docs"
+    },
     "exclude": [
         "./dist",
         "./test",

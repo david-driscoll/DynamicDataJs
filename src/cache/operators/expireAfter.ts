@@ -15,7 +15,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 /**
  * Automatically removes items from the cache after the time specified by
  * the time selector elapses.
-
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param cache The cache
@@ -32,7 +32,7 @@ export function expireAfter<TObject, TKey>(
 /**
  * Automatically removes items from the cache after the time specified by
  * the time selector elapses.
-
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param timeSelector The time selector.  Return null if the item should never be removed
@@ -42,7 +42,7 @@ export function expireAfter<TObject, TKey>(timeSelector: (value: TObject) => num
 /**
  * Automatically removes items from the cache after the time specified by
  * the time selector elapses.
-
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param cache The cache
@@ -57,7 +57,7 @@ export function expireAfter<TObject, TKey>(
 /**
  * Automatically removes items from the cache after the time specified by
  * the time selector elapses.
-
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param timeSelector The time selector.  Return null if the item should never be removed

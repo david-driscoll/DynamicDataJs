@@ -8,6 +8,7 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 
 /**
  * Cache equivalent to Publish().RefCount().  The source is cached so long as there is at least 1 subscriber.
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the destination key.
  */

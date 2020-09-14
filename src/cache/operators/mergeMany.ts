@@ -5,6 +5,7 @@ import { subscribeMany } from './subscribeMany';
 /**
  * Dynamically merges the observable which is selected from each item in the stream, and unmerges the item
  * when it is no longer part of the stream.
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TDestination The type of the destination.

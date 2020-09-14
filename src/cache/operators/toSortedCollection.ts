@@ -7,6 +7,7 @@ import { orderBy, orderByDescending } from 'ix/iterable/operators';
 
 /**
  * Converts the changeset into a fully formed sorted collection. Each change in the source results in a new sorted collection
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TSortKey The sort key

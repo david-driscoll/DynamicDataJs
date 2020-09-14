@@ -10,6 +10,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 /**
  * Groups the source using the property specified by the property selector. Groups are re-applied when the property value changed.
  * When there are likely to be a large number of group property changes specify a throttle to improve performance
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TGroupKey The type of the group key.

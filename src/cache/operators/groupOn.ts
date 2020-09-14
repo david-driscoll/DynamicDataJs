@@ -14,6 +14,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  *  Groups the source on the value returned by group selector factory.
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @typeparam TGroupKey The type of the group key.

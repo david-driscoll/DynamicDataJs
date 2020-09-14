@@ -9,12 +9,15 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
 
 /**
  * Defer the subscription until the stream has been inflated with data
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
+ * @param source The source cache
  */
 export function deferUntilLoaded<TObject, TKey>(source: IObservableCache<TObject, TKey>): Observable<IChangeSet<TObject, TKey>>;
 /**
  * Defer the subscription until the stream has been inflated with data
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  */

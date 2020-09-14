@@ -8,6 +8,7 @@ import { Change } from '../Change';
 
 /**
  * Selects distinct values from the source, using the specified value selector
+ * @category Operator
  * @typeparam TObject The type of the source
  * @typeparam TValue The type of the destination
  * @param source The source

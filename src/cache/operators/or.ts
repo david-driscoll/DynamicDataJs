@@ -5,6 +5,7 @@ import { ArrayOrIterable } from '../../util/ArrayOrIterable';
 
 /**
  * Apply a logical Or operator between the collections i.e items which are in any of the sources are included
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
  * @param items The items

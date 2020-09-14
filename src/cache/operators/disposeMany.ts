@@ -10,8 +10,10 @@ import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction'
  * Disposes each item when no longer required.
  * Individual items are disposed when removed or replaced. All items
  * are disposed when the stream is disposed
+ * @category Operator
  * @typeparam TObject The type of the object.
  * @typeparam TKey The type of the key.
+ * @param removeAction the action to take when an item is removed
  */
 export function disposeMany<TObject, TKey>(removeAction?: (value: TObject) => void): MonoTypeChangeSetOperatorFunction<TObject, TKey> {
     if (!removeAction) {

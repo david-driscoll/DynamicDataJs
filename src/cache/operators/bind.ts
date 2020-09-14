@@ -7,6 +7,13 @@ import { from, toArray } from 'ix/iterable';
 import { map } from 'ix/iterable/operators';
 import equal from 'fast-deep-equal';
 
+/**
+ * Bind to an array that will get updated as as changes happen to the observable
+ * @category Operator
+ * @param values the values
+ * @param adapter the adapter
+ * @param refreshThreshold the number of changes to force a refresh
+ */
 export function bind<TObject, TKey>(
     values: TObject[],
     adapter?: (changes: IChangeSet<TObject, TKey>) => void,
@@ -19,6 +26,13 @@ export function bind<TObject, TKey>(
         return source.pipe(tap(adapter!));
     };
 }
+/**
+ * Bind to a sorted array that will get updated as as changes happen to the observable
+ * @category Operator
+ * @param values the Operator
+ * @param adapter the adapter
+ * @param refreshThreshold the number of changes to force a refresh
+ */
 export function bindSort<TObject, TKey>(
     values: TObject[],
     adapter?: (changes: ISortedChangeSet<TObject, TKey>) => void,
@@ -27,14 +41,28 @@ export function bindSort<TObject, TKey>(
     return bind(values, adapter as any, refreshThreshold) as any;
 }
 
+/**
+ * A default adapter using an index of operator
+ * @param values the array
+ */
 bind.indexOfAdapter = function indexOfAdapter<TObject, TKey>(values: TObject[]) {
     return bind.create(values, (value: TObject, key: TKey) => values.indexOf(value));
 };
 
+/**
+ * A default adapter using deep equals
+ * @param values the array
+ */
 bind.deepEqualAdapter = function findIndexOfAdapter<TObject, TKey>(values: TObject[]) {
     return bind.create(values, (value: TObject, key: TKey) => values.findIndex(v => equal(v, value)));
 };
 
+/**
+ * Bind to a sorted array that will get updated as as changes happen to the observable
+ * @param values the array
+ * @param indexOf the method for finding the index
+ * @param refreshThreshold the number of changes before triggering a refresh
+ */
 bind.create = function createBindAdpater<TObject, TKey>(values: TObject[], indexOf: (value: TObject, key: TKey) => number, refreshThreshold = 25) {
     const _cache = new Cache<TObject, TKey>();
     let _loaded = false;

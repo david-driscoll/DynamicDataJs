@@ -8,6 +8,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
  * Automatically refresh downstream operators when any properties change.
+ * @category Operator
  * @param changeSetBuffer Batch up changes by specifying the buffer. This greatly increases performance when many elements have sucessive property changes
  * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
  * @param scheduler The scheduler
@@ -19,6 +20,7 @@ export function autoRefresh<TObject, TKey>(
 ): ChangeSetOperatorFunction<TObject, TKey, NotifyPropertyChangedType<TObject>>;
 /**
  * Automatically refresh downstream operators when any properties change.
+ * @category Operator
  * @param key the property to watch
  * @param changeSetBuffer Batch up changes by specifying the buffer. This greatly increases performance when many elements have sucessive property changes
  * @param propertyChangeThrottle When observing on multiple property changes, apply a throttle to prevent excessive refesh invocations
