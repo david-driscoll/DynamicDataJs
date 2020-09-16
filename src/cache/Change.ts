@@ -9,113 +9,103 @@ function assert(condition: any, message?: string): asserts condition {
     }
 }
 
-export class Change<TObject, TKey> {
+function toString<TObject, TKey>(this: Change<TObject, TKey>) {
+    const { reason, key, current, previous } = this;
+    return `"${reason}, Key: ${key}, Current: ${current}, Previous: ${previous}`;
+}
+
+export const Change = {
+    create<TObject, TKey>(data: Exclude<Change<TObject, TKey>, Function>) {
+        return {
+            ...data,
+            toString,
+        };
+    },
+    add<TObject, TKey>(key: TKey, current: TObject, currentIndex?: number): Change<TObject, TKey> {
+        return {
+            reason: 'add',
+            key,
+            current,
+            currentIndex: currentIndex ?? -1,
+            toString: toString as any,
+        };
+    },
+    update<TObject, TKey>(key: TKey, current: TObject, previous: TObject, currentIndex?: number, previousIndex?: number): Change<TObject, TKey> {
+        return {
+            reason: 'update',
+            key,
+            current,
+            previousIndex,
+            currentIndex: currentIndex ?? -1,
+            previous,
+            toString: toString as any,
+        };
+    },
+    remove<TObject, TKey>(key: TKey, current: TObject, currentIndex?: number): Change<TObject, TKey> {
+        return {
+            reason: 'remove',
+            key,
+            current,
+            currentIndex: currentIndex ?? -1,
+            toString: toString as any,
+        };
+    },
+    refresh<TObject, TKey>(key: TKey, current: TObject): Change<TObject, TKey> {
+        return {
+            reason: 'refresh',
+            key,
+            current,
+            currentIndex: -1,
+            toString: toString as any,
+        };
+    },
+    moved<TObject, TKey>(key: TKey, current: TObject, currentIndex: number, previousIndex: number): Change<TObject, TKey> {
+        return {
+            reason: 'moved',
+            key,
+            current,
+            currentIndex,
+            previousIndex,
+            toString: toString as any,
+        };
+    },
+};
+
+export interface Change<TObject, TKey> {
     // : IEquatable<Change<TObject, TKey>>
     /**
      *  The unique key of the item which has changed
      */
-    public readonly key: TKey;
+    readonly key: TKey;
 
     /**
      *  The  reason for the change
      */
-    public readonly reason: ChangeReason;
+    readonly reason: ChangeReason;
 
     /**
      *  The item which has changed
      */
-    public readonly current: TObject;
+    readonly current: TObject;
 
     /**
      *  The current index
      */
-    public readonly currentIndex: number;
+    readonly currentIndex: number;
 
     /**
      *  The previous change.
      *
      *  This is only when Reason==ChangeReason.Replace.
      */
-    public readonly previous?: TObject;
+    readonly previous?: TObject;
 
     /**
      *  The previous change.
      *
      *  This is only when Reason==ChangeReason.Update or ChangeReason.Move.
      */
-    public readonly previousIndex?: number;
+    readonly previousIndex?: number;
 
-    /**
-     *  Initializes a new instance of the <see cref="Change{TObject, TKey}"/> object.
-     *  @param reason The reason
-     *  @param key The key
-     *  @param current The current
-     */
-    constructor(reason: ChangeReason, key: TKey, current: TObject);
-
-    /**
-     *  Initializes a new instance of the <see cref="Change{TObject, TKey}"/> object.
-     *  @param reason The reason
-     *  @param key The key
-     *  @param current The current
-     *  @param index The index
-     */
-    constructor(reason: ChangeReason, key: TKey, current: TObject, index?: number);
-
-    /**
-     *  Constructor for ChangeReason.Move
-     *  @param reason The reason
-     *  @param key The key
-     *  @param current The current
-     *  @param currentIndex The CurrentIndex
-     *  @param previousIndex CurrentIndex of the previous
-     */
-    constructor(reason: 'moved', key: TKey, current: TObject, currentIndex: number, previousIndex: number);
-
-    /**
-     *  Initializes a new instance of the <see cref="Change{TObject, TKey}"/> object.
-     *  @param reason The reason
-     *  @param key The key
-     *  @param current The current
-     *  @param previous The previous
-     *  @param currentIndex Value of the current
-     *  @param previousIndex Value of the previous
-     */
-    constructor(reason: ChangeReason, key: TKey, current: TObject, previous?: TObject, currentIndex?: number, previousIndex?: number);
-    // : this()
-
-    // constructor(reason: 'moved', key: TKey, current: TObject, currentIndex: number, previousIndex: number);
-    // constructor(reason: ChangeReason, key: TKey, current: TObject, index?: number);
-    // constructor(reason: ChangeReason, key: TKey, current: TObject, previous?: TObject, currentIndex?: number, previousIndex?: number);
-    constructor(reason: ChangeReason, key: TKey, current: TObject, previous?: TObject | number, currentIndex = -1, previousIndex = -1) {
-        this.reason = reason;
-        this.key = key;
-        if (reason === 'moved') {
-            assert(typeof previous === 'number');
-            assert(previous >= 0, 'currentIndex must be greater than or equal to zero');
-            assert(currentIndex >= 0, 'previousIndex must be greater than or equal to zero');
-            this.current = current;
-            this.currentIndex = previous;
-            this.previousIndex = currentIndex;
-            return;
-        }
-
-        this.current = current;
-        this.previous = previous as any; // TObject could be number...
-        this.currentIndex = currentIndex;
-        this.previousIndex = previousIndex;
-
-        if (reason == 'add' && previous !== undefined && typeof previous !== 'number') {
-            throw new Error('For ChangeReason add, a previous value cannot be specified');
-        }
-
-        if (reason == 'update' && previous === undefined) {
-            throw new Error('For ChangeReason change, must supply previous value');
-        }
-    }
-
-    public toString() {
-        const { reason, key, current, previous } = this;
-        return `"${reason}, Key: ${key}, Current: ${current}, Previous: ${previous}`;
-    }
+    toString(): string;
 }

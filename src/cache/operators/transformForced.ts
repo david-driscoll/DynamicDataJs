@@ -61,7 +61,7 @@ export function transformForced<TSource, TKey, TDestination>(
             function* captureChanges(cache: Cache<TSource, TKey>, shouldTransform: (value: TSource, key: TKey) => boolean) {
                 for (const [key, value] of cache.entries()) {
                     if (shouldTransform(value, key)) {
-                        yield new Change<TSource, TKey>('refresh', key, value);
+                        yield Change.refresh(key, value);
                     }
                 }
             }

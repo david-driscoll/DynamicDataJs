@@ -79,7 +79,7 @@ export function transformPromise<TSource, TKey, TDestination>(
     ): Promise<IChangeSet<TDestination, TKey>> {
         const toTransform = ixFrom(cache.entries()).pipe(
             ixFilter(([key, value]) => shouldTransform(value.source, key)),
-            ixMap(([key, value]) => new Change<TSource, TKey>('update', key, value.source, value.source)),
+            ixMap(([key, value]) => Change.update(key, value.source, value.source)),
         );
 
         const transformed = await from(toTransform)
@@ -156,9 +156,12 @@ export function transformPromise<TSource, TKey, TDestination>(
 
         const changes = cache.captureChanges();
         const transformed = ixFrom(changes).pipe(
-            ixMap(
-                change =>
-                    new Change<TDestination, TKey>(change.reason, change.key, change.current.destination, change.previous?.destination, change.currentIndex, change.previousIndex),
+            ixMap(change =>
+                Change.create({
+                    ...change,
+                    current: change.current.destination,
+                    previous: change.previous?.destination,
+                }),
             ),
         );
 

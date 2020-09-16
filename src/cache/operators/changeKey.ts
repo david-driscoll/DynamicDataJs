@@ -21,7 +21,7 @@ export function changeKey<TObject, TSourceKey, TDestinationKey>(
     return function changeKeyOperator(source) {
         return source.pipe(
             map(updates => {
-                const changed = ixFrom(updates).pipe(ixMap(u => new Change(u.reason, selector(u.current, u.key), u.current, u.previous)));
+                const changed = ixFrom(updates).pipe(ixMap(u => Change.create({ ...u, key: selector(u.current, u.key) })));
                 return new ChangeSet(changed);
             }),
         );
