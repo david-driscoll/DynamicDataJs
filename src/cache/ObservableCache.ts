@@ -139,7 +139,7 @@ export class ObservableCache<TObject, TKey> implements IObservableCache<TObject,
         return new Observable<Change<TObject, TKey>>(observer => {
             const initial = this._readerWriter.lookup(key);
             if (initial) {
-                observer.next(new Change<TObject, TKey>('add', key, initial));
+                observer.next(Change.add(key, initial));
             }
 
             return this._changes.pipe(finalize(() => observer.complete())).subscribe(changes => {

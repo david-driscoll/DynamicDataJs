@@ -34,7 +34,7 @@ export function autoRefreshOnObservable<TObject, TKey>(
                                     'Object must implement the notifyPropertyChangedSymbol or inherit from the NotifyPropertyChangedBase class or be wrapped by the proxy method observePropertyChanges',
                                 );
                             }
-                            return new Change<NotifyPropertyChangedType<TObject>, TKey>('refresh', k, t);
+                            return Change.refresh(k, t);
                         }),
                     ),
                 ),

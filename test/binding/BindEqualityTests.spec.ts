@@ -12,11 +12,11 @@ describe('BindEqualityTests', () => {
         subject.pipe(bind(values, bind.indexOfAdapter(values))).subscribe();
 
         const person = new Person('Adult1', 50);
-        subject.next(new ChangeSet([new Change<Person, string>('add', person.name, person)]));
+        subject.next(new ChangeSet([Change.add(person.name, person)]));
 
         expect(values.length).toBe(1);
 
-        subject.next(new ChangeSet([new Change<Person, string>('remove', person.name, new Person('Adult1', 50))]));
+        subject.next(new ChangeSet([Change.remove(person.name, new Person('Adult1', 50))]));
 
         expect(values.length).toBe(1);
     });
@@ -26,11 +26,11 @@ describe('BindEqualityTests', () => {
         subject.pipe(bind(values, bind.deepEqualAdapter(values))).subscribe();
 
         const person = new Person('Adult1', 50);
-        subject.next(new ChangeSet([new Change<Person, string>('add', person.name, person)]));
+        subject.next(new ChangeSet([Change.add(person.name, person)]));
 
         expect(values.length).toBe(1);
 
-        subject.next(new ChangeSet([new Change<Person, string>('remove', person.name, new Person('Adult1', 50))]));
+        subject.next(new ChangeSet([Change.remove(person.name, new Person('Adult1', 50))]));
 
         expect(values.length).toBe(0);
     });

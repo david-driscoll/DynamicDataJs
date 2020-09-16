@@ -15,8 +15,8 @@ export function treatMovesAsRemoveAdd<TObject, TKey>(): MonoTypeOperatorFunction
     function* replaceMoves(items: IChangeSet<TObject, TKey>): Iterable<Change<TObject, TKey>> {
         for (const change of items) {
             if (change.reason === 'moved') {
-                yield new Change<TObject, TKey>('remove', change.key, change.current, change.previousIndex);
-                yield new Change<TObject, TKey>('add', change.key, change.current, change.currentIndex);
+                yield Change.remove(change.key, change.current, change.previousIndex);
+                yield Change.add(change.key, change.current, change.currentIndex);
             } else {
                 yield change;
             }

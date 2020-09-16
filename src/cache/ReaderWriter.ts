@@ -109,7 +109,7 @@ export class ReaderWriter<TObject, TKey> {
 
         for (const [key, value] of dictionary.entries()) {
             if (filter == undefined || filter(value)) {
-                changes.add(new Change<TObject, TKey>('add', key, value));
+                changes.add(Change.add(key, value));
             }
         }
 

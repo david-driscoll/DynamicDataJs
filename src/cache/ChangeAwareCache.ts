@@ -64,14 +64,14 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
      */
     public add(item: TObject, key: TKey) {
         this.ensureInitialised();
-        this._changes!.add(new Change<TObject, TKey>('add', key, item));
+        this._changes!.add(Change.add(key, item));
         this._mapAdapter.set(key, item);
     }
 
     public addOrUpdate(item: TObject, key: TKey) {
         this.ensureInitialised();
         const data = tryGetValue(this._mapAdapter, key);
-        this._changes!.add(data.found ? new Change<TObject, TKey>('update', key, item, data.value) : new Change<TObject, TKey>('add', key, item));
+        this._changes!.add(data.found ? Change.update(key, item, data.value) : Change.add(key, item));
 
         this._mapAdapter.set(key, item);
     }
@@ -86,14 +86,14 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
 
         this.ensureInitialised();
         this._data.forEach((key, value) => {
-            this._changes!.add(new Change<TObject, TKey>('refresh', value, key));
+            this._changes!.add(Change.refresh(value, key));
         });
     }
 
     public clear() {
         this.ensureInitialised();
         this._data.forEach((key, value) => {
-            this._changes!.add(new Change<TObject, TKey>('remove', value, key));
+            this._changes!.add(Change.remove(value, key));
         });
         this._data.clear();
     }
@@ -154,7 +154,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
         this.ensureInitialised();
         const data = tryGetValue<TKey, TObject>(this._mapAdapter, key);
         if (data.found) {
-            this._changes!.add(new Change<TObject, TKey>('refresh', key, data.value));
+            this._changes!.add(Change.refresh(key, data.value));
         }
     }
 
@@ -175,7 +175,7 @@ export class ChangeAwareCache<TObject, TKey> implements ICache<TObject, TKey> {
         this.ensureInitialised();
         const data = tryGetValue<TKey, TObject>(this._mapAdapter, key);
         if (data.found) {
-            this._changes!.add(new Change<TObject, TKey>('remove', key, data.value!));
+            this._changes!.add(Change.remove(key, data.value!));
             this._mapAdapter.delete(key);
         }
     }

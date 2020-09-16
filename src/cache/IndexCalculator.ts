@@ -25,7 +25,7 @@ export class IndexCalculator<TObject, TKey> {
         //therefore infer the first batch of changes from the cache
 
         this._list = toArray(from(cache.entries()).pipe(orderBy(z => z, this._comparer)));
-        const initialItems = this._list.map(([key, value], index) => new Change<TObject, TKey>('add', key, value, index));
+        const initialItems = this._list.map(([key, value], index) => Change.add(key, value, index));
         return new ChangeSet<TObject, TKey>(initialItems);
     }
 
@@ -67,7 +67,7 @@ export class IndexCalculator<TObject, TKey> {
             this._list.splice(old, 1);
             this._list.splice(index, 0, current);
 
-            changes.push(new Change<TObject, TKey>('moved', currentKey, currentValue, index, old));
+            changes.push(Change.moved(currentKey, currentValue, index, old));
         }
         return new ChangeSet<TObject, TKey>(changes);
     }
@@ -85,7 +85,7 @@ export class IndexCalculator<TObject, TKey> {
                         const position = this.getInsertPositionBinary(current);
                         this._list.splice(position, 0, current);
 
-                        result.push(new Change<TObject, TKey>('add', u.key, u.current, position));
+                        result.push(Change.add(u.key, u.current, position));
                     }
 
                     break;
@@ -98,7 +98,7 @@ export class IndexCalculator<TObject, TKey> {
                         const newposition = this.getInsertPositionBinary(current);
                         this._list.splice(newposition, 0, current);
 
-                        result.push(new Change<TObject, TKey>('update', u.key, u.current, u.previous, newposition, old));
+                        result.push(Change.update(u.key, u.current, u.previous!, newposition, old));
                     }
 
                     break;
@@ -107,7 +107,7 @@ export class IndexCalculator<TObject, TKey> {
                     {
                         const position = this.getCurrentPosition(current);
                         this._list.splice(position, 1);
-                        result.push(new Change<TObject, TKey>('remove', u.key, u.current, position));
+                        result.push(Change.remove(u.key, u.current, position));
                     }
 
                     break;
@@ -154,7 +154,7 @@ export class IndexCalculator<TObject, TKey> {
 
             this._list.splice(old, 1);
             this._list.splice(newposition, 0, currentTuple as [TKey, TObject]);
-            result.push(new Change<TObject, TKey>('moved', current.key, current.current, newposition, old));
+            result.push(Change.moved(current.key, current.current, newposition, old));
         }
 
         return new ChangeSet<TObject, TKey>(result);

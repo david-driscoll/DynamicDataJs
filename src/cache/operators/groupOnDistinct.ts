@@ -76,12 +76,7 @@ export function groupOnDistinct<TObject, TKey, TGroupKey>(
 
             const notifier = parentGroups
                 .connect()
-                .pipe(
-                    map(x => {
-                        const groups = ixFrom(x).pipe(ixMap(s => new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>(s.reason, s.key, s.current)));
-                        return new GroupChangeSet<TObject, TKey, TGroupKey>(groups);
-                    }),
-                )
+                .pipe(map(x => new GroupChangeSet<TObject, TKey, TGroupKey>(ixFrom(x).pipe(ixMap(x => Change.create(x))))))
                 .subscribe(observer);
 
             return Disposable.create(() => {

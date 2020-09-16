@@ -60,7 +60,7 @@ export function distinctValues<TObject, TKey, TValue>(valueSelector: (value: TOb
                 _valueCounters.set(value, count + 1);
             } else {
                 _valueCounters.set(value, 1);
-                result.add(new Change('add', value, value));
+                result.add(Change.add(value, value));
             }
         }
 
@@ -79,7 +79,7 @@ export function distinctValues<TObject, TKey, TValue>(valueSelector: (value: TOb
 
             //if there are none, then remove and notify
             _valueCounters.delete(value);
-            result.add(new Change('remove', value, value));
+            result.add(Change.remove(value, value));
         }
 
         for (const change of changes) {

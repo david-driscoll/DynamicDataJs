@@ -71,7 +71,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
 
         function regroup() {
             //re-evaluate all items in the group
-            const items = ixFrom(_itemCache.entries()).pipe(ixMap(([key, value]) => new Change<TObject, TKey>('refresh', key, value.item)));
+            const items = ixFrom(_itemCache.entries()).pipe(ixMap(([key, value]) => Change.refresh(key, value.item)));
             return handleUpdates(new ChangeSet<TObject, TKey>(items), true);
         }
 
@@ -100,7 +100,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
             grouped.forEach(group => {
                 const [groupCache, created] = getCache(group.key);
                 if (created) {
-                    result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('add', group.key, groupCache));
+                    result.push(Change.add(group.key, groupCache));
                 }
 
                 groupCache.update(groupUpdater => {
@@ -125,7 +125,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                                         g.update(u => u.removeKey(current.key));
                                         if (g.size === 0) {
                                             _groupCache.delete(g.key);
-                                            result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', g.key, g));
+                                            result.push(Change.remove(g.key, g));
                                         }
                                     }
 
@@ -151,7 +151,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                                         g.update(u => u.removeKey(current.key));
                                         if (g.size === 0) {
                                             _groupCache.delete(g.key);
-                                            result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', g.key, g));
+                                            result.push(Change.remove(g.key, g));
                                         }
                                     }
                                 }
@@ -178,7 +178,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
                                             g.update(u => u.removeKey(current.key));
                                             if (g.size === 0) {
                                                 _groupCache.delete(g.key);
-                                                result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', g.key, g));
+                                                result.push(Change.remove(g.key, g));
                                             }
                                         }
                                         groupUpdater.addOrUpdate(current.item, current.key);
@@ -198,7 +198,7 @@ export function groupOn<TObject, TKey, TGroupKey>(
 
                 if (groupCache.cache.size === 0) {
                     if (_groupCache.has(group.key)) _groupCache.delete(group.key);
-                    result.push(new Change<Group<TObject, TKey, TGroupKey>, TGroupKey>('remove', group.key, groupCache));
+                    result.push(Change.remove(group.key, groupCache));
                 }
             });
 

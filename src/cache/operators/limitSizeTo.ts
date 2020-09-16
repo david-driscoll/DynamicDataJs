@@ -71,7 +71,7 @@ class SizeLimiter<TObject, TKey> {
             ixFrom(this._cache.entries()).pipe(
                 orderByDescending(([key, value]) => value.expireAt),
                 ixSkip(this._sizeLimit),
-                ixMap(([key, value]) => new Change<TObject, TKey>('remove', key, value.value)),
+                ixMap(([key, value]) => Change.remove(key, value.value)),
             ),
         );
 
@@ -80,7 +80,13 @@ class SizeLimiter<TObject, TKey> {
         }
 
         const notifications = this._cache.captureChanges();
-        const changed = ixFrom(notifications).pipe(ixMap(update => new Change<TObject, TKey>(update.reason, update.key, update.current.value, update.previous?.value)));
+        const changed = ixFrom(notifications).pipe(
+            ixMap(update => ({
+                ...update,
+                current: update.current.value,
+                previous: update.previous?.value,
+            })),
+        );
 
         return new ChangeSet<TObject, TKey>(changed);
     }
