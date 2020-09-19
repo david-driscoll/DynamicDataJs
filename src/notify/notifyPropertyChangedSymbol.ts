@@ -5,6 +5,7 @@ type IterableCollections = Map<any, any> | Set<any>;
 type WeakCollections = WeakMap<any, any> | WeakSet<any>;
 type CollectionTypes = IterableCollections | WeakCollections;
 type PrimitiveTypes = string | number | symbol | any[];
+export const originalValue = Symbol.for('originalValue');
 export const notifyPropertyChangedSymbol = Symbol.for('NotifyPropertyChanged');
 export const notifyCollectionChangedSymbol = Symbol.for('NotifyCollectionChanged');
 
@@ -30,7 +31,6 @@ export const toRawType = (value: unknown): string => {
 };
 
 const rawToNpc = new WeakMap<any, NotifyPropertyChangedType<any>>();
-const npcToRaw = new WeakMap<NotifyPropertyChangedType<any>, any>();
 const npcObservers = new WeakMap<any, Subject<any>>();
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet]);
 const isObservableType = (() => {
@@ -45,25 +45,19 @@ const isObservableType = (() => {
 })();
 
 export function toRaw<T>(observed: T): T {
-    return npcToRaw.get(observed) ?? observed;
+    return (<{ [originalValue]?(): T }>observed)?.[originalValue]?.() ?? observed;
+}
+
+function hasOriginalValue<T>(observed: T): boolean {
+    return (<{ [originalValue]?(): T }>observed)?.[originalValue] !== undefined;
 }
 
 export function isNotifyPropertyChanged<T>(target: T): target is NotifyPropertyChangedType<T> {
-    if (target && (target as any)[notifyPropertyChangedSymbol] !== undefined) {
-        return true;
-    }
-
-    const data = npcToRaw.get(target);
-    return data && data[notifyPropertyChangedSymbol] !== undefined;
+    return (<{ [notifyPropertyChangedSymbol]?: Observable<string> }>target)?.[notifyPropertyChangedSymbol] !== undefined;
 }
 
 export function isNotifyCollectionChanged<T>(target: T): target is NotifyCollectionChangedType<T> {
-    if (target && (target as any)[notifyCollectionChangedSymbol] !== undefined) {
-        return true;
-    }
-
-    const data = npcToRaw.get(target);
-    return data && data[notifyCollectionChangedSymbol] !== undefined;
+    return (<{ [notifyCollectionChangedSymbol]?: Observable<string> }>target)?.[notifyCollectionChangedSymbol] !== undefined;
 }
 
 const canObserve = (value: any): boolean => {
@@ -72,10 +66,10 @@ const canObserve = (value: any): boolean => {
 };
 
 export function observePropertyChanges<T>(target: ObjectType<T>): NotifyPropertyChangedType<T> {
-    return createNotifyPropertyChanged(target, rawToNpc, npcToRaw, npcObservers, objectHandlers, collectionHandlers) as any;
+    return createNotifyPropertyChanged(target, rawToNpc, npcObservers, objectHandlers, collectionHandlers) as any;
 }
 export function observeCollectionChanges<T>(target: CollectionType<T>): NotifyCollectionChangedType<T> {
-    return createNotifyPropertyChanged(target, rawToNpc, npcToRaw, npcObservers, objectHandlers, collectionHandlers) as any;
+    return createNotifyPropertyChanged(target, rawToNpc, npcObservers, objectHandlers, collectionHandlers) as any;
 }
 
 export function notificationsFor<T>(target: NotifyPropertyChangedType<T>): Observable<keyof T>;
@@ -272,7 +266,6 @@ const collectionHandlers = (() => {
 function createNotifyPropertyChanged<TObject extends new (...arguments_: any) => any>(
     target: InstanceType<TObject>,
     toProxy: WeakMap<any, NotifyPropertyChangedType<any>>,
-    toRaw: WeakMap<NotifyPropertyChangedType<any>, any>,
     toObserver: WeakMap<any, Subject<any>>,
     objectHandlers: (observer: Observer<string | symbol>) => ProxyHandler<any>,
     collectionHandlers: (observer: Observer<unknown>) => ProxyHandler<any>,
@@ -285,32 +278,51 @@ function createNotifyPropertyChanged<TObject extends new (...arguments_: any) =>
     if (observed !== void 0) {
         return observed;
     }
-    // target is already a Proxy
-    if (toRaw.has(target)) {
-        return target as any;
+    if (hasOriginalValue(observed)) {
+        return observed;
     }
-    // only a whitelist of value types can be observed.
     if (!canObserve(target)) {
+        // only a whitelist of value types can be observed.
         return target as any;
     }
 
     const observer = new Subject<any>();
     if (collectionTypes.has(target.constructor)) {
         observed = new Proxy(target, collectionHandlers(observer));
+        Object.defineProperties(observed, {
+            [originalValue]: {
+                value() {
+                    return target;
+                },
+            },
+            [notifyCollectionChangedSymbol]: {
+                get() {
+                    return observer.asObservable();
+                },
+                enumerable: false,
+                configurable: false,
+            },
+        });
     } else {
         observed = new Proxy(target, objectHandlers(observer));
+        Object.defineProperties(observed, {
+            [originalValue]: {
+                value() {
+                    return target;
+                },
+            },
+            [notifyPropertyChangedSymbol]: {
+                get() {
+                    return observer.asObservable();
+                },
+                enumerable: false,
+                configurable: false,
+            },
+        });
     }
 
     toObserver.set(target, observer);
     toObserver.set(observed, observer);
     toProxy.set(target, observed);
-    toRaw.set(observed, target);
-    Object.defineProperty(observed, notifyPropertyChangedSymbol, {
-        get() {
-            return observer.asObservable();
-        },
-        enumerable: false,
-        configurable: false,
-    });
     return observed;
 }
