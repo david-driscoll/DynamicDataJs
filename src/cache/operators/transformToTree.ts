@@ -31,7 +31,7 @@ export function transformToTree<TObject, TKey>(
 
             //for each object we need a node which provides
             //a structure to set the parent and children
-            const allNodes = asObservableCache(allData.connect().pipe(transform((t, v) => new Node(t, v))));
+            const allNodes = asObservableCache(allData.connect().pipe(transform((t, v) => new Node(t, v), false)));
 
             const groupedByPivot = asObservableCache(allNodes.connect().pipe(groupOn(x => pivotOn(x.item))));
 
