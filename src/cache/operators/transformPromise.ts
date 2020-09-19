@@ -24,7 +24,7 @@ import { ChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
  */
 export function transformPromise<TSource, TKey, TDestination>(
     transformFactory: (current: TSource, previous: TSource | undefined, key: TKey) => Promise<TDestination>,
-    transformOnRefresh?: boolean,
+    transformOnRefresh: boolean = true,
     maximumConcurrency: number = 1,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
     forceTransform?: Observable<(source: TSource, key: TKey) => boolean>,
