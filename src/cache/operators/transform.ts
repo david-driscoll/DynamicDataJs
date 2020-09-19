@@ -16,7 +16,7 @@ import { DynamicDataError } from '../DynamicDataError';
  */
 export function transform<TSource, TKey, TDestination>(
     transformFactory: (current: TSource, key: TKey, previous: TSource | undefined) => TDestination,
-    transformOnRefresh?: boolean,
+    transformOnRefresh: boolean = true,
     exceptionCallback?: (error: DynamicDataError<TSource, TKey>) => void,
 ): ChangeSetOperatorFunction<TSource, TKey, TDestination> {
     return function transformOperator(source) {
