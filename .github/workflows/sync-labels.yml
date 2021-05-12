@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.4
 
       - name: Checkout tools repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.4
         with:
           repository: RocketSurgeonsGuild/.github
           path: .rsg
