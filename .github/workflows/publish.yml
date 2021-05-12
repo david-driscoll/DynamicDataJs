@@ -22,7 +22,7 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: 💰 cache modules
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.5
         with:
           # npm cache files are stored in `~/.npm` on Linux/macOS
           path: ~/.npm
