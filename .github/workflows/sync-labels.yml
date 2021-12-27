@@ -23,7 +23,7 @@ jobs:
           path: .rsg
 
       - name: merge files
-        uses: RocketSurgeonsGuild/actions/merge-labels@v0.2.4
+        uses: RocketSurgeonsGuild/actions/merge-labels@v0.2.5
         with:
           files: '.rsg/.github/labels.yml,.github/labels.yml'
           output: .github/labels.yml
