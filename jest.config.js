@@ -5,7 +5,7 @@ module.exports = {
     globals: {
         'ts-jest': {
             compiler: 'typescript',
-            tsConfig: {
+            tsconfig: {
                 importHelpers: true,
                 target: 'ES6',
                 module: 'commonjs',

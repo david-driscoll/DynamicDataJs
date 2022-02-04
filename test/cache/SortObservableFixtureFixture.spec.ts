@@ -10,7 +10,7 @@ import { randomPersonGenerator } from '../domain/RandomPersonGenerator';
 import { ISortedChangeSet } from '../../src/cache/ISortedChangeSet';
 import { toArray, range, from, last } from 'ix/iterable';
 import { map, orderBy, orderByDescending, take } from 'ix/iterable/operators';
-import faker from 'faker';
+import faker from '@faker-js/faker';
 
 describe('SortObservableFixture', () => {
     let _cache: ISourceCache<Person, string> & ISourceUpdater<Person, string>;
