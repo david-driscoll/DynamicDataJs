@@ -1,1 +1,1 @@
-export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: Error };
+export type DynamicDataError<TObject, TKey> = { key: TKey; value: TObject; error: unknown };

@@ -9,7 +9,6 @@ import { Disposable } from '../../util';
 import { NotifyPropertyChangedType } from '../../notify/notifyPropertyChangedSymbol';
 import { ISourceCache, isSourceCache } from '../ISourceCache';
 import { isObservableCache } from '../IObservableCache';
-import { isScheduler } from 'rxjs/internal-compatibility';
 import { MonoTypeChangeSetOperatorFunction } from '../ChangeSetOperatorFunction';
 
 /**
@@ -139,4 +138,8 @@ export function expireAfter<TObject, TKey>(
             });
         });
     };
+
+    function isScheduler(value: any): value is SchedulerLike {
+        return value && typeof value.schedule === 'function';
+    }
 }

@@ -1,4 +1,4 @@
-import { merge, Observable, OperatorFunction } from 'rxjs';
+import { merge, Observable, lastValueFrom } from 'rxjs';
 import { IChangeSet } from '../IChangeSet';
 import { ChangeAwareCache } from '../ChangeAwareCache';
 import { DynamicDataError } from '../DynamicDataError';
@@ -44,7 +44,7 @@ export function transformPromise<TSource, TKey, TDestination>(
           }
         | {
               change: Change<TSource, TKey>;
-              error: Error;
+              error: unknown;
               success: false;
               key: TKey;
           };
@@ -82,25 +82,25 @@ export function transformPromise<TSource, TKey, TDestination>(
             ixMap(([key, value]) => Change.update(key, value.source, value.source)),
         );
 
-        const transformed = await from(toTransform)
-            .pipe(
+        const transformed = await lastValueFrom(
+            from(toTransform).pipe(
                 map(z => transform(z)),
                 mergeAll(maximumConcurrency),
                 toArray(),
-            )
-            .toPromise();
+            ),
+        );
 
         return processUpdates(cache, transformed);
     }
 
     async function doTransformChanges(cache: ChangeAwareCache<TransformedItemContainer, TKey>, changes: IChangeSet<TSource, TKey>): Promise<IChangeSet<TDestination, TKey>> {
-        const transformed = await from(changes)
-            .pipe(
+        const transformed = await lastValueFrom(
+            from(changes).pipe(
                 map(z => transform(z)),
                 mergeAll(maximumConcurrency),
                 toArray(),
-            )
-            .toPromise();
+            ),
+        );
         return processUpdates(cache, transformed);
     }
 
@@ -177,7 +177,7 @@ export function transformPromise<TSource, TKey, TDestination>(
         };
     }
 
-    function createTransformError(change: Change<TSource, TKey>, error: Error) {
+    function createTransformError(change: Change<TSource, TKey>, error: unknown) {
         return {
             success: false as const,
             error,

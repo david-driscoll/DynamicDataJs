@@ -5,7 +5,7 @@ import { PersonEmpKey, PersonEmployment } from '../domain/PersonEmployment';
 import { Person } from '../domain/Person';
 import { count, every, from, range, toArray } from 'ix/iterable';
 import { map, flatMap } from 'ix/iterable/operators';
-import faker from 'faker';
+import faker from '@faker-js/faker';
 import { PersonWithEmployment } from '../domain/PersonWithEmployment';
 import { groupOn } from '../../src/cache/operators/groupOn';
 import { distinctValues } from '../../src/cache/operators/distinctValues';
@@ -39,7 +39,7 @@ describe('GroupFromDistinctFixture', () => {
         const emphistory = toArray(
             range(1, numberOfPeople).pipe(
                 flatMap(i => {
-                    const companiestogenrate = faker.random.number({ min: 0, max: 4 });
+                    const companiestogenrate = faker.datatype.number({ min: 0, max: 4 });
                     return range(0, companiestogenrate).pipe(map(c => new PersonEmployment(`Person${i}`, companies[c])));
                 }),
             ),
