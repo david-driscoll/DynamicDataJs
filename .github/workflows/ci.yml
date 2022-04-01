@@ -20,7 +20,7 @@ jobs:
           clean: 'false'
           fetch-depth: '0'
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3.1.0
         with:
           always-auth: true
           node-version: '12.x'
@@ -70,7 +70,7 @@ jobs:
           clean: 'false'
           fetch-depth: '0'
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3.1.0
         with:
           always-auth: true
           node-version: '12.x'
